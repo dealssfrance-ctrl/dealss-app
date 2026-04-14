@@ -1,8 +1,8 @@
 ﻿import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import {
-  ArrowLeft, Send, Image as ImageIcon, MoreVertical, ShieldCheck, Store,
-  CheckCheck, Check, Reply, Pencil, Trash2, X, ChevronDown, User, Eye,
+  ArrowLeft, Send, Image as ImageIcon, ShieldCheck, Store,
+  CheckCheck, Check, Reply, Pencil, Trash2, X, ChevronDown, User, Eye, Copy,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
@@ -24,8 +24,10 @@ export function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ message: ChatMessage; x: number; y: number } | null>(null);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageTimeRef = useRef<string | null>(null);
@@ -107,12 +109,56 @@ export function ChatScreen() {
     return () => clearInterval(interval);
   }, [fetchMessages]);
 
-  // Close context menu on outside click
+  // Close context menu on outside click/scroll
   useEffect(() => {
-    const handleClick = () => setActiveMenuId(null);
-    if (activeMenuId) document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, [activeMenuId]);
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    document.addEventListener('click', close);
+    document.addEventListener('scroll', close, true);
+    return () => {
+      document.removeEventListener('click', close);
+      document.removeEventListener('scroll', close, true);
+    };
+  }, [contextMenu]);
+
+  const openContextMenu = (message: ChatMessage, e: { clientX: number; clientY: number }) => {
+    if (message.deletedAt || message.id.startsWith('temp-')) return;
+    const x = Math.min(e.clientX, window.innerWidth - 180);
+    const y = Math.min(e.clientY, window.innerHeight - 200);
+    setContextMenu({ message, x, y });
+  };
+
+  const handleTouchStart = (message: ChatMessage, e: React.TouchEvent) => {
+    longPressTriggeredRef.current = false;
+    const touch = e.touches[0];
+    const pos = { clientX: touch.clientX, clientY: touch.clientY };
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      openContextMenu(message, pos);
+      // Prevent text selection
+      window.getSelection()?.removeAllRanges();
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleTouchMove = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleCopyText = (text: string | undefined) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => toast.success('Copié'));
+    setContextMenu(null);
+  };
 
   if (loading) {
     return <Layout><ChatScreenSkeleton /></Layout>;
@@ -214,21 +260,18 @@ export function ChatScreen() {
     } catch {
       toast.error('Erreur lors de la suppression');
     }
-    setActiveMenuId(null);
   };
 
   const startEdit = (message: ChatMessage) => {
     setEditingMessage(message);
     setInputText(message.text || '');
     setReplyTo(null);
-    setActiveMenuId(null);
     inputRef.current?.focus();
   };
 
   const startReply = (message: ChatMessage) => {
     setReplyTo(message);
     setEditingMessage(null);
-    setActiveMenuId(null);
     inputRef.current?.focus();
   };
 
@@ -403,7 +446,11 @@ export function ChatScreen() {
                         initial={{ opacity: 0, y: 10, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         transition={{ duration: 0.2 }}
-                        className={`flex ${isConsecutive ? 'mt-0.5' : 'mt-3'} ${isCurrentUser ? 'justify-end' : 'justify-start'} group/msg rounded-lg transition-colors`}
+                        className={`flex ${isConsecutive ? 'mt-0.5' : 'mt-3'} ${isCurrentUser ? 'justify-end' : 'justify-start'} rounded-lg transition-colors`}
+                        onContextMenu={(e) => { e.preventDefault(); openContextMenu(message, e); }}
+                        onTouchStart={(e) => handleTouchStart(message, e)}
+                        onTouchEnd={handleTouchEnd}
+                        onTouchMove={handleTouchMove}
                       >
                         {/* Other user avatar */}
                         {!isCurrentUser && (
@@ -470,36 +517,6 @@ export function ChatScreen() {
                                 </div>
                               )}
 
-                              {/* Quick actions on hover */}
-                              {!isTemp && (
-                                <div className={`flex items-center gap-0.5 mt-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
-                                  <button
-                                    onClick={() => startReply(message)}
-                                    className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-                                    title="RÃ©pondre"
-                                  >
-                                    <Reply size={14} className="text-gray-400" />
-                                  </button>
-                                  {isCurrentUser && message.text && (
-                                    <button
-                                      onClick={() => startEdit(message)}
-                                      className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-                                      title="Modifier"
-                                    >
-                                      <Pencil size={13} className="text-gray-400" />
-                                    </button>
-                                  )}
-                                  {isCurrentUser && (
-                                    <button
-                                      onClick={() => handleDeleteMessage(message.id)}
-                                      className="p-1 hover:bg-red-50 rounded-full transition-colors"
-                                      title="Supprimer"
-                                    >
-                                      <Trash2 size={13} className="text-gray-400 hover:text-red-400" />
-                                    </button>
-                                  )}
-                                </div>
-                              )}
                             </>
                           )}
 
@@ -521,48 +538,6 @@ export function ChatScreen() {
                           )}
                         </div>
 
-                        {/* Mobile context menu */}
-                        {!isDeleted && !isTemp && isCurrentUser && (
-                          <div className="md:hidden relative self-center ml-1">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === message.id ? null : message.id); }}
-                              className="p-1 opacity-0 group-hover/msg:opacity-100 hover:bg-gray-200 rounded-full transition-all"
-                            >
-                              <MoreVertical size={14} className="text-gray-400" />
-                            </button>
-                            <AnimatePresence>
-                              {activeMenuId === message.id && (
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.9 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  exit={{ opacity: 0, scale: 0.9 }}
-                                  className="absolute right-0 top-8 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-30 min-w-[140px]"
-                                >
-                                  <button
-                                    onClick={() => startReply(message)}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                                  >
-                                    <Reply size={15} /> RÃ©pondre
-                                  </button>
-                                  {message.text && (
-                                    <button
-                                      onClick={() => startEdit(message)}
-                                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
-                                    >
-                                      <Pencil size={15} /> Modifier
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={() => handleDeleteMessage(message.id)}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"
-                                  >
-                                    <Trash2 size={15} /> Supprimer
-                                  </button>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                        )}
                       </motion.div>
                     );
                   })}
@@ -588,6 +563,64 @@ export function ChatScreen() {
             )}
           </AnimatePresence>
         </div>
+
+        {/* ─── Context Menu ─── */}
+        <AnimatePresence>
+          {contextMenu && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-40"
+                onClick={() => setContextMenu(null)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 5 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 5 }}
+                transition={{ duration: 0.15 }}
+                className="fixed z-50 bg-white rounded-2xl shadow-xl border border-gray-200 py-2 min-w-[170px] overflow-hidden"
+                style={{ left: contextMenu.x, top: contextMenu.y }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => { startReply(contextMenu.message); setContextMenu(null); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >
+                  <Reply size={16} className="text-[#1FA774]" /> Répondre
+                </button>
+                {contextMenu.message.text && (
+                  <button
+                    onClick={() => handleCopyText(contextMenu.message.text)}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                  >
+                    <Copy size={16} className="text-gray-400" /> Copier
+                  </button>
+                )}
+                {contextMenu.message.senderId === currentUserId && contextMenu.message.text && (
+                  <button
+                    onClick={() => { startEdit(contextMenu.message); setContextMenu(null); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                  >
+                    <Pencil size={16} className="text-blue-500" /> Modifier
+                  </button>
+                )}
+                {contextMenu.message.senderId === currentUserId && (
+                  <>
+                    <div className="mx-3 my-1 border-t border-gray-100" />
+                    <button
+                      onClick={() => { handleDeleteMessage(contextMenu.message.id); setContextMenu(null); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors"
+                    >
+                      <Trash2 size={16} /> Supprimer
+                    </button>
+                  </>
+                )}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* â”€â”€â”€ Reply/Edit preview â”€â”€â”€ */}
         <AnimatePresence>
