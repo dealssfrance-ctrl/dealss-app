@@ -11,7 +11,7 @@ import { Layout } from '../components/Layout';
 import { ChatScreenSkeleton } from '../components/Skeleton';
 import { toast } from 'sonner';
 
-const POLL_INTERVAL = 15000;
+const POLL_INTERVAL = 3000;
 
 export function ChatScreen() {
   const { id } = useParams();

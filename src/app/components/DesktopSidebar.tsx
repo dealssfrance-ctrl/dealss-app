@@ -20,13 +20,10 @@ export function DesktopSidebar() {
 
   useEffect(() => {
     fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
+    const isChatPage = location.pathname === '/messages' || location.pathname.startsWith('/chat/');
+    const interval = setInterval(fetchUnread, isChatPage ? 3000 : 30000);
     return () => clearInterval(interval);
-  }, [fetchUnread]);
-
-  useEffect(() => {
-    fetchUnread();
-  }, [location.pathname, fetchUnread]);
+  }, [fetchUnread, location.pathname]);
 
   const navItems = [
     { icon: Home, label: 'Accueil', path: '/' },

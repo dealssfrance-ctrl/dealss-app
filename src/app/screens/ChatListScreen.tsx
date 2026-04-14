@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { chatService, ConversationSummary } from '../services/chatService';
 import { ChatListSkeleton } from '../components/Skeleton';
 
-const POLL_INTERVAL = 30000;
+const POLL_INTERVAL = 3000;
 
 export function ChatListScreen() {
   const navigate = useNavigate();
