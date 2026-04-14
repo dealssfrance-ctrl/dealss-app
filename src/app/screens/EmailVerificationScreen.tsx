@@ -60,13 +60,17 @@ export function EmailVerificationScreen() {
   // Auto-check session on mount (user may have confirmed in same browser)
   useEffect(() => {
     const autoCheck = async () => {
-      const { data: refreshData } = await supabase.auth.refreshSession();
-      if (refreshData?.session) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email_confirmed_at) {
-          clearPendingVerification();
-          navigate('/', { replace: true });
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.email_confirmed_at) {
+            clearPendingVerification();
+            navigate('/', { replace: true });
+          }
         }
+      } catch {
+        // No session — expected while waiting for verification
       }
     };
     autoCheck();
@@ -75,9 +79,9 @@ export function EmailVerificationScreen() {
   const checkSession = async () => {
     try {
       setChecking(true);
-      // Try refreshing the existing session
-      const { data: refreshData } = await supabase.auth.refreshSession();
-      if (refreshData?.session) {
+      // Try getting existing session (works if confirmed in same browser)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user?.email_confirmed_at) {
           clearPendingVerification();
@@ -86,9 +90,16 @@ export function EmailVerificationScreen() {
           return;
         }
       }
-      toast.error('Email pas encore vérifié. Vérifiez votre boîte mail.');
+      // No session found — user may have verified in another browser
+      // Clear pending state and send to sign-in
+      clearPendingVerification();
+      toast.info('Connectez-vous avec vos identifiants pour continuer.');
+      navigate('/signin', { replace: true });
     } catch {
-      toast.error('Erreur lors de la vérification');
+      // Even on error, just redirect to sign-in
+      clearPendingVerification();
+      toast.info('Connectez-vous avec vos identifiants.');
+      navigate('/signin', { replace: true });
     } finally {
       setChecking(false);
     }
