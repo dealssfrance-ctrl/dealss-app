@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { supabase } from '../services/supabaseClient';
 import './Traffic.css';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 interface TrafficData {
   id: string;
@@ -27,12 +25,12 @@ const Traffic = () => {
   const fetchTrafficData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/traffic`);
-      if (response.data.success) {
-        setTrafficData(response.data.data);
-      } else {
-        setError('Failed to fetch traffic data');
-      }
+      const { data, error } = await supabase.from('traffic_data').select('*').order('date', { ascending: true });
+      if (error) throw error;
+      setTrafficData((data || []).map((r: any) => ({
+        id: r.id, date: r.date, visits: r.visits, pageViews: r.page_views,
+        uniqueUsers: r.unique_users, bounceRate: r.bounce_rate, avgSessionDuration: r.avg_session_duration,
+      })));
     } catch (error) {
       console.error('Error fetching traffic data:', error);
       setError('Failed to fetch traffic data');

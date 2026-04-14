@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+import { supabase } from '../services/supabaseClient';
 
 interface Offer {
   id: string;
@@ -35,8 +33,13 @@ const Offers = () => {
 
   const fetchOffers = async () => {
     try {
-      const res = await axios.get(`${API}/offers`);
-      setOffers(res.data.data?.data || res.data.data || []);
+      const { data, error } = await supabase.from('offers').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      setOffers((data || []).map((r: any) => ({
+        id: r.id, storeName: r.store_name, discount: r.discount, description: r.description,
+        category: r.category, imageUrl: r.image_url, status: r.status, userId: r.user_id,
+        userName: r.user_name, createdAt: r.created_at, updatedAt: r.updated_at,
+      })));
     } catch (err) {
       console.error('Error fetching offers:', err);
     } finally {
@@ -46,8 +49,9 @@ const Offers = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get(`${API}/offers/categories`);
-      setCategories(res.data.data || []);
+      const { data } = await supabase.from('offers').select('category');
+      const cats = Array.from(new Set((data || []).map((r: any) => r.category))).sort() as string[];
+      setCategories(cats);
     } catch (err) {
       console.error('Error fetching categories:', err);
     }
@@ -86,21 +90,31 @@ const Offers = () => {
     }
     try {
       if (editingOffer) {
-        await axios.put(`${API}/offers/${editingOffer.id}`, form);
+        await supabase.from('offers').update({
+          store_name: form.storeName, discount: form.discount, description: form.description,
+          category: form.category, image_url: form.imageUrl, status: form.status,
+          updated_at: new Date().toISOString(),
+        }).eq('id', editingOffer.id);
       } else {
-        await axios.post(`${API}/offers`, { ...form, userId: '1', userName: 'Admin' });
+        const id = `offer_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        const now = new Date().toISOString();
+        await supabase.from('offers').insert({
+          id, store_name: form.storeName, discount: form.discount, description: form.description,
+          category: form.category, image_url: form.imageUrl, status: form.status || 'active',
+          user_id: '1', user_name: 'Admin', created_at: now, updated_at: now,
+        });
       }
       setShowModal(false);
       fetchOffers();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred');
+      setError(err.message || 'An error occurred');
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this offer?')) return;
     try {
-      await axios.delete(`${API}/offers/${id}`);
+      await supabase.from('offers').delete().eq('id', id);
       fetchOffers();
     } catch (err) {
       console.error('Error deleting offer:', err);
@@ -110,7 +124,7 @@ const Offers = () => {
   const toggleStatus = async (offer: Offer) => {
     const newStatus = offer.status === 'active' ? 'inactive' : 'active';
     try {
-      await axios.put(`${API}/offers/${offer.id}`, { status: newStatus });
+      await supabase.from('offers').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', offer.id);
       fetchOffers();
     } catch (err) {
       console.error('Error toggling status:', err);

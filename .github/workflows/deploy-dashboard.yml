@@ -1,0 +1,49 @@
+name: Deploy Dashboard to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dashboard/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-dashboard
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build dashboard
+        env:
+          VITE_SUPABASE_URL: https://rylxeslhdpyewtfexzll.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_RAnXm0cqHKRRHuJ0u5rfYA_bS5TU6WS
+        run: cd dashboard && npx vite build --base=/dealss-dashboard/
+
+      - name: Add 404.html for SPA routing
+        run: cp dashboard/dist/index.html dashboard/dist/404.html
+
+      - name: Deploy to dealss-dashboard repo
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.DEPLOY_TOKEN }}
+          external_repository: dealssfrance-ctrl/dealss-dashboard
+          publish_dir: ./dashboard/dist

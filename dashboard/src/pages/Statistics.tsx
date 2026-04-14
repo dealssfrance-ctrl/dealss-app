@@ -3,9 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import axios from 'axios';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+import { supabase } from '../services/supabaseClient';
 
 interface Stats {
   totalUsers: number;
@@ -47,16 +45,45 @@ const Statistics = () => {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [statsRes, catRes, statusRes, trafficRes] = await Promise.all([
-          axios.get(`${API}/dashboard/stats`),
-          axios.get(`${API}/dashboard/offers-by-category`),
-          axios.get(`${API}/dashboard/offers-by-status`),
-          axios.get(`${API}/dashboard/traffic-chart`)
+        // Stats
+        const [usersRes, offersRes, trafficRes, convsRes, msgsRes] = await Promise.all([
+          supabase.from('users').select('id', { count: 'exact', head: true }),
+          supabase.from('offers').select('id', { count: 'exact', head: true }),
+          supabase.from('traffic_data').select('visits'),
+          supabase.from('conversations').select('id', { count: 'exact', head: true }),
+          supabase.from('messages').select('id', { count: 'exact', head: true }),
         ]);
-        setStats(statsRes.data.data);
-        setCategories(catRes.data.data);
-        setStatusData(statusRes.data.data);
-        setTraffic(trafficRes.data.data);
+        const totalTraffic = (trafficRes.data || []).reduce((sum: number, d: any) => sum + d.visits, 0);
+        const { data: allTraffic } = await supabase.from('traffic_data').select('date,visits').order('date', { ascending: true });
+        let growth = 0;
+        if (allTraffic && allTraffic.length >= 14) {
+          const recent7 = allTraffic.slice(-7).reduce((s: number, d: any) => s + d.visits, 0);
+          const prev7 = allTraffic.slice(-14, -7).reduce((s: number, d: any) => s + d.visits, 0);
+          growth = prev7 > 0 ? Math.round(((recent7 - prev7) / prev7) * 1000) / 10 : 0;
+        }
+        setStats({
+          totalUsers: usersRes.count || 0, totalOffers: offersRes.count || 0, totalTraffic,
+          totalConversations: convsRes.count || 0, totalMessages: msgsRes.count || 0, growth,
+        });
+
+        // Categories
+        const { data: allOffers } = await supabase.from('offers').select('category');
+        const catMap: Record<string, number> = {};
+        (allOffers || []).forEach((o: any) => { catMap[o.category] = (catMap[o.category] || 0) + 1; });
+        setCategories(Object.entries(catMap).map(([category, count]) => ({ category, count })));
+
+        // Status
+        const { data: allOffersStatus } = await supabase.from('offers').select('status');
+        const statusMap: Record<string, number> = {};
+        (allOffersStatus || []).forEach((o: any) => { statusMap[o.status] = (statusMap[o.status] || 0) + 1; });
+        setStatusData(Object.entries(statusMap).map(([status, count]) => ({ status, count })));
+
+        // Traffic chart
+        const { data: trafficChart } = await supabase.from('traffic_data').select('*').order('date', { ascending: true });
+        setTraffic((trafficChart || []).map((d: any) => ({
+          date: d.date, visits: d.visits, pageViews: d.page_views,
+          uniqueUsers: d.unique_users, bounceRate: d.bounce_rate, avgSessionDuration: d.avg_session_duration,
+        })));
       } catch (err) {
         console.error('Error loading statistics:', err);
       } finally {

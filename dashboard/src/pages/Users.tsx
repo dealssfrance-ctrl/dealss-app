@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+import { supabase } from '../services/supabaseClient';
 
 interface User {
   id: string;
@@ -21,8 +19,9 @@ const Users = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get(`${API}/users`);
-      setUsers(res.data.data);
+      const { data, error } = await supabase.from('users').select('id,email,name,created_at,updated_at');
+      if (error) throw error;
+      setUsers((data || []).map((r: any) => ({ id: r.id, name: r.name, email: r.email, createdAt: r.created_at, updatedAt: r.updated_at })));
     } catch (err) {
       console.error('Error fetching users:', err);
     } finally {
@@ -53,21 +52,23 @@ const Users = () => {
     }
     try {
       if (editingUser) {
-        await axios.put(`${API}/users/${editingUser.id}`, { name: form.name, email: form.email });
+        await supabase.from('users').update({ name: form.name, email: form.email, updated_at: new Date().toISOString() }).eq('id', editingUser.id);
       } else {
-        await axios.post(`${API}/users`, { name: form.name, email: form.email, password: form.password || 'default123' });
+        const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        const now = new Date().toISOString();
+        await supabase.from('users').insert({ id, name: form.name, email: form.email, password: form.password || 'default123', created_at: now, updated_at: now });
       }
       setShowModal(false);
       fetchUsers();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred');
+      setError(err.message || 'An error occurred');
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
-      await axios.delete(`${API}/users/${id}`);
+      await supabase.from('users').delete().eq('id', id);
       fetchUsers();
     } catch (err) {
       console.error('Error deleting user:', err);

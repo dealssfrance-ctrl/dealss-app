@@ -1,10 +1,19 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-
 import { supabase } from './supabaseClient';
 
-async function getSupabaseToken(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token ?? null;
+function toOffer(row: any): Offer {
+  return {
+    id: row.id,
+    storeName: row.store_name,
+    discount: row.discount,
+    description: row.description,
+    category: row.category,
+    imageUrl: row.image_url || '',
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    userId: row.user_id,
+    userName: row.user_name,
+  };
 }
 
 export interface Offer {
@@ -60,21 +69,8 @@ export interface SearchParams {
 }
 
 class OffersService {
-  private async getAuthHeaders(): Promise<HeadersInit> {
-    const token = await getSupabaseToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    };
-  }
-
-  /**
-   * Compress an image file on the client before upload.
-   * Resizes to max 1200px on longest side and outputs JPEG at 0.7 quality.
-   */
   private compressImage(file: File, maxSize = 1200, quality = 0.7): Promise<File> {
     return new Promise((resolve, reject) => {
-      // If already small enough, skip compression
       if (file.size <= 200 * 1024) {
         resolve(file);
         return;
@@ -133,174 +129,136 @@ class OffersService {
     file: File,
     onProgress?: (percent: number) => void
   ): Promise<string> {
-    // Compress before uploading
     const compressed = await this.compressImage(file);
+    const ext = compressed.name.replace(/^.*\./, '') || 'jpg';
+    const fileName = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
 
-    const token = await getSupabaseToken();
-    const formData = new FormData();
-    formData.append('image', compressed);
+    if (onProgress) onProgress(10);
 
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', `${API_URL}/offers/upload`);
+    const { error } = await supabase.storage
+      .from('offers')
+      .upload(fileName, compressed, { contentType: compressed.type, upsert: false });
 
-      if (token) {
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-      }
+    if (error) throw new Error(error.message || 'Failed to upload image');
 
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable && onProgress) {
-          onProgress(Math.round((e.loaded / e.total) * 100));
-        }
-      };
+    if (onProgress) onProgress(90);
 
-      xhr.onload = () => {
-        try {
-          const result = JSON.parse(xhr.responseText);
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(result.url);
-          } else {
-            reject(new Error(result.message || 'Failed to upload image'));
-          }
-        } catch {
-          reject(new Error('Failed to parse upload response'));
-        }
-      };
+    const { data: urlData } = supabase.storage.from('offers').getPublicUrl(fileName);
 
-      xhr.onerror = () => reject(new Error('Network error during upload'));
-      xhr.onabort = () => reject(new Error('Upload cancelled'));
-
-      xhr.send(formData);
-    });
+    if (onProgress) onProgress(100);
+    return urlData.publicUrl;
   }
 
   async getOffers(page = 1, limit = 10): Promise<OffersResponse> {
-    const response = await fetch(
-      `${API_URL}/offers?page=${page}&limit=${limit}`,
-      {
-        method: 'GET',
-        headers: await this.getAuthHeaders()
-      }
-    );
+    const from = (page - 1) * limit;
+    const { data, count, error } = await supabase
+      .from('offers')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, from + limit - 1);
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch offers');
-    }
+    if (error) throw new Error('Failed to fetch offers');
 
-    return response.json();
+    const total = count || 0;
+    const totalPages = Math.ceil(total / limit);
+    return {
+      success: true,
+      data: (data || []).map(toOffer),
+      pagination: { page, limit, total, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
+    };
   }
 
   async searchOffers(params: SearchParams): Promise<OffersResponse> {
-    const searchParams = new URLSearchParams();
-    
-    if (params.query) searchParams.append('q', params.query);
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const sortBy = params.sortBy || 'createdAt';
+    const sortOrder = params.sortOrder || 'desc';
+
+    let q = supabase.from('offers').select('*', { count: 'exact' }).eq('status', 'active');
+
+    if (params.query) {
+      q = q.or(`store_name.ilike.%${params.query}%,description.ilike.%${params.query}%,category.ilike.%${params.query}%`);
+    }
     if (params.category && params.category !== 'All') {
-      searchParams.append('category', params.category);
-    }
-    if (params.page) searchParams.append('page', params.page.toString());
-    if (params.limit) searchParams.append('limit', params.limit.toString());
-    if (params.sortBy) searchParams.append('sortBy', params.sortBy);
-    if (params.sortOrder) searchParams.append('sortOrder', params.sortOrder);
-
-    const response = await fetch(
-      `${API_URL}/offers/search?${searchParams.toString()}`,
-      {
-        method: 'GET',
-        headers: await this.getAuthHeaders()
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to search offers');
+      q = q.ilike('category', params.category);
     }
 
-    return response.json();
+    const sortColumn = sortBy === 'storeName' ? 'store_name' : sortBy === 'discount' ? 'discount' : 'created_at';
+    q = q.order(sortColumn, { ascending: sortOrder === 'asc' });
+
+    const from = (page - 1) * limit;
+    q = q.range(from, from + limit - 1);
+
+    const { data, count, error } = await q;
+    if (error) throw new Error('Failed to search offers');
+
+    const total = count || 0;
+    const totalPages = Math.ceil(total / limit);
+    return {
+      success: true,
+      data: (data || []).map(toOffer),
+      pagination: { page, limit, total, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
+    };
   }
 
   async getOfferById(id: string): Promise<OfferResponse> {
-    const response = await fetch(`${API_URL}/offers/${id}`, {
-      method: 'GET',
-      headers: await this.getAuthHeaders()
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch offer');
-    }
-
-    return response.json();
+    const { data, error } = await supabase.from('offers').select('*').eq('id', id).single();
+    if (error || !data) throw new Error('Failed to fetch offer');
+    return { success: true, data: toOffer(data) };
   }
 
   async getCategories(): Promise<{ success: boolean; data: string[] }> {
-    const response = await fetch(`${API_URL}/offers/categories`, {
-      method: 'GET',
-      headers: await this.getAuthHeaders()
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch categories');
-    }
-
-    return response.json();
+    const { data, error } = await supabase.from('offers').select('category');
+    if (error) throw new Error('Failed to fetch categories');
+    const categories = Array.from(new Set((data || []).map((r: any) => r.category))).sort() as string[];
+    return { success: true, data: ['All', ...categories] };
   }
 
   async createOffer(data: CreateOfferData, userId: string): Promise<OfferResponse> {
-    const response = await fetch(`${API_URL}/offers`, {
-      method: 'POST',
-      headers: await this.getAuthHeaders(),
-      body: JSON.stringify({ ...data, userId })
-    });
+    const id = `offer_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const now = new Date().toISOString();
 
-    const result = await response.json();
+    const { data: row, error } = await supabase.from('offers').insert({
+      id,
+      store_name: data.storeName,
+      discount: data.discount,
+      description: data.description,
+      category: data.category,
+      image_url: data.imageUrl || '',
+      status: 'active',
+      user_id: userId,
+      user_name: '',
+      created_at: now,
+      updated_at: now,
+    }).select().single();
 
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to create offer');
-    }
-
-    return result;
+    if (error) throw new Error(error.message || 'Failed to create offer');
+    return { success: true, data: toOffer(row) };
   }
 
   async updateOffer(id: string, data: Partial<CreateOfferData>): Promise<OfferResponse> {
-    const response = await fetch(`${API_URL}/offers/${id}`, {
-      method: 'PUT',
-      headers: await this.getAuthHeaders(),
-      body: JSON.stringify(data)
-    });
+    const dbUpdates: any = { updated_at: new Date().toISOString() };
+    if (data.storeName) dbUpdates.store_name = data.storeName;
+    if (data.discount) dbUpdates.discount = data.discount;
+    if (data.description) dbUpdates.description = data.description;
+    if (data.category) dbUpdates.category = data.category;
+    if (data.imageUrl !== undefined) dbUpdates.image_url = data.imageUrl;
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to update offer');
-    }
-
-    return result;
+    const { data: row, error } = await supabase.from('offers').update(dbUpdates).eq('id', id).select().single();
+    if (error || !row) throw new Error('Failed to update offer');
+    return { success: true, data: toOffer(row) };
   }
 
   async deleteOffer(id: string): Promise<{ success: boolean; message: string }> {
-    const response = await fetch(`${API_URL}/offers/${id}`, {
-      method: 'DELETE',
-      headers: await this.getAuthHeaders()
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to delete offer');
-    }
-
-    return result;
+    const { error } = await supabase.from('offers').delete().eq('id', id);
+    if (error) throw new Error('Failed to delete offer');
+    return { success: true, message: 'Offer deleted successfully' };
   }
 
   async getMyOffers(userId: string): Promise<{ success: boolean; data: Offer[] }> {
-    const response = await fetch(`${API_URL}/offers/user/${userId}`, {
-      method: 'GET',
-      headers: await this.getAuthHeaders()
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch user offers');
-    }
-
-    return response.json();
+    const { data, error } = await supabase.from('offers').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    if (error) throw new Error('Failed to fetch user offers');
+    return { success: true, data: (data || []).map(toOffer) };
   }
 }
 
