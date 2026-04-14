@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, MessageCircle, Star, Share2, Heart, Clock, Tag, MapPin, ExternalLink, ShieldCheck, TrendingDown } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Star, Share2, Heart, Clock, Tag, MapPin, ExternalLink, ShieldCheck, TrendingDown, X, ZoomIn, ZoomOut, Download } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { StarRating } from '../components/StarRating';
@@ -11,7 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { offersService, Offer } from '../services/offersService';
 import { chatService } from '../services/chatService';
 import { reviewsService, Review } from '../services/reviewsService';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { OfferDetailSkeleton } from '../components/Skeleton';
 
@@ -24,6 +24,8 @@ export function OfferDetailScreen() {
   const [isOfferReviewModalOpen, setIsOfferReviewModalOpen] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [offerRating, setOfferRating] = useState<{ average: number; count: number }>({ average: 0, count: 0 });
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxZoom, setLightboxZoom] = useState(1);
 
   const isOwnOffer = offer?.userId === user?.id;
 
@@ -174,7 +176,7 @@ export function OfferDetailScreen() {
           <div className="md:flex md:gap-8">
             {/* ─── LEFT: Image + Gallery ─── */}
             <div className="md:w-[55%] md:shrink-0">
-              <div className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-[4/3] md:aspect-[3/2] shadow-sm">
+              <div className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-[4/3] md:aspect-[3/2] shadow-sm cursor-zoom-in" onClick={() => { setLightboxOpen(true); setLightboxZoom(1); }}>
                 <img
                   src={offer.imageUrl}
                   alt={offer.storeName}
@@ -360,6 +362,69 @@ export function OfferDetailScreen() {
           )}
         </motion.div>
       </div>
+
+      {/* ─── Image Lightbox ─── */}
+      <AnimatePresence>
+        {lightboxOpen && offer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/90 flex flex-col"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <div className="flex items-center justify-between px-4 py-3 shrink-0" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setLightboxZoom(z => Math.max(0.5, z - 0.5))}
+                  disabled={lightboxZoom <= 0.5}
+                  className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 transition-colors"
+                >
+                  <ZoomOut size={20} />
+                </button>
+                <span className="text-white/70 text-sm font-medium min-w-[3rem] text-center">{Math.round(lightboxZoom * 100)}%</span>
+                <button
+                  onClick={() => setLightboxZoom(z => Math.min(4, z + 0.5))}
+                  disabled={lightboxZoom >= 4}
+                  className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 transition-colors"
+                >
+                  <ZoomIn size={20} />
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={offer.imageUrl}
+                  download
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  <Download size={20} />
+                </a>
+                <button
+                  onClick={() => setLightboxOpen(false)}
+                  className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center justify-center overflow-auto p-4" onClick={(e) => e.stopPropagation()}>
+              <motion.img
+                src={offer.imageUrl}
+                alt={offer.storeName}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.2 }}
+                className="max-w-full max-h-full object-contain rounded-lg cursor-zoom-out"
+                style={{ transform: `scale(${lightboxZoom})`, transition: 'transform 0.2s ease' }}
+                onClick={() => setLightboxOpen(false)}
+                draggable={false}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </Layout>
   );
 }
