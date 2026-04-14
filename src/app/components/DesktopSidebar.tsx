@@ -1,16 +1,37 @@
 import { Home, Search, MessageCircle, User, Plus } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { chatService } from '../services/chatService';
 
 export function DesktopSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnread = useCallback(async () => {
+    if (!user) return;
+    try {
+      const count = await chatService.getTotalUnreadCount(user.id);
+      setUnreadCount(count);
+    } catch { /* ignore */ }
+  }, [user]);
+
+  useEffect(() => {
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUnread]);
+
+  useEffect(() => {
+    fetchUnread();
+  }, [location.pathname, fetchUnread]);
 
   const navItems = [
     { icon: Home, label: 'Accueil', path: '/' },
     { icon: Search, label: 'Rechercher', path: '/search' },
-    { icon: MessageCircle, label: 'Messages', path: '/messages' },
+    { icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadCount },
     { icon: User, label: 'Profil', path: '/profile' },
   ];
 
@@ -39,8 +60,20 @@ export function DesktopSidebar() {
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
-              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-sm">{item.label}</span>
+              <div className="relative">
+                <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                {'badge' in item && (item as any).badge > 0 && (
+                  <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {(item as any).badge > 99 ? '99+' : (item as any).badge}
+                  </span>
+                )}
+              </div>
+              <span className="text-sm flex-1">{item.label}</span>
+              {'badge' in item && (item as any).badge > 0 && (
+                <span className="min-w-[22px] h-[22px] px-1.5 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center">
+                  {(item as any).badge > 99 ? '99+' : (item as any).badge}
+                </span>
+              )}
             </button>
           );
         })}

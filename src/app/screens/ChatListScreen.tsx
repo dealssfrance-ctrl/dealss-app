@@ -91,11 +91,18 @@ export function ChatListScreen() {
           <div className="max-w-4xl mx-auto px-5 md:px-8 pt-6 pb-4">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-              {conversations.length > 0 && (
-                <span className="px-2.5 py-1 bg-[#1FA774] text-white text-xs font-bold rounded-full">
-                  {conversations.length}
-                </span>
-              )}
+              {(() => {
+                const totalUnread = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+                return totalUnread > 0 ? (
+                  <span className="px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse">
+                    {totalUnread > 99 ? '99+' : totalUnread}
+                  </span>
+                ) : conversations.length > 0 ? (
+                  <span className="px-2.5 py-1 bg-gray-200 text-gray-500 text-xs font-bold rounded-full">
+                    {conversations.length}
+                  </span>
+                ) : null;
+              })()}
             </div>
             {/* Search bar */}
             {conversations.length > 0 && (
@@ -158,18 +165,25 @@ export function ChatListScreen() {
                   {/* Content */}
                   <div className="flex-1 text-left min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <h3 className="font-semibold text-gray-900 text-[15px] truncate">
+                      <h3 className={`font-semibold text-[15px] truncate ${conversation.unreadCount > 0 ? 'text-gray-900' : 'text-gray-700'}`}>
                         {conversation.otherUserName}
                       </h3>
-                      <span className="text-[11px] text-gray-400 flex-shrink-0 ml-3 font-medium">
-                        {formatTime(conversation.lastMessageTime)}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0 ml-3">
+                        <span className={`text-[11px] font-medium ${conversation.unreadCount > 0 ? 'text-[#1FA774]' : 'text-gray-400'}`}>
+                          {formatTime(conversation.lastMessageTime)}
+                        </span>
+                        {conversation.unreadCount > 0 && (
+                          <span className="min-w-[20px] h-5 px-1.5 bg-[#1FA774] text-white text-[11px] font-bold rounded-full flex items-center justify-center">
+                            {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1.5 mb-1">
                       <Store size={12} className="text-gray-400 shrink-0" />
                       <p className="text-xs text-gray-400 truncate">{conversation.storeName}</p>
                     </div>
-                    <p className="text-sm text-gray-500 truncate leading-snug">
+                    <p className={`text-sm truncate leading-snug ${conversation.unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
                       {conversation.lastMessage || 'Commencez la conversation...'}
                     </p>
                   </div>

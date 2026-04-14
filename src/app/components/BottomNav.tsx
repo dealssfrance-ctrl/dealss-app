@@ -1,14 +1,38 @@
 import { Home, Search, MessageCircle, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { chatService } from '../services/chatService';
 
 export function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnread = useCallback(async () => {
+    if (!user) return;
+    try {
+      const count = await chatService.getTotalUnreadCount(user.id);
+      setUnreadCount(count);
+    } catch { /* ignore */ }
+  }, [user]);
+
+  useEffect(() => {
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUnread]);
+
+  // Refresh when navigating away from chat
+  useEffect(() => {
+    fetchUnread();
+  }, [location.pathname, fetchUnread]);
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/' },
     { icon: Search, label: 'Search', path: '/search' },
-    { icon: MessageCircle, label: 'Messages', path: '/messages' },
+    { icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadCount },
     { icon: User, label: 'Profile', path: '/profile' },
   ];
 
@@ -23,13 +47,20 @@ export function BottomNav() {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className="flex flex-col items-center gap-1 py-2 px-3 min-w-[60px]"
+              className="relative flex flex-col items-center gap-1 py-2 px-3 min-w-[60px]"
             >
-              <Icon
-                size={24}
-                className={isActive ? 'text-[#1FA774]' : 'text-gray-400'}
-                strokeWidth={isActive ? 2.5 : 2}
-              />
+              <div className="relative">
+                <Icon
+                  size={24}
+                  className={isActive ? 'text-[#1FA774]' : 'text-gray-400'}
+                  strokeWidth={isActive ? 2.5 : 2}
+                />
+                {item.badge && item.badge > 0 ? (
+                  <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                ) : null}
+              </div>
               <span className={`text-xs ${isActive ? 'text-[#1FA774] font-semibold' : 'text-gray-500'}`}>
                 {item.label}
               </span>
