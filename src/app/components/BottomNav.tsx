@@ -36,6 +36,9 @@ export function BottomNav() {
     { icon: User, label: 'Profile', path: '/profile' },
   ];
 
+  // Hide on individual chat screens
+  if (location.pathname.startsWith('/chat/')) return null;
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-inset-bottom md:hidden z-30">
       <div className="flex justify-around items-center h-20 max-w-md mx-auto px-4">

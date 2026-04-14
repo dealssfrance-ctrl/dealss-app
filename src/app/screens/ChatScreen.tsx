@@ -340,7 +340,7 @@ export function ChatScreen() {
           100% { background-color: transparent; }
         }
       `}</style>
-      <div className="h-[calc(100dvh-4rem)] md:h-screen flex flex-col bg-[#f0f2f5]">
+      <div className="h-dvh md:h-screen flex flex-col bg-[#f0f2f5]">
         {/* â”€â”€â”€ Header â”€â”€â”€ */}
         <div className="bg-white border-b border-gray-200 shrink-0 z-20">
           <div className="max-w-5xl mx-auto px-4 md:px-6">
