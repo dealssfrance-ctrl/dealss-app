@@ -30,14 +30,11 @@ function AuthCallbackHandler() {
           // Verifier missing (different browser) or code expired
           // The email IS verified server-side even if the exchange fails
           localStorage.removeItem('pending_verification_email');
-          toast.success(
-            'Email vérifié avec succès ! Connectez-vous avec vos identifiants.',
-            { duration: 6000 },
-          );
-          // Redirect to sign-in
+          localStorage.setItem('seen_welcome', 'true');
+          // Navigate to full-screen confirmation page (visible, not a fleeting toast)
           const base = getRouterBasename();
-          const signinPath = `${base === '/' ? '' : base}/signin`;
-          window.location.replace(signinPath);
+          const confirmedPath = `${base === '/' ? '' : base}/email-confirmed`;
+          window.location.replace(confirmedPath);
         } else if (data.session) {
           authLog('PKCE exchange succeeded, session created');
           localStorage.removeItem('pending_verification_email');

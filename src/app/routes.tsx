@@ -5,6 +5,7 @@ import { SignInScreen } from './screens/SignInScreen';
 import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
 import { ResetPasswordScreen } from './screens/ResetPasswordScreen';
 import { EmailVerificationScreen } from './screens/EmailVerificationScreen';
+import { EmailConfirmedScreen } from './screens/EmailConfirmedScreen';
 import { Home } from './screens/Home';
 import { SearchScreen } from './screens/SearchScreen';
 import { AddOfferScreen } from './screens/AddOfferScreen';
@@ -40,6 +41,10 @@ export const router = createBrowserRouter([
   {
     path: '/reset-password',
     Component: () => <ResetPasswordScreen />,
+  },
+  {
+    path: '/email-confirmed',
+    Component: () => <EmailConfirmedScreen />,
   },
   {
     path: '/',
