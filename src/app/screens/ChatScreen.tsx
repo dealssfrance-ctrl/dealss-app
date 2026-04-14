@@ -747,8 +747,8 @@ export function ChatScreen() {
           )}
         </AnimatePresence>
 
-        {/* â”€â”€â”€ Input bar â”€â”€â”€ */}
-        <div className="bg-white border-t border-gray-200 shrink-0">
+        {/* ─── Input bar ─── */}
+        <div className="bg-white border-t border-gray-200 shrink-0 pb-16 md:pb-0">
           <div className="max-w-3xl mx-auto px-3 md:px-6 py-3">
             <form onSubmit={handleSend} className="flex items-end gap-2">
               <label className="p-2.5 hover:bg-gray-100 rounded-full cursor-pointer transition-colors shrink-0">
