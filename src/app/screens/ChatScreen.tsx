@@ -340,7 +340,7 @@ export function ChatScreen() {
           100% { background-color: transparent; }
         }
       `}</style>
-      <div className="h-screen flex flex-col bg-[#f0f2f5]">
+      <div className="h-[calc(100dvh-4rem)] md:h-screen flex flex-col bg-[#f0f2f5]">
         {/* â”€â”€â”€ Header â”€â”€â”€ */}
         <div className="bg-white border-b border-gray-200 shrink-0 z-20">
           <div className="max-w-5xl mx-auto px-4 md:px-6">
@@ -748,7 +748,7 @@ export function ChatScreen() {
         </AnimatePresence>
 
         {/* ─── Input bar ─── */}
-        <div className="bg-white border-t border-gray-200 shrink-0 pb-16 md:pb-0">
+        <div className="bg-white border-t border-gray-200 shrink-0">
           <div className="max-w-3xl mx-auto px-3 md:px-6 py-3">
             <form onSubmit={handleSend} className="flex items-end gap-2">
               <label className="p-2.5 hover:bg-gray-100 rounded-full cursor-pointer transition-colors shrink-0">
