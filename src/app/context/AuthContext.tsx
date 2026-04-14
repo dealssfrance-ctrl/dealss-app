@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../services/supabaseClient';
+import { getRedirectUrl, authLog } from '../utils/env';
 import type { Session } from '@supabase/supabase-js';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export interface User {
   id: string;
@@ -42,6 +41,25 @@ function sessionToUser(session: Session): User {
   };
 }
 
+/** Upsert user profile in the `users` table directly via Supabase. */
+async function syncUserProfile(session: Session): Promise<void> {
+  const meta = session.user.user_metadata || {};
+  const { error } = await supabase.from('users').upsert(
+    {
+      id: session.user.id,
+      email: session.user.email,
+      name: meta.name || meta.full_name || '',
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'id' },
+  );
+  if (error) {
+    console.error('User profile sync error:', error.message);
+  } else {
+    authLog('User profile synced', session.user.id);
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -55,8 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setHasSeenWelcome(savedWelcome);
     if (savedPending) setPendingVerification(true);
 
-    // Get initial session
+    authLog('Environment', {
+      origin: window.location.origin,
+      base: import.meta.env.BASE_URL,
+      redirectHome: getRedirectUrl(),
+    });
+
+    // Get initial session (also exchanges PKCE code if present in URL)
     supabase.auth.getSession().then(({ data: { session } }) => {
+      authLog('Initial session', session ? 'found' : 'none');
       if (session) {
         setUser(sessionToUser(session));
         setToken(session.access_token);
@@ -64,37 +89,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    // Listen for auth state changes (login, logout, token refresh)
+    // Listen for auth state changes (login, logout, token refresh, password recovery)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        authLog('Auth event', event);
         if (session) {
           setUser(sessionToUser(session));
           setToken(session.access_token);
+
           // Email confirmed — clear pending verification
           if (event === 'SIGNED_IN' && localStorage.getItem('pending_verification_email')) {
             localStorage.removeItem('pending_verification_email');
             setPendingVerification(false);
           }
-          // Auto-sync profile to backend on any sign-in (handles email confirmation flow)
+
+          // Sync user profile to `users` table on sign-in
           if (event === 'SIGNED_IN') {
-            try {
-              await fetch(`${API_URL}/auth/sync-profile`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify({ name: session.user.user_metadata?.name || '' }),
-              });
-            } catch (err) {
-              console.error('Auto sync-profile error:', err);
-            }
+            syncUserProfile(session);
           }
         } else {
           setUser(null);
           setToken(null);
         }
-      }
+      },
     );
 
     return () => subscription.unsubscribe();
@@ -108,43 +125,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Le mot de passe doit contenir au moins 6 caractères');
     }
 
+    authLog('Signup redirect URL', getRedirectUrl());
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { name },
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: getRedirectUrl(),
       },
     });
 
     if (error) throw new Error(error.message);
 
     // Supabase returns a user with empty identities when the email already exists
-    // (unconfirmed or confirmed) — detect this to give proper feedback
     if (data.user && data.user.identities && data.user.identities.length === 0) {
       throw new Error('Un compte avec cet email existe déjà. Essayez de vous connecter.');
     }
 
     if (!data.session) {
-      // Email confirmation required — save pending state
+      // Email confirmation required
       localStorage.setItem('pending_verification_email', email);
       setPendingVerification(true);
       return;
     }
 
-    // Sync profile to backend users table
-    try {
-      await fetch(`${API_URL}/auth/sync-profile`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${data.session.access_token}`,
-        },
-        body: JSON.stringify({ name }),
-      });
-    } catch (err) {
-      console.error('Profile sync error:', err);
-    }
+    // Sync profile directly via Supabase
+    await syncUserProfile(data.session);
 
     setUser(sessionToUser(data.session));
     setToken(data.session.access_token);
@@ -160,19 +167,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw new Error(error.message);
     if (!data.session) throw new Error('Échec de la connexion');
 
-    // Sync profile (ensures user row exists even after email confirmation)
-    try {
-      await fetch(`${API_URL}/auth/sync-profile`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${data.session.access_token}`,
-        },
-        body: JSON.stringify({ name: data.session.user.user_metadata?.name || '' }),
-      });
-    } catch (err) {
-      console.error('Profile sync error:', err);
-    }
+    // Sync profile directly via Supabase
+    await syncUserProfile(data.session);
 
     setUser(sessionToUser(data.session));
     setToken(data.session.access_token);
@@ -186,7 +182,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const forgotPassword = async (email: string): Promise<void> => {
-    const redirectTo = `${window.location.origin}/reset-password`;
+    const redirectTo = getRedirectUrl('reset-password');
+    authLog('Password reset redirect URL', redirectTo);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
     });

@@ -1,13 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { Button } from '../components/Button';
 import { Mail, RefreshCw, LogOut, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
+import { getRedirectUrl } from '../utils/env';
 import { toast } from 'sonner';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export function EmailVerificationScreen() {
   const navigate = useNavigate();
@@ -34,7 +33,7 @@ export function EmailVerificationScreen() {
       }
 
       // Clean the hash from URL
-      window.history.replaceState(null, '', window.location.pathname);
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
   }, []);
 
@@ -45,12 +44,11 @@ export function EmailVerificationScreen() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  // Listen for successful email confirmation
+  // Listen for successful email confirmation (same-browser flow)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_IN' && session) {
-          // Email confirmed — clear pending state and go home
           clearPendingVerification();
           navigate('/', { replace: true });
         }
@@ -59,7 +57,7 @@ export function EmailVerificationScreen() {
     return () => subscription.unsubscribe();
   }, [clearPendingVerification, navigate]);
 
-  // Auto-check session on mount (user may have confirmed and been redirected back)
+  // Auto-check session on mount (user may have confirmed in same browser)
   useEffect(() => {
     const autoCheck = async () => {
       const { data: refreshData } = await supabase.auth.refreshSession();
@@ -74,39 +72,10 @@ export function EmailVerificationScreen() {
     autoCheck();
   }, []);
 
-  // Poll backend every 5s to check if email was verified (works across browsers)
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  useEffect(() => {
-    if (!pendingEmail) return;
-
-    const checkBackend = async () => {
-      try {
-        const res = await fetch(`${API_URL}/auth/check-verification?email=${encodeURIComponent(pendingEmail)}`);
-        const data = await res.json();
-        if (data.verified) {
-          clearPendingVerification();
-          toast.success('Email vérifié ! Connectez-vous pour continuer.');
-          navigate('/signin', { replace: true });
-        }
-      } catch {
-        // silent — will retry on next interval
-      }
-    };
-
-    // Check immediately
-    checkBackend();
-    // Then every 5 seconds
-    pollingRef.current = setInterval(checkBackend, 5000);
-
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
-  }, [pendingEmail, clearPendingVerification, navigate]);
-
   const checkSession = async () => {
     try {
       setChecking(true);
-      // First try refreshing the existing session (works if confirmed in same browser)
+      // Try refreshing the existing session
       const { data: refreshData } = await supabase.auth.refreshSession();
       if (refreshData?.session) {
         const { data: { user } } = await supabase.auth.getUser();
@@ -116,15 +85,6 @@ export function EmailVerificationScreen() {
           navigate('/', { replace: true });
           return;
         }
-      }
-      // Fallback: check via backend (cross-browser)
-      const res = await fetch(`${API_URL}/auth/check-verification?email=${encodeURIComponent(pendingEmail)}`);
-      const data = await res.json();
-      if (data.verified) {
-        clearPendingVerification();
-        toast.success('Email vérifié ! Connectez-vous pour continuer.');
-        navigate('/signin', { replace: true });
-        return;
       }
       toast.error('Email pas encore vérifié. Vérifiez votre boîte mail.');
     } catch {
@@ -143,7 +103,7 @@ export function EmailVerificationScreen() {
         type: 'signup',
         email: pendingEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: getRedirectUrl(),
         },
       });
 

@@ -14,6 +14,7 @@ import { ProfileScreen } from './screens/ProfileScreen';
 import { ChatListScreen } from './screens/ChatListScreen';
 import { ChatScreen } from './screens/ChatScreen';
 import { AuthRoute, ProtectedRoute, WelcomeGate, VerificationGate } from './context/ProtectedRoute';
+import { getRouterBasename } from './utils/env';
 
 export const router = createBrowserRouter([
   {
@@ -76,4 +77,6 @@ export const router = createBrowserRouter([
     path: '*',
     Component: () => <Navigate to="/" replace />,
   },
-]);
+], {
+  basename: getRouterBasename(),
+});

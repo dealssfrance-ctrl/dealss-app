@@ -3,15 +3,19 @@ import { router } from './routes';
 import { AuthProvider } from './context/AuthContext';
 import { Toaster } from 'sonner';
 import { useEffect } from 'react';
+import { getRouterBasename, authLog } from './utils/env';
 
 function HashErrorHandler() {
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.includes('error=') && hash.includes('error_code=')) {
+      authLog('Auth error in URL hash', hash);
       // Supabase redirected with an auth error — preserve the hash and send to verify-email
       const pending = localStorage.getItem('pending_verification_email');
       if (pending) {
-        window.location.replace(`/verify-email${hash}`);
+        const base = getRouterBasename();
+        const target = `${base === '/' ? '' : base}/verify-email${hash}`;
+        window.location.replace(target);
       }
     }
   }, []);
