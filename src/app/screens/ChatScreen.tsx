@@ -2,7 +2,7 @@
 import { useParams, useNavigate } from 'react-router';
 import {
   ArrowLeft, Send, Image as ImageIcon, ShieldCheck, Store,
-  CheckCheck, Check, Reply, Pencil, Trash2, X, ChevronDown, User, Eye, Copy,
+  CheckCheck, Check, Reply, Pencil, Trash2, X, ChevronDown, User, Eye, Copy, ZoomIn, ZoomOut, Download,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +26,8 @@ export function ChatScreen() {
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [contextMenu, setContextMenu] = useState<{ message: ChatMessage; x: number; y: number } | null>(null);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [lightboxZoom, setLightboxZoom] = useState(1);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggeredRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -494,17 +496,18 @@ export function ChatScreen() {
                               )}
 
                               {message.imageUrl ? (
-                                <div
-                                  className={`rounded-2xl overflow-hidden shadow-sm border border-gray-100 ${
+                                <button
+                                  onClick={() => { setLightboxUrl(message.imageUrl!); setLightboxZoom(1); }}
+                                  className={`rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-zoom-in ${
                                     isCurrentUser ? 'rounded-tr-sm' : 'rounded-tl-sm'
                                   } ${message.replyTo ? 'rounded-t-none' : ''}`}
                                 >
                                   <img
                                     src={message.imageUrl}
-                                    alt="Image partagÃ©e"
+                                    alt="Image partagée"
                                     className="max-w-full h-auto max-h-80 object-cover"
                                   />
-                                </div>
+                                </button>
                               ) : (
                                 <div
                                   className={`px-4 py-2.5 shadow-sm ${
@@ -563,6 +566,70 @@ export function ChatScreen() {
             )}
           </AnimatePresence>
         </div>
+
+        {/* ─── Image Lightbox ─── */}
+        <AnimatePresence>
+          {lightboxUrl && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] bg-black/90 flex flex-col"
+              onClick={() => setLightboxUrl(null)}
+            >
+              {/* Top bar */}
+              <div className="flex items-center justify-between px-4 py-3 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setLightboxZoom(z => Math.max(0.5, z - 0.5))}
+                    disabled={lightboxZoom <= 0.5}
+                    className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 transition-colors"
+                  >
+                    <ZoomOut size={20} />
+                  </button>
+                  <span className="text-white/70 text-sm font-medium min-w-[3rem] text-center">{Math.round(lightboxZoom * 100)}%</span>
+                  <button
+                    onClick={() => setLightboxZoom(z => Math.min(4, z + 0.5))}
+                    disabled={lightboxZoom >= 4}
+                    className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 transition-colors"
+                  >
+                    <ZoomIn size={20} />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={lightboxUrl}
+                    download
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                  >
+                    <Download size={20} />
+                  </a>
+                  <button
+                    onClick={() => setLightboxUrl(null)}
+                    className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+              {/* Image */}
+              <div className="flex-1 flex items-center justify-center overflow-auto p-4" onClick={(e) => e.stopPropagation()}>
+                <motion.img
+                  src={lightboxUrl}
+                  alt="Zoom"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                  className="max-w-full max-h-full object-contain rounded-lg cursor-zoom-out"
+                  style={{ transform: `scale(${lightboxZoom})`, transition: 'transform 0.2s ease' }}
+                  onClick={() => setLightboxUrl(null)}
+                  draggable={false}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* ─── Context Menu ─── */}
         <AnimatePresence>
