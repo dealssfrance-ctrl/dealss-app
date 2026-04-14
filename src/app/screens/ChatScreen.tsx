@@ -2,7 +2,7 @@
 import { useParams, useNavigate } from 'react-router';
 import {
   ArrowLeft, Send, Image as ImageIcon, ShieldCheck, Store,
-  CheckCheck, Check, Reply, Pencil, Trash2, X, ChevronDown, User, Eye, Copy, ZoomIn, ZoomOut, Download,
+  CheckCheck, Check, Reply, Pencil, Trash2, X, ChevronDown, User, Eye, Copy, ZoomIn, ZoomOut, Download, Share2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
@@ -159,6 +159,21 @@ export function ChatScreen() {
   const handleCopyText = (text: string | undefined) => {
     if (!text) return;
     navigator.clipboard.writeText(text).then(() => toast.success('Copié'));
+    setContextMenu(null);
+  };
+
+  const handleShareMessage = async (message: ChatMessage) => {
+    const text = message.text || '';
+    const shareData: ShareData = { text };
+    if (message.imageUrl) shareData.text = message.imageUrl;
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(text || message.imageUrl || '');
+        toast.success('Copié dans le presse-papier');
+      }
+    } catch {}
     setContextMenu(null);
   };
 
@@ -665,6 +680,12 @@ export function ChatScreen() {
                     <Copy size={16} className="text-gray-400" /> Copier
                   </button>
                 )}
+                <button
+                  onClick={() => handleShareMessage(contextMenu.message)}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >
+                  <Share2 size={16} className="text-gray-400" /> Partager
+                </button>
                 {contextMenu.message.senderId === currentUserId && contextMenu.message.text && (
                   <button
                     onClick={() => { startEdit(contextMenu.message); setContextMenu(null); }}
