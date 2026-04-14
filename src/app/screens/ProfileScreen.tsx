@@ -170,7 +170,7 @@ export function ProfileScreen() {
               <p className="text-gray-400">No offers yet</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
               {offers.map((offer, index) => (
                 <motion.div
                   key={offer.id}
