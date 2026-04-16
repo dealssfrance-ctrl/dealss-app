@@ -3,6 +3,10 @@ export interface User {
   email: string;
   password: string;
   name: string;
+  company: string;
+  jobTitle: string;
+  isProfilePublic: boolean;
+  showWorkInfo: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

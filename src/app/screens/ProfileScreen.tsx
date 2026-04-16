@@ -11,22 +11,27 @@ import { toast } from 'sonner';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
 
 export function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const navigate = useNavigate();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [userName, setUserName] = useState(user?.name || '');
-  const [company, setCompany] = useState('');
-  const [jobTitle, setJobTitle] = useState('');
-  const [isProfilePublic, setIsProfilePublic] = useState(true);
-  const [showWorkInfo, setShowWorkInfo] = useState(true);
+  const [company, setCompany] = useState(user?.company || '');
+  const [jobTitle, setJobTitle] = useState(user?.jobTitle || '');
+  const [isProfilePublic, setIsProfilePublic] = useState(user?.isProfilePublic ?? true);
+  const [showWorkInfo, setShowWorkInfo] = useState(user?.showWorkInfo ?? true);
   const [stats, setStats] = useState({ averageRating: 0, totalReviews: 0 });
 
   useEffect(() => {
     if (user) {
       loadUserOffers();
       setUserName(user.name);
+      setCompany(user.company || '');
+      setJobTitle(user.jobTitle || '');
+      setIsProfilePublic(user.isProfilePublic ?? true);
+      setShowWorkInfo(user.showWorkInfo ?? true);
     }
   }, [user]);
 
@@ -57,15 +62,29 @@ export function ProfileScreen() {
     }
   };
 
-  const handleSave = () => {
-    // Name editing would require a backend endpoint for user update
-    setIsEditing(false);
-    toast.success('Profil mis à jour');
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await updateProfile({
+        name: userName,
+        company,
+        jobTitle,
+        isProfilePublic,
+        showWorkInfo,
+      });
+      setIsEditing(false);
+      toast.success('Profil mis à jour');
+    } catch (error) {
+      toast.error('Impossible de mettre à jour le profil');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
     setUserName(user?.name || '');
-    // Reset company/job to saved values (would come from backend)
+    setCompany(user?.company || '');
+    setJobTitle(user?.jobTitle || '');
     setIsEditing(false);
   };
 
@@ -195,9 +214,10 @@ export function ProfileScreen() {
                 </button>
                 <button
                   onClick={handleSave}
-                  className="flex-1 py-3 rounded-full font-semibold text-white bg-[#1FA774]"
+                  disabled={saving}
+                  className="flex-1 py-3 rounded-full font-semibold text-white bg-[#1FA774] disabled:opacity-50"
                 >
-                  Enregistrer
+                  {saving ? 'Enregistrement...' : 'Enregistrer'}
                 </button>
               </div>
             </div>
@@ -278,9 +298,16 @@ export function ProfileScreen() {
               </div>
             </div>
             <button
-              onClick={() => {
-                setIsProfilePublic(!isProfilePublic);
-                toast.success(isProfilePublic ? 'Profil masqué' : 'Profil publié');
+              onClick={async () => {
+                const newValue = !isProfilePublic;
+                setIsProfilePublic(newValue);
+                try {
+                  await updateProfile({ isProfilePublic: newValue });
+                  toast.success(newValue ? 'Profil publié' : 'Profil masqué');
+                } catch {
+                  setIsProfilePublic(!newValue);
+                  toast.error('Erreur lors de la mise à jour');
+                }
               }}
               className={`relative w-12 h-7 rounded-full transition-colors ${
                 isProfilePublic ? 'bg-[#1FA774]' : 'bg-gray-300'
@@ -318,9 +345,16 @@ export function ProfileScreen() {
                 </div>
               </div>
               <button
-                onClick={() => {
-                  setShowWorkInfo(!showWorkInfo);
-                  toast.success(showWorkInfo ? 'Infos pro masquées' : 'Infos pro visibles');
+                onClick={async () => {
+                  const newValue = !showWorkInfo;
+                  setShowWorkInfo(newValue);
+                  try {
+                    await updateProfile({ showWorkInfo: newValue });
+                    toast.success(newValue ? 'Infos pro visibles' : 'Infos pro masquées');
+                  } catch {
+                    setShowWorkInfo(!newValue);
+                    toast.error('Erreur lors de la mise à jour');
+                  }
                 }}
                 className={`relative w-12 h-7 rounded-full transition-colors ${
                   showWorkInfo ? 'bg-[#1FA774]' : 'bg-gray-300'

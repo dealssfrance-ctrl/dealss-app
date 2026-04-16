@@ -5,12 +5,16 @@ import { OfferCard } from '../components/OfferCard';
 import { offersService, Offer } from '../services/offersService';
 import { supabase } from '../services/supabaseClient';
 import { motion } from 'motion/react';
-import { ArrowLeft, Package } from 'lucide-react';
+import { ArrowLeft, Package, Briefcase, EyeOff } from 'lucide-react';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
 
 interface PublicUser {
   id: string;
   name: string;
+  company: string;
+  jobTitle: string;
+  isProfilePublic: boolean;
+  showWorkInfo: boolean;
   createdAt: string;
 }
 
@@ -32,7 +36,7 @@ export function PublicProfileScreen() {
       // Fetch user info
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, name, created_at')
+        .select('id, name, company, job_title, is_profile_public, show_work_info, created_at')
         .eq('id', userId)
         .single();
 
@@ -41,9 +45,19 @@ export function PublicProfileScreen() {
         return;
       }
 
+      // If profile is hidden, redirect away
+      if (userData.is_profile_public === false) {
+        navigate('/', { replace: true });
+        return;
+      }
+
       setUser({
         id: userData.id,
         name: userData.name,
+        company: userData.company || '',
+        jobTitle: userData.job_title || '',
+        isProfilePublic: userData.is_profile_public ?? true,
+        showWorkInfo: userData.show_work_info ?? true,
         createdAt: userData.created_at,
       });
 
@@ -112,6 +126,12 @@ export function PublicProfileScreen() {
               </div>
               <div className="flex-1">
                 <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">{user.name}</h2>
+                {user.showWorkInfo && (user.jobTitle || user.company) && (
+                  <p className="text-gray-600 text-sm mb-1 flex items-center gap-1">
+                    <Briefcase size={14} />
+                    {user.jobTitle}{user.jobTitle && user.company ? ' à ' : ''}{user.company}
+                  </p>
+                )}
                 <p className="text-gray-400 text-sm">Membre depuis {joinDate}</p>
                 <p className="text-gray-500 text-sm mt-1 flex items-center gap-1">
                   <Package size={14} />

@@ -9,6 +9,10 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
   name TEXT NOT NULL,
+  company TEXT DEFAULT '',
+  job_title TEXT DEFAULT '',
+  is_profile_public BOOLEAN DEFAULT true,
+  show_work_info BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

@@ -7,6 +7,10 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  company: string;
+  jobTitle: string;
+  isProfilePublic: boolean;
+  showWorkInfo: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,6 +29,7 @@ export interface AuthContextType {
   resetPassword: (password: string) => Promise<void>;
   markWelcomeSeen: () => void;
   clearPendingVerification: () => void;
+  updateProfile: (updates: Partial<Pick<User, 'name' | 'company' | 'jobTitle' | 'isProfilePublic' | 'showWorkInfo'>>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,13 +41,35 @@ function sessionToUser(session: Session): User {
     id: u.id,
     email: u.email || '',
     name: meta.name || meta.full_name || '',
+    company: '',
+    jobTitle: '',
+    isProfilePublic: true,
+    showWorkInfo: true,
     createdAt: u.created_at || '',
     updatedAt: u.updated_at || '',
   };
 }
 
+/** Fetch full user profile from `users` table */
+async function fetchUserProfile(userId: string): Promise<Partial<User>> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('name, company, job_title, is_profile_public, show_work_info')
+    .eq('id', userId)
+    .single();
+
+  if (error || !data) return {};
+  return {
+    name: data.name || '',
+    company: data.company || '',
+    jobTitle: data.job_title || '',
+    isProfilePublic: data.is_profile_public ?? true,
+    showWorkInfo: data.show_work_info ?? true,
+  };
+}
+
 /** Upsert user profile in the `users` table directly via Supabase. */
-async function syncUserProfile(session: Session): Promise<void> {
+async function syncUserProfile(session: Session): Promise<Partial<User>> {
   const meta = session.user.user_metadata || {};
   const { error } = await supabase.from('users').upsert(
     {
@@ -51,13 +78,15 @@ async function syncUserProfile(session: Session): Promise<void> {
       name: meta.name || meta.full_name || '',
       updated_at: new Date().toISOString(),
     },
-    { onConflict: 'id' },
+    { onConflict: 'id', ignoreDuplicates: false },
   );
   if (error) {
     console.error('User profile sync error:', error.message);
   } else {
     authLog('User profile synced', session.user.id);
   }
+  // Fetch full profile (including company, job_title etc.)
+  return fetchUserProfile(session.user.id);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -80,10 +109,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     // Get initial session (also exchanges PKCE code if present in URL)
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       authLog('Initial session', session ? 'found' : 'none');
       if (session) {
-        setUser(sessionToUser(session));
+        const baseUser = sessionToUser(session);
+        const profile = await fetchUserProfile(session.user.id);
+        setUser({ ...baseUser, ...profile });
         setToken(session.access_token);
       }
       setLoading(false);
@@ -94,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         authLog('Auth event', event);
         if (session) {
-          setUser(sessionToUser(session));
+          const baseUser = sessionToUser(session);
           setToken(session.access_token);
 
           // Email confirmed — clear pending verification
@@ -105,7 +136,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Sync user profile to `users` table on sign-in
           if (event === 'SIGNED_IN') {
-            syncUserProfile(session);
+            const profile = await syncUserProfile(session);
+            setUser({ ...baseUser, ...profile });
+          } else {
+            const profile = await fetchUserProfile(session.user.id);
+            setUser({ ...baseUser, ...profile });
           }
         } else {
           setUser(null);
@@ -151,9 +186,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Sync profile directly via Supabase
-    await syncUserProfile(data.session);
+    const profile = await syncUserProfile(data.session);
 
-    setUser(sessionToUser(data.session));
+    setUser({ ...sessionToUser(data.session), ...profile });
     setToken(data.session.access_token);
     localStorage.setItem('seen_welcome', 'true');
   };
@@ -168,9 +203,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!data.session) throw new Error('Échec de la connexion');
 
     // Sync profile directly via Supabase
-    await syncUserProfile(data.session);
+    const profile = await syncUserProfile(data.session);
 
-    setUser(sessionToUser(data.session));
+    setUser({ ...sessionToUser(data.session), ...profile });
     setToken(data.session.access_token);
     localStorage.setItem('seen_welcome', 'true');
   };
@@ -205,6 +240,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPendingVerification(false);
   };
 
+  const updateProfile = async (updates: Partial<Pick<User, 'name' | 'company' | 'jobTitle' | 'isProfilePublic' | 'showWorkInfo'>>) => {
+    if (!user) throw new Error('Non connecté');
+
+    const dbUpdates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.company !== undefined) dbUpdates.company = updates.company;
+    if (updates.jobTitle !== undefined) dbUpdates.job_title = updates.jobTitle;
+    if (updates.isProfilePublic !== undefined) dbUpdates.is_profile_public = updates.isProfilePublic;
+    if (updates.showWorkInfo !== undefined) dbUpdates.show_work_info = updates.showWorkInfo;
+
+    const { error } = await supabase
+      .from('users')
+      .update(dbUpdates)
+      .eq('id', user.id);
+
+    if (error) throw new Error(error.message);
+
+    setUser(prev => prev ? { ...prev, ...updates } : prev);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -221,6 +276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resetPassword,
         markWelcomeSeen,
         clearPendingVerification,
+        updateProfile,
       }}
     >
       {children}

@@ -5,6 +5,10 @@ interface User {
   id: string;
   name: string;
   email: string;
+  company: string;
+  jobTitle: string;
+  isProfilePublic: boolean;
+  showWorkInfo: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -14,14 +18,14 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', company: '', jobTitle: '' });
   const [error, setError] = useState('');
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase.from('users').select('id,email,name,created_at,updated_at');
+      const { data, error } = await supabase.from('users').select('id,email,name,company,job_title,is_profile_public,show_work_info,created_at,updated_at');
       if (error) throw error;
-      setUsers((data || []).map((r: any) => ({ id: r.id, name: r.name, email: r.email, createdAt: r.created_at, updatedAt: r.updated_at })));
+      setUsers((data || []).map((r: any) => ({ id: r.id, name: r.name, email: r.email, company: r.company || '', jobTitle: r.job_title || '', isProfilePublic: r.is_profile_public ?? true, showWorkInfo: r.show_work_info ?? true, createdAt: r.created_at, updatedAt: r.updated_at })));
     } catch (err) {
       console.error('Error fetching users:', err);
     } finally {
@@ -33,14 +37,14 @@ const Users = () => {
 
   const openAddModal = () => {
     setEditingUser(null);
-    setForm({ name: '', email: '', password: '' });
+    setForm({ name: '', email: '', password: '', company: '', jobTitle: '' });
     setError('');
     setShowModal(true);
   };
 
   const openEditModal = (user: User) => {
     setEditingUser(user);
-    setForm({ name: user.name, email: user.email, password: '' });
+    setForm({ name: user.name, email: user.email, password: '', company: user.company, jobTitle: user.jobTitle });
     setError('');
     setShowModal(true);
   };
@@ -52,11 +56,11 @@ const Users = () => {
     }
     try {
       if (editingUser) {
-        await supabase.from('users').update({ name: form.name, email: form.email, updated_at: new Date().toISOString() }).eq('id', editingUser.id);
+        await supabase.from('users').update({ name: form.name, email: form.email, company: form.company, job_title: form.jobTitle, updated_at: new Date().toISOString() }).eq('id', editingUser.id);
       } else {
         const id = `user_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
         const now = new Date().toISOString();
-        await supabase.from('users').insert({ id, name: form.name, email: form.email, password: form.password || 'default123', created_at: now, updated_at: now });
+        await supabase.from('users').insert({ id, name: form.name, email: form.email, password: form.password || 'default123', company: form.company, job_title: form.jobTitle, created_at: now, updated_at: now });
       }
       setShowModal(false);
       fetchUsers();
@@ -104,6 +108,9 @@ const Users = () => {
                   <tr>
                     <th>Name</th>
                     <th>Email</th>
+                    <th>Company</th>
+                    <th>Job Title</th>
+                    <th>Visibility</th>
                     <th>Created</th>
                     <th>Actions</th>
                   </tr>
@@ -113,6 +120,13 @@ const Users = () => {
                     <tr key={user.id}>
                       <td>{user.name}</td>
                       <td>{user.email}</td>
+                      <td>{user.company || '—'}</td>
+                      <td>{user.jobTitle || '—'}</td>
+                      <td>
+                        <span className={`label label-${user.isProfilePublic ? 'primary' : 'default'}`}>
+                          {user.isProfilePublic ? 'Public' : 'Hidden'}
+                        </span>
+                      </td>
                       <td>{new Date(user.createdAt).toLocaleDateString()}</td>
                       <td>
                         <button className="btn btn-white btn-xs" onClick={() => openEditModal(user)} style={{ marginRight: '5px' }}>
@@ -125,7 +139,7 @@ const Users = () => {
                     </tr>
                   ))}
                   {users.length === 0 && (
-                    <tr><td colSpan={4} style={{ textAlign: 'center' }} className="text-muted">No users found</td></tr>
+                    <tr><td colSpan={7} style={{ textAlign: 'center' }} className="text-muted">No users found</td></tr>
                   )}
                 </tbody>
               </table>
@@ -176,6 +190,28 @@ const Users = () => {
                 />
               </div>
             )}
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600 }}>Company</label>
+              <input
+                type="text"
+                className="form-control"
+                value={form.company}
+                onChange={e => setForm({ ...form, company: e.target.value })}
+                placeholder="e.g. Air France"
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e6e7', borderRadius: '3px' }}
+              />
+            </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600 }}>Job Title</label>
+              <input
+                type="text"
+                className="form-control"
+                value={form.jobTitle}
+                onChange={e => setForm({ ...form, jobTitle: e.target.value })}
+                placeholder="e.g. Hôtesse de l'air"
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #e5e6e7', borderRadius: '3px' }}
+              />
+            </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
               <button className="btn btn-white" onClick={() => setShowModal(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSubmit}>

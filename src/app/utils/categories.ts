@@ -5,9 +5,9 @@ export interface CategoryConfig {
 }
 
 export const CATEGORIES: CategoryConfig[] = [
-  { key: 'All', label: 'Tout', emoji: '🏷️' },
+  { key: 'All', label: 'Tout', emoji: '🔥' },
   { key: 'Fashion', label: 'Mode', emoji: '👗' },
-  { key: 'Travel', label: 'Vol', emoji: '✈️' },
+  { key: 'Travel', label: 'Vols', emoji: '✈️' },
   { key: 'Sports', label: 'Sport', emoji: '⚽' },
   { key: 'Beauty', label: 'Beauté', emoji: '💄' },
   { key: 'Food', label: 'Food', emoji: '🍔' },
@@ -21,7 +21,6 @@ export const CATEGORY_KEYS = CATEGORIES.map(c => c.key);
 export function getCategoryLabel(key: string): string {
   const cat = CATEGORIES.find(c => c.key === key);
   if (!cat) return key;
-  if (cat.key === 'All') return cat.label;
   return `${cat.emoji} ${cat.label}`;
 }
 
