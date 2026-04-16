@@ -11,7 +11,9 @@
 /** Full base URL including origin and base path, no trailing slash. */
 export function getAppBaseUrl(): string {
   const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
-  return `${window.location.origin}${base}`;
+  // Capacitor / relative base: "./" becomes "." — treat as root
+  const cleanBase = base === '.' ? '' : base;
+  return `${window.location.origin}${cleanBase}`;
 }
 
 /**
@@ -26,7 +28,9 @@ export function getRedirectUrl(path: string = ''): string {
 
 /** The basename the router should use (e.g. "/dealss-app" or "/"). */
 export function getRouterBasename(): string {
-  return (import.meta.env.BASE_URL || '/').replace(/\/$/, '') || '/';
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') || '/';
+  // Capacitor / relative base: "./" becomes "." after trim — treat as root
+  return base === '.' ? '/' : base;
 }
 
 /** Log helper — prefixes all auth-related logs. */
