@@ -12,18 +12,18 @@ export function ReviewsList({ reviews }: ReviewsListProps) {
     const diff = now.getTime() - d.getTime();
     const days = Math.floor(diff / 86400000);
 
-    if (days === 0) return 'Today';
-    if (days === 1) return 'Yesterday';
-    if (days < 7) return `${days} days ago`;
-    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+    if (days === 0) return 'Aujourd\'hui';
+    if (days === 1) return 'Hier';
+    if (days < 7) return `Il y a ${days} jours`;
+    if (days < 30) return `Il y a ${Math.floor(days / 7)} semaines`;
     return date.toLocaleDateString();
   };
 
   if (reviews.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-400">No reviews yet</p>
-        <p className="text-sm text-gray-400 mt-1">Be the first to review this offer</p>
+        <p className="text-gray-400">Aucun avis pour le moment</p>
+        <p className="text-sm text-gray-400 mt-1">Soyez le premier à donner votre avis</p>
       </div>
     );
   }

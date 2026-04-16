@@ -81,9 +81,9 @@ export function ResetPasswordScreen() {
           <div className="w-16 h-16 bg-green-500 rounded-full mx-auto mb-4 flex items-center justify-center">
             <Check size={32} className="text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Password Reset!</h2>
-          <p className="text-gray-500 mb-6">Your password has been reset successfully.</p>
-          <p className="text-sm text-gray-400">Redirecting to sign in...</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Mot de passe réinitialisé !</h2>
+          <p className="text-gray-500 mb-6">Votre mot de passe a été réinitialisé avec succès.</p>
+          <p className="text-sm text-gray-400">Redirection vers la connexion...</p>
         </motion.div>
       </div>
     );
@@ -98,7 +98,7 @@ export function ResetPasswordScreen() {
             <button onClick={() => navigate('/welcome')} className="p-1">
               <ArrowLeft size={24} className="text-gray-900" />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Reset Password</h1>
+            <h1 className="text-xl font-semibold text-gray-900">Réinitialiser le mot de passe</h1>
           </div>
         </div>
       </div>
@@ -113,8 +113,8 @@ export function ResetPasswordScreen() {
             <div className="w-20 h-20 bg-gradient-to-br from-[#1FA774] to-[#16865c] rounded-full mx-auto mb-6 flex items-center justify-center text-3xl">
               🔐
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Create New Password</h2>
-            <p className="text-gray-500">Enter your new password below</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Créer un nouveau mot de passe</h2>
+            <p className="text-gray-500">Entrez votre nouveau mot de passe ci-dessous</p>
           </div>
 
           {error && (
@@ -131,7 +131,7 @@ export function ResetPasswordScreen() {
             {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                New Password
+                Nouveau mot de passe
               </label>
               <div className="relative">
                 <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -156,7 +156,7 @@ export function ResetPasswordScreen() {
             {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
+                Confirmer le mot de passe
               </label>
               <div className="relative">
                 <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -183,7 +183,7 @@ export function ResetPasswordScreen() {
               disabled={loading}
               className="bg-[#1FA774] text-white hover:bg-[#168659] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Resetting...' : 'Reset Password'}
+              {loading ? 'Réinitialisation...' : 'Réinitialiser le mot de passe'}
             </Button>
           </form>
         </motion.div>

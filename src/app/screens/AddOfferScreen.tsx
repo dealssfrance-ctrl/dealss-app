@@ -7,8 +7,9 @@ import { motion } from 'motion/react';
 import { offersService } from '../services/offersService';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import { FORM_CATEGORIES, getCategoryLabel } from '../utils/categories';
 
-const CATEGORIES = ['Fashion', 'Food', 'Sports', 'Electronics', 'Beauty', 'Other'];
+const CATEGORIES = FORM_CATEGORIES;
 
 export function AddOfferScreen() {
   const navigate = useNavigate();
@@ -236,19 +237,19 @@ export function AddOfferScreen() {
               Catégorie <span className="text-red-500">*</span>
             </label>
             <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((category) => (
+              {CATEGORIES.map((cat) => (
                 <button
-                  key={category}
+                  key={cat.key}
                   type="button"
-                  onClick={() => handleChange('category', category)}
+                  onClick={() => handleChange('category', cat.key)}
                   disabled={loading}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                    formData.category === category
+                    formData.category === cat.key
                       ? 'bg-[#1FA774] text-white'
                       : 'bg-white border border-gray-200 text-gray-600 hover:border-[#1FA774]'
                   } disabled:opacity-50`}
                 >
-                  {category}
+                  {cat.emoji} {cat.label}
                 </button>
               ))}
             </div>

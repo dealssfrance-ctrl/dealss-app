@@ -7,8 +7,9 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { offersService, Offer } from '../services/offersService';
 import { OfferCardGridSkeleton, HotDealsSkeleton, CategoryTabsSkeleton, LoadMoreSkeleton } from '../components/Skeleton';
+import { CATEGORY_KEYS, getCategoryLabel, orderCategories } from '../utils/categories';
 
-const DEFAULT_CATEGORIES = ['All', 'Fashion', 'Food', 'Sports', 'Electronics', 'Beauty'];
+const DEFAULT_CATEGORIES = CATEGORY_KEYS;
 
 export function Home() {
   const navigate = useNavigate();
@@ -69,7 +70,7 @@ export function Home() {
     try {
       const result = await offersService.getCategories();
       if (result.success) {
-        setCategories(result.data);
+        setCategories(orderCategories(result.data.filter(c => c !== 'All')));
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -190,7 +191,7 @@ export function Home() {
                       : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50'
                   }`}
                 >
-                  {category}
+                  {getCategoryLabel(category)}
                 </button>
               ))}
             </div>
@@ -202,7 +203,7 @@ export function Home() {
           <div className="px-5 md:px-8 lg:px-10 mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <TrendingUp size={20} className="text-[#1FA774]" />
-              <h3 className="font-bold text-lg text-gray-900">Hot Deals</h3>
+              <h3 className="font-bold text-lg text-gray-900">Bons Plans 🔥</h3>
             </div>
             <span className="text-sm text-gray-500">{hotDeals.length} offres</span>
           </div>

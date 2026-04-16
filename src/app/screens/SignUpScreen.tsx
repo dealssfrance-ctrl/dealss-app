@@ -77,7 +77,7 @@ export function SignUpScreen() {
             <button onClick={() => navigate('/welcome')} className="p-1">
               <ArrowLeft size={24} className="text-gray-900" />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Create Account</h1>
+            <h1 className="text-xl font-semibold text-gray-900">Créer un compte</h1>
           </div>
         </div>
       </div>
@@ -89,8 +89,8 @@ export function SignUpScreen() {
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Dealss</h2>
-            <p className="text-gray-500">Create your account to get started</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Bienvenue sur Dealss</h2>
+            <p className="text-gray-500">Créez votre compte pour commencer</p>
           </div>
 
           {error && (
@@ -108,7 +108,7 @@ export function SignUpScreen() {
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
+                Nom complet
               </label>
               <div className="relative">
                 <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -116,7 +116,7 @@ export function SignUpScreen() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleChange('name', e.target.value)}
-                  placeholder="John Doe"
+                  placeholder="Jean Dupont"
                   className="w-full bg-white border border-gray-200 rounded-2xl pl-12 pr-5 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent disabled:bg-gray-100"
                   required
                   disabled={loading}
@@ -127,7 +127,7 @@ export function SignUpScreen() {
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+                Adresse email
               </label>
               <div className="relative">
                 <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -146,7 +146,7 @@ export function SignUpScreen() {
             {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                Mot de passe
               </label>
               <div className="relative">
                 <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -169,13 +169,13 @@ export function SignUpScreen() {
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">At least 6 characters</p>
+              <p className="text-xs text-gray-500 mt-1">Au moins 6 caractères</p>
             </div>
 
             {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
+                Confirmer le mot de passe
               </label>
               <div className="relative">
                 <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -201,13 +201,13 @@ export function SignUpScreen() {
 
             {/* Terms */}
             <p className="text-xs text-gray-500 text-center">
-              By creating an account, you agree to our{' '}
+              En créant un compte, vous acceptez nos{' '}
               <button type="button" className="text-[#1FA774] font-medium">
-                Terms of Service
+                Conditions d'utilisation
               </button>{' '}
-              and{' '}
+              et{' '}
               <button type="button" className="text-[#1FA774] font-medium">
-                Privacy Policy
+                Politique de confidentialité
               </button>
             </p>
 
@@ -218,20 +218,20 @@ export function SignUpScreen() {
                 disabled={loading}
                 className="disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating Account...' : 'Create Account'}
+                {loading ? 'Création du compte...' : 'Créer un compte'}
               </Button>
             </div>
 
             {/* Sign In Link */}
             <p className="text-center text-gray-600">
-              Already have an account?{' '}
+              Vous avez déjà un compte ?{' '}
               <button
                 type="button"
                 onClick={() => navigate('/signin')}
                 className="text-[#1FA774] font-semibold hover:underline disabled:opacity-50"
                 disabled={loading}
               >
-                Sign In
+                Se connecter
               </button>
             </p>
           </form>

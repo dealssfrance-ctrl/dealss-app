@@ -6,8 +6,9 @@ import { ArrowLeft, Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { offersService, Offer } from '../services/offersService';
+import { CATEGORY_KEYS, getCategoryLabel } from '../utils/categories';
 
-const CATEGORIES = ['All', 'Fashion', 'Food', 'Sports', 'Electronics', 'Beauty', 'Other'];
+const CATEGORIES = CATEGORY_KEYS;
 
 export function SearchScreen() {
   const navigate = useNavigate();
@@ -149,7 +150,7 @@ export function SearchScreen() {
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                {category}
+                {getCategoryLabel(category)}
               </button>
             ))}
           </div>

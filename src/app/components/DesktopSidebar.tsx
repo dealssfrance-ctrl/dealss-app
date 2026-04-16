@@ -1,19 +1,25 @@
 import { Home, Search, MessageCircle, User, Plus } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { chatService } from '../services/chatService';
+import { playMessageSound } from '../utils/sounds';
 
 export function DesktopSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const prevUnreadRef = useRef(0);
 
   const fetchUnread = useCallback(async () => {
     if (!user) return;
     try {
       const count = await chatService.getTotalUnreadCount(user.id);
+      if (count > prevUnreadRef.current && prevUnreadRef.current > 0) {
+        playMessageSound();
+      }
+      prevUnreadRef.current = count;
       setUnreadCount(count);
     } catch { /* ignore */ }
   }, [user]);

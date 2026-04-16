@@ -28,7 +28,7 @@ export function WelcomeScreen() {
         >
           <h1 className="text-6xl font-bold text-white mb-4">Dealss</h1>
           <p className="text-xl text-white/90 max-w-md">
-            Share and discover exclusive employee discounts
+            Partagez et découvrez des réductions exclusives employés
           </p>
         </motion.div>
 
@@ -44,8 +44,8 @@ export function WelcomeScreen() {
               <TrendingUp size={24} />
             </div>
             <div className="text-left">
-              <h3 className="font-semibold">Hot Deals</h3>
-              <p className="text-sm text-white/80">Up to 40% off on top brands</p>
+              <h3 className="font-semibold">Bons Plans</h3>
+              <p className="text-sm text-white/80">Jusqu'à 40% de réduction sur les grandes marques</p>
             </div>
           </div>
 
@@ -54,8 +54,8 @@ export function WelcomeScreen() {
               <Users size={24} />
             </div>
             <div className="text-left">
-              <h3 className="font-semibold">Community</h3>
-              <p className="text-sm text-white/80">Connect with other employees</p>
+              <h3 className="font-semibold">Communauté</h3>
+              <p className="text-sm text-white/80">Connectez-vous avec d'autres employés</p>
             </div>
           </div>
 
@@ -64,8 +64,8 @@ export function WelcomeScreen() {
               <Shield size={24} />
             </div>
             <div className="text-left">
-              <h3 className="font-semibold">Trusted</h3>
-              <p className="text-sm text-white/80">Verified sellers and reviews</p>
+              <h3 className="font-semibold">Fiable</h3>
+              <p className="text-sm text-white/80">Vendeurs et avis vérifiés</p>
             </div>
           </div>
         </motion.div>
@@ -85,7 +85,7 @@ export function WelcomeScreen() {
           }}
           className="bg-white !text-[#1FA774] hover:bg-gray-100"
         >
-          Create Account
+          Créer un compte
         </Button>
         <button
           onClick={() => {
@@ -94,7 +94,7 @@ export function WelcomeScreen() {
           }}
           className="w-full py-4 rounded-full font-semibold text-white border-2 border-white/30 hover:bg-white/10 transition-colors"
         >
-          Sign In
+          Se connecter
         </button>
         <button
           onClick={() => {
@@ -103,7 +103,7 @@ export function WelcomeScreen() {
           }}
           className="w-full py-4 rounded-full font-semibold text-white/70 hover:text-white hover:bg-white/5 transition-colors text-sm"
         >
-          Continue as Guest
+          Continuer en tant qu'invité
         </button>
       </motion.div>
     </div>

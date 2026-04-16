@@ -48,7 +48,7 @@ export function OfferReviewModal({ isOpen, onClose, offerName, offerImage, onSub
             >
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Rate this Offer</h2>
+                <h2 className="text-xl font-bold text-gray-900">Évaluer cette offre</h2>
                 <button
                   onClick={onClose}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -68,7 +68,7 @@ export function OfferReviewModal({ isOpen, onClose, offerName, offerImage, onSub
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900">{offerName}</h3>
-                  <p className="text-sm text-gray-500">Share your experience</p>
+                  <p className="text-sm text-gray-500">Partagez votre expérience</p>
                 </div>
               </div>
 
@@ -96,23 +96,23 @@ export function OfferReviewModal({ isOpen, onClose, offerName, offerImage, onSub
 
               {/* Rating Text */}
               <div className="text-center mb-6">
-                {rating === 0 && <p className="text-gray-400">Tap a star to rate</p>}
-                {rating === 1 && <p className="text-gray-700 font-medium">Not worth it</p>}
-                {rating === 2 && <p className="text-gray-700 font-medium">Could be better</p>}
-                {rating === 3 && <p className="text-gray-700 font-medium">Good deal</p>}
-                {rating === 4 && <p className="text-gray-700 font-medium">Great deal!</p>}
-                {rating === 5 && <p className="text-gray-700 font-medium">Excellent deal!</p>}
+                {rating === 0 && <p className="text-gray-400">Appuyez sur une étoile pour noter</p>}
+                {rating === 1 && <p className="text-gray-700 font-medium">Pas intéressant</p>}
+                {rating === 2 && <p className="text-gray-700 font-medium">Pourrait être mieux</p>}
+                {rating === 3 && <p className="text-gray-700 font-medium">Bonne affaire</p>}
+                {rating === 4 && <p className="text-gray-700 font-medium">Très bonne affaire !</p>}
+                {rating === 5 && <p className="text-gray-700 font-medium">Excellente affaire !</p>}
               </div>
 
               {/* Comment */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Your Review
+                  Votre avis
                 </label>
                 <textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder="Tell others about this offer..."
+                  placeholder="Partagez votre avis sur cette offre..."
                   rows={4}
                   className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent resize-none"
                 />
@@ -124,13 +124,13 @@ export function OfferReviewModal({ isOpen, onClose, offerName, offerImage, onSub
                   onClick={onClose}
                   className="flex-1 py-3 rounded-full font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
                 >
-                  Cancel
+                  Annuler
                 </button>
                 <Button
                   onClick={handleSubmit}
                   className={`flex-1 ${rating === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  Submit Review
+                  Envoyer l'avis
                 </Button>
               </div>
             </motion.div>

@@ -45,7 +45,7 @@ export function ForgotPasswordScreen() {
             <button onClick={() => navigate('/signin')} className="p-1">
               <ArrowLeft size={24} className="text-gray-900" />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Forgot Password</h1>
+            <h1 className="text-xl font-semibold text-gray-900">Mot de passe oublié</h1>
           </div>
         </div>
       </div>
@@ -91,9 +91,9 @@ export function ForgotPasswordScreen() {
               <div className="w-20 h-20 bg-gradient-to-br from-[#1FA774] to-[#16865c] rounded-full mx-auto mb-6 flex items-center justify-center text-4xl">
                 🔑
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Forgot Password?</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Mot de passe oublié ?</h2>
               <p className="text-gray-500">
-                Enter your email address and we'll send you a link to reset your password
+                Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe
               </p>
             </div>
 
@@ -112,7 +112,7 @@ export function ForgotPasswordScreen() {
               {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
+                  Adresse email
                 </label>
                 <div className="relative">
                   <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -138,20 +138,20 @@ export function ForgotPasswordScreen() {
                   disabled={loading}
                   className="disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Sending...' : 'Send Reset Link'}
+                  {loading ? 'Envoi...' : 'Envoyer le lien de réinitialisation'}
                 </Button>
               </div>
 
               {/* Back to Sign In */}
               <p className="text-center text-gray-600">
-                Remember your password?{' '}
+                Vous vous souvenez de votre mot de passe ?{' '}
                 <button
                   type="button"
                   onClick={() => navigate('/signin')}
                   className="text-[#1FA774] font-semibold hover:underline disabled:opacity-50"
                   disabled={loading}
                 >
-                  Sign In
+                  Se connecter
                 </button>
               </p>
             </form>

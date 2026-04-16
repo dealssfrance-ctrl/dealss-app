@@ -10,6 +10,7 @@ import { chatService, ChatMessage, ConversationDetail } from '../services/chatSe
 import { Layout } from '../components/Layout';
 import { ChatScreenSkeleton } from '../components/Skeleton';
 import { toast } from 'sonner';
+import { playMessageSound } from '../utils/sounds';
 
 const POLL_INTERVAL = 3000;
 
@@ -80,6 +81,9 @@ export function ChatScreen() {
           const updatedMap = new Map(response.data.map(m => [m.id, m]));
           const merged = prev.map(m => updatedMap.get(m.id) || m);
           if (newMsgs.length > 0) {
+            // Play sound for incoming messages from other users
+            const hasIncoming = newMsgs.some(m => m.senderId !== currentUserId);
+            if (hasIncoming) playMessageSound();
             setTimeout(() => scrollToBottom(), 100);
             return [...merged, ...newMsgs];
           }

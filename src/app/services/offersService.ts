@@ -211,7 +211,7 @@ class OffersService {
     const { data, error } = await supabase.from('offers').select('category');
     if (error) throw new Error('Failed to fetch categories');
     const categories = Array.from(new Set((data || []).map((r: any) => r.category))).sort() as string[];
-    return { success: true, data: ['All', ...categories] };
+    return { success: true, data: categories };
   }
 
   async createOffer(data: CreateOfferData, userId: string): Promise<OfferResponse> {

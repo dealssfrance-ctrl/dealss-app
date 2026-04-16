@@ -32,7 +32,7 @@ export function OfferCard({ offer }: OfferCardProps) {
           </div>
           <p className="text-sm text-gray-600 line-clamp-2 mb-2">{offer.description}</p>
           {offer.userName && (
-            <span className="text-xs text-gray-400">by {offer.userName}</span>
+            <span className="text-xs text-gray-400">par {offer.userName}</span>
           )}
         </div>
       </div>

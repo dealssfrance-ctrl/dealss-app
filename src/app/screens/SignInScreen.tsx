@@ -47,7 +47,7 @@ export function SignInScreen() {
             <button onClick={() => navigate('/welcome')} className="p-1">
               <ArrowLeft size={24} className="text-gray-900" />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Sign In</h1>
+            <h1 className="text-xl font-semibold text-gray-900">Connexion</h1>
           </div>
         </div>
       </div>
@@ -62,8 +62,8 @@ export function SignInScreen() {
             <div className="w-20 h-20 bg-gradient-to-br from-[#1FA774] to-[#16865c] rounded-full mx-auto mb-6 flex items-center justify-center text-4xl">
               🎁
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-            <p className="text-gray-500">Sign in to continue to Dealss</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Bon retour</h2>
+            <p className="text-gray-500">Connectez-vous pour continuer sur Dealss</p>
           </div>
 
           {error && (
@@ -81,7 +81,7 @@ export function SignInScreen() {
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+                Adresse email
               </label>
               <div className="relative">
                 <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -101,7 +101,7 @@ export function SignInScreen() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Password
+                  Mot de passe
                 </label>
                 <button
                   type="button"
@@ -141,20 +141,20 @@ export function SignInScreen() {
                 disabled={loading}
                 className="disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Signing In...' : 'Sign In'}
+                {loading ? 'Connexion...' : 'Se connecter'}
               </Button>
             </div>
 
             {/* Sign Up Link */}
             <p className="text-center text-gray-600">
-              Don't have an account?{' '}
+              Vous n'avez pas de compte ?{' '}
               <button
                 type="button"
                 onClick={() => navigate('/signup')}
                 className="text-[#1FA774] font-semibold hover:underline disabled:opacity-50"
                 disabled={loading}
               >
-                Sign Up
+                S'inscrire
               </button>
             </p>
           </form>

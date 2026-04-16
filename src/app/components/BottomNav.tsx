@@ -1,19 +1,28 @@
 import { Home, Search, MessageCircle, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { chatService } from '../services/chatService';
+import { playMessageSound } from '../utils/sounds';
 
 export function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const prevUnreadRef = useRef(0);
 
   const fetchUnread = useCallback(async () => {
     if (!user) return;
     try {
       const count = await chatService.getTotalUnreadCount(user.id);
+      if (count > prevUnreadRef.current && prevUnreadRef.current >= 0) {
+        // Don't play on initial load
+        if (prevUnreadRef.current > 0) {
+          playMessageSound();
+        }
+      }
+      prevUnreadRef.current = count;
       setUnreadCount(count);
     } catch { /* ignore */ }
   }, [user]);
@@ -26,10 +35,10 @@ export function BottomNav() {
   }, [fetchUnread, location.pathname]);
 
   const navItems = [
-    { icon: Home, label: 'Home', path: '/' },
-    { icon: Search, label: 'Search', path: '/search' },
+    { icon: Home, label: 'Accueil', path: '/' },
+    { icon: Search, label: 'Rechercher', path: '/search' },
     { icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadCount },
-    { icon: User, label: 'Profile', path: '/profile' },
+    { icon: User, label: 'Profil', path: '/profile' },
   ];
 
   // Hide on individual chat screens
