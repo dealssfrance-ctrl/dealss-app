@@ -108,19 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       redirectHome: getRedirectUrl(),
     });
 
-    // Get initial session (also exchanges PKCE code if present in URL)
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      authLog('Initial session', session ? 'found' : 'none');
-      if (session) {
-        const baseUser = sessionToUser(session);
-        const profile = await fetchUserProfile(session.user.id);
-        setUser({ ...baseUser, ...profile });
-        setToken(session.access_token);
-      }
-      setLoading(false);
-    });
-
-    // Listen for auth state changes (login, logout, token refresh, password recovery)
+    // Single listener for ALL auth events (including initial session).
+    // Avoids lock contention that happens when getSession() races with onAuthStateChange.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         authLog('Auth event', event);
@@ -146,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
           setToken(null);
         }
+        setLoading(false);
       },
     );
 
@@ -185,11 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Sync profile directly via Supabase
-    const profile = await syncUserProfile(data.session);
-
-    setUser({ ...sessionToUser(data.session), ...profile });
-    setToken(data.session.access_token);
+    // onAuthStateChange will fire SIGNED_IN and handle profile sync
     localStorage.setItem('seen_welcome', 'true');
   };
 
@@ -202,11 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw new Error(error.message);
     if (!data.session) throw new Error('Échec de la connexion');
 
-    // Sync profile directly via Supabase
-    const profile = await syncUserProfile(data.session);
-
-    setUser({ ...sessionToUser(data.session), ...profile });
-    setToken(data.session.access_token);
+    // onAuthStateChange will fire SIGNED_IN and handle profile sync
     localStorage.setItem('seen_welcome', 'true');
   };
 
