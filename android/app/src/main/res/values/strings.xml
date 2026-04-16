@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dealss</string>
+    <string name="title_activity_main">Dealss</string>
+    <string name="package_name">com.dealss.app</string>
+    <string name="custom_url_scheme">com.dealss.app</string>
+</resources>
