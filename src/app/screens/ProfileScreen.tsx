@@ -336,7 +336,7 @@ export function ProfileScreen() {
           </motion.div>
         )}
 
-        {/* My Offers Section */}}
+        {/* My Offers Section */}
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Mes offres</h3>
           {loading ? (
