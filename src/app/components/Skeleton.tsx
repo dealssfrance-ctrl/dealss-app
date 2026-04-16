@@ -50,7 +50,7 @@ export function OfferCardSkeleton() {
 
 export function OfferCardGridSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
       {Array.from({ length: count }).map((_, index) => (
         <motion.div
           key={index}
