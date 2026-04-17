@@ -7,9 +7,11 @@ import Statistics from './pages/Statistics';
 import Traffic from './pages/Traffic';
 import './App.css';
 
+const basename = import.meta.env.BASE_URL?.replace(/\/$/, '') || '/';
+
 function App() {
   return (
-    <Router>
+    <Router basename={basename}>
       <div id="wrapper">
         <Sidebar />
         <div id="page-wrapper" className="gray-bg">
