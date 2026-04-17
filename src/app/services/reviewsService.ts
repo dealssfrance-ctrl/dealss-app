@@ -125,37 +125,45 @@ export const reviewsService = {
       id,
       offerId: review.offerId,
       userId: review.userId,
-      userName: review.userName,
+      userName: review.userName || 'Utilisateur',
       rating: review.rating,
       comment: review.comment,
       createdAt: new Date().toISOString(),
     };
 
-    // 1. Save to localStorage immediately (instant)
-    addLocalReview(newReview);
+    // 1. Save to localStorage immediately (instant, never throws)
+    try {
+      addLocalReview(newReview);
+    } catch {
+      // localStorage full or unavailable — continue anyway
+    }
 
     // 2. Fire-and-forget DB persistence
-    supabase
-      .from('reviews')
-      .insert({
-        id,
-        offer_id: review.offerId,
-        user_id: review.userId,
-        user_name: review.userName,
-        rating: review.rating,
-        comment: review.comment || null,
-        created_at: newReview.createdAt,
-      })
-      .select()
-      .single()
-      .then(({ error }) => {
-        if (error) {
-          console.warn('[Reviews] DB persist failed, localStorage fallback active:', error.message);
-        }
-      })
-      .catch(() => {
-        console.warn('[Reviews] DB unreachable, review saved locally');
-      });
+    try {
+      supabase
+        .from('reviews')
+        .insert({
+          id,
+          offer_id: review.offerId,
+          user_id: review.userId,
+          user_name: review.userName || 'Utilisateur',
+          rating: review.rating,
+          comment: review.comment || null,
+          created_at: newReview.createdAt,
+        })
+        .select()
+        .single()
+        .then(({ error }) => {
+          if (error) {
+            console.warn('[Reviews] DB persist failed:', error.message);
+          }
+        })
+        .catch(() => {
+          console.warn('[Reviews] DB unreachable, review saved locally');
+        });
+    } catch {
+      // Supabase client error — review is still in localStorage
+    }
 
     return { success: true, data: newReview };
   },

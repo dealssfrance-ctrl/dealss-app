@@ -8,7 +8,7 @@ interface OfferReviewModalProps {
   onClose: () => void;
   offerName: string;
   offerImage: string;
-  onSubmit: (rating: number, comment: string) => void;
+  onSubmit: (rating: number, comment: string) => void | Promise<void>;
 }
 
 export function OfferReviewModal({ isOpen, onClose, offerName, offerImage, onSubmit }: OfferReviewModalProps) {

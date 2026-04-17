@@ -143,23 +143,36 @@ export function OfferDetailScreen() {
     }
   };
 
-  const handleOfferReviewSubmit = async (rating: number, comment: string) => {
+  const handleOfferReviewSubmit = (rating: number, comment: string) => {
     if (!user || !offer) return;
 
-    // createReview saves to localStorage instantly + fires DB persist in background
-    const result = await reviewsService.createReview({
+    const userName = user.name || user.email?.split('@')[0] || 'Utilisateur';
+
+    // 1. Instant UI update — no await, no delay
+    const localReview: Review = {
+      id: `rev_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
       offerId: offer.id,
       userId: user.id,
-      userName: user.name,
+      userName,
       rating,
       comment,
-    });
-
-    // Instant local state update
-    const updatedReviews = [result.data, ...reviews];
+      createdAt: new Date().toISOString(),
+    };
+    const updatedReviews = [localReview, ...reviews];
     setReviews(updatedReviews);
     setOfferRating(computeRating(updatedReviews));
     toast.success('Merci pour votre avis ! ⭐');
+
+    // 2. Persist in background (localStorage + DB)
+    reviewsService.createReview({
+      offerId: offer.id,
+      userId: user.id,
+      userName,
+      rating,
+      comment,
+    }).catch(() => {
+      // Already saved to localStorage inside createReview
+    });
   };
 
   return (

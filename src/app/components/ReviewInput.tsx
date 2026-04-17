@@ -3,7 +3,7 @@ import { Star, Send } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface ReviewInputProps {
-  onSubmit: (rating: number, comment: string) => void;
+  onSubmit: (rating: number, comment: string) => void | Promise<void>;
   userName: string;
 }
 
