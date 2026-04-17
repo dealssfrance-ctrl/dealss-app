@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, MessageCircle, Star, Share2, Heart, Clock, Tag, MapPin, ExternalLink, ShieldCheck, TrendingDown, X, ZoomIn, ZoomOut, Download } from 'lucide-react';
 import { Button } from '../components/Button';
@@ -26,6 +26,7 @@ export function OfferDetailScreen() {
   const [offerRating, setOfferRating] = useState<{ average: number; count: number }>({ average: 0, count: 0 });
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxZoom, setLightboxZoom] = useState(1);
+  const topRef = useRef<HTMLDivElement>(null);
 
   const isOwnOffer = offer?.userId === user?.id;
 
@@ -59,6 +60,9 @@ export function OfferDetailScreen() {
       }
     };
     fetchOffer();
+    // Scroll to top so the image is visible first
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    topRef.current?.scrollIntoView();
   }, [id]);
 
   if (loading) {
@@ -145,7 +149,7 @@ export function OfferDetailScreen() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50">
+      <div ref={topRef} className="min-h-screen bg-gray-50">
         {/* Top bar — mobile only */}
         <div className="md:hidden bg-white border-b border-gray-200 sticky top-0 z-20">
           <div className="flex items-center justify-between px-4 py-3">
@@ -163,20 +167,20 @@ export function OfferDetailScreen() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="max-w-5xl mx-auto px-4 md:px-8 py-4 md:py-8"
+          className="max-w-6xl mx-auto px-4 md:px-8 py-4 md:py-6"
         >
           {/* Desktop back nav */}
-          <div className="hidden md:flex items-center gap-3 mb-6">
+          <div className="hidden md:flex items-center gap-3 mb-4">
             <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
               <ArrowLeft size={20} className="text-gray-600" />
             </button>
             <span className="text-sm text-gray-400">Retour</span>
           </div>
 
-          <div className="md:flex md:gap-8">
+          <div className="md:flex md:gap-6 md:items-start">
             {/* ─── LEFT: Image + Gallery ─── */}
-            <div className="md:w-[55%] md:shrink-0">
-              <div className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-[4/3] md:aspect-[3/2] shadow-sm cursor-zoom-in" onClick={() => { setLightboxOpen(true); setLightboxZoom(1); }}>
+            <div className="md:w-[50%] md:shrink-0 md:sticky md:top-6">
+              <div className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-[4/3] shadow-sm cursor-zoom-in" onClick={() => { setLightboxOpen(true); setLightboxZoom(1); }}>
                 <img
                   src={offer.imageUrl}
                   alt={offer.storeName}
@@ -220,10 +224,10 @@ export function OfferDetailScreen() {
             </div>
 
             {/* ─── RIGHT: Details ─── */}
-            <div className="flex-1 min-w-0 mt-5 md:mt-0 space-y-5">
+            <div className="flex-1 min-w-0 mt-5 md:mt-0 space-y-4">
               {/* Store name + rating */}
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{offer.storeName}</h1>
+                <h1 className="text-2xl md:text-[1.75rem] font-bold text-gray-900 mb-1.5">{offer.storeName}</h1>
                 <div className="flex flex-wrap items-center gap-3">
                   {/* Mobile category + time */}
                   <span className="md:hidden inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
@@ -241,35 +245,35 @@ export function OfferDetailScreen() {
               </div>
 
               {/* Discount highlight card */}
-              <div className="bg-gradient-to-r from-[#1FA774]/5 to-[#1FA774]/10 border border-[#1FA774]/20 rounded-2xl p-4 flex items-center gap-4">
-                <div className="w-14 h-14 bg-[#1FA774]/10 rounded-xl flex items-center justify-center shrink-0">
-                  <TrendingDown size={28} className="text-[#1FA774]" />
+              <div className="bg-gradient-to-r from-[#1FA774]/5 to-[#1FA774]/10 border border-[#1FA774]/20 rounded-xl p-3.5 flex items-center gap-3">
+                <div className="w-11 h-11 bg-[#1FA774]/10 rounded-lg flex items-center justify-center shrink-0">
+                  <TrendingDown size={22} className="text-[#1FA774]" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500 font-medium">Réduction</p>
-                  <p className="text-2xl font-bold text-[#1FA774]">{offer.discount}</p>
+                  <p className="text-xs text-gray-500 font-medium">Réduction</p>
+                  <p className="text-xl font-bold text-[#1FA774]">{offer.discount}</p>
                 </div>
               </div>
 
               {/* Description */}
-              <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Description</h2>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{offer.description}</p>
+              <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Description</h2>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{offer.description}</p>
               </div>
 
               {/* Seller card */}
               {offer.userName && (
-                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                  <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Vendeur</h2>
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#1FA774] to-[#16865c] flex items-center justify-center shrink-0 shadow-sm">
-                      <span className="text-white font-bold text-xl">
+                <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                  <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2.5">Vendeur</h2>
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#1FA774] to-[#16865c] flex items-center justify-center shrink-0 shadow-sm">
+                      <span className="text-white font-bold text-base">
                         {offer.userName.charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-base">{offer.userName}</h3>
-                      <p className="text-sm text-gray-400">Membre Dealss</p>
+                      <h3 className="font-semibold text-gray-900 text-sm">{offer.userName}</h3>
+                      <p className="text-xs text-gray-400">Membre Dealss</p>
                     </div>
                     {!isOwnOffer && (
                       <button
@@ -286,28 +290,28 @@ export function OfferDetailScreen() {
 
               {/* Action buttons */}
               {!isOwnOffer && (
-                <div className="flex gap-3">
+                <div className="flex gap-2.5">
                   <Button
                     onClick={handleContactClick}
                     className="flex-1"
                   >
                     <span className="flex items-center justify-center gap-2">
-                      <MessageCircle size={20} />
+                      <MessageCircle size={18} />
                       Contacter le vendeur
                     </span>
                   </Button>
                   <button
                     onClick={handleShare}
-                    className="w-14 h-14 flex items-center justify-center bg-white border border-gray-200 rounded-full hover:bg-gray-50 transition-colors shrink-0 shadow-sm"
+                    className="w-12 h-12 flex items-center justify-center bg-white border border-gray-200 rounded-full hover:bg-gray-50 transition-colors shrink-0 shadow-sm"
                   >
-                    <Share2 size={20} className="text-gray-600" />
+                    <Share2 size={18} className="text-gray-600" />
                   </button>
                 </div>
               )}
 
               {/* ─── Reviews Section ─── */}
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                   <h2 className="text-base font-bold text-gray-900">
                     Avis {offerRating.count > 0 && (
                       <span className="text-sm font-normal text-gray-400 ml-1">({offerRating.count})</span>
@@ -323,10 +327,10 @@ export function OfferDetailScreen() {
                     </button>
                   )}
                 </div>
-                <div className="p-5">
+                <div className="p-4">
                   {/* Summary bar */}
                   {offerRating.count > 0 && (
-                    <div className="flex items-center gap-4 mb-5 pb-5 border-b border-gray-100">
+                    <div className="flex items-center gap-4 mb-4 pb-4 border-b border-gray-100">
                       <div className="text-center">
                         <p className="text-3xl font-bold text-gray-900">{offerRating.average.toFixed(1)}</p>
                         <StarRating rating={offerRating.average} size={14} />
