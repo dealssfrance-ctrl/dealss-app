@@ -117,49 +117,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         authResolved = true;
         authLog('Auth event', event);
-        if (session) {
-          const baseUser = sessionToUser(session);
-          setToken(session.access_token);
+        try {
+          if (session) {
+            const baseUser = sessionToUser(session);
+            setToken(session.access_token);
 
-          // Email confirmed — clear pending verification
-          if (event === 'SIGNED_IN' && localStorage.getItem('pending_verification_email')) {
-            localStorage.removeItem('pending_verification_email');
-            setPendingVerification(false);
-          }
+            // Email confirmed — clear pending verification
+            if (event === 'SIGNED_IN' && localStorage.getItem('pending_verification_email')) {
+              localStorage.removeItem('pending_verification_email');
+              setPendingVerification(false);
+            }
 
-          // Sync user profile to `users` table on sign-in
-          if (event === 'SIGNED_IN') {
-            const profile = await syncUserProfile(session);
+            // Sync user profile to `users` table on sign-in
+            let profile: Partial<User> = {};
+            try {
+              if (event === 'SIGNED_IN') {
+                profile = await syncUserProfile(session);
+              } else {
+                profile = await fetchUserProfile(session.user.id);
+              }
+            } catch (e) {
+              console.error('[Auth] Profile fetch failed, continuing with base user:', e);
+            }
             setUser({ ...baseUser, ...profile });
           } else {
-            const profile = await fetchUserProfile(session.user.id);
-            setUser({ ...baseUser, ...profile });
+            setUser(null);
+            setToken(null);
           }
-        } else {
-          setUser(null);
-          setToken(null);
+        } finally {
+          setLoading(false);
         }
-        setLoading(false);
       },
     );
 
     // Safety fallback: if onAuthStateChange never fires (e.g. lock timeout,
-    // stale session refresh failure), force-resolve loading via getSession().
+    // stale session refresh failure) or if loading is still true after 3s,
+    // force-resolve via getSession().
     const safetyTimeout = setTimeout(async () => {
-      if (authResolved) return;
-      console.warn('[Auth] onAuthStateChange did not fire in time, falling back to getSession()');
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          const baseUser = sessionToUser(session);
-          setToken(session.access_token);
-          const profile = await fetchUserProfile(session.user.id);
-          setUser({ ...baseUser, ...profile });
+      // Use setter callback to check current value without stale closure
+      setLoading(prev => {
+        if (!prev) return prev; // already resolved, nothing to do
+        console.warn('[Auth] Safety timeout: forcing loading to resolve');
+        return false;
+      });
+
+      // If auth never resolved, try getSession as last resort
+      if (!authResolved) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            const baseUser = sessionToUser(session);
+            setToken(session.access_token);
+            let profile: Partial<User> = {};
+            try {
+              profile = await fetchUserProfile(session.user.id);
+            } catch { /* ignore */ }
+            setUser({ ...baseUser, ...profile });
+          }
+        } catch (e) {
+          console.error('[Auth] Fallback getSession() failed:', e);
         }
-      } catch (e) {
-        console.error('[Auth] Fallback getSession() failed:', e);
       }
-      setLoading(false);
     }, 3000);
 
     return () => {
