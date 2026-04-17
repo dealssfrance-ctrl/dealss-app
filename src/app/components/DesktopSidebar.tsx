@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { chatService } from '../services/chatService';
 import { playMessageSound } from '../utils/sounds';
-import { CATEGORIES } from '../utils/categories';
+import { FORM_CATEGORIES } from '../utils/categories';
 
 export function DesktopSidebar() {
   const navigate = useNavigate();
@@ -97,7 +97,7 @@ export function DesktopSidebar() {
             >
               🏷️ Toutes
             </button>
-            {CATEGORIES.map((cat) => {
+            {FORM_CATEGORIES.map((cat) => {
               const isActive = searchParams.get('category') === cat.key;
               return (
                 <button
