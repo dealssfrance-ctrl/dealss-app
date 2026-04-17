@@ -16,7 +16,7 @@ export function ReviewsList({ reviews }: ReviewsListProps) {
     if (days === 1) return 'Hier';
     if (days < 7) return `Il y a ${days} jours`;
     if (days < 30) return `Il y a ${Math.floor(days / 7)} semaines`;
-    return date.toLocaleDateString();
+    return d.toLocaleDateString('fr-FR');
   };
 
   if (reviews.length === 0) {
