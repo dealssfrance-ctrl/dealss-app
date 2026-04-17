@@ -82,6 +82,76 @@ export interface SearchParams {
 }
 
 class OffersService {
+  /** Supported types the browser can natively decode via <img> / Canvas */
+  private static NATIVE_IMAGE_TYPES = new Set([
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml',
+  ]);
+
+  /**
+   * Convert any image file to a browser-friendly JPEG via Canvas.
+   * Handles HEIC, HEIF, AVIF, TIFF, and other exotic formats by
+   * reading the file as an object URL and drawing it on a canvas.
+   * If the browser cannot decode the format natively, we use a
+   * FileReader → createImageBitmap fallback.
+   */
+  private async convertToJpeg(file: File): Promise<File> {
+    // Already a format we can use — skip conversion
+    if (OffersService.NATIVE_IMAGE_TYPES.has(file.type)) {
+      return file;
+    }
+
+    // Try createImageBitmap first — works for some formats (AVIF, WebP)
+    // on newer browsers, and avoids the Image() load path entirely.
+    try {
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        const blob = await new Promise<Blob | null>(r => canvas.toBlob(r, 'image/jpeg', 0.85));
+        if (blob) {
+          return new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+        }
+      }
+    } catch { /* createImageBitmap failed, try Image() fallback */ }
+
+    // Fallback: try loading via Image element
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(file); return; }
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) { resolve(file); return; }
+            resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
+          },
+          'image/jpeg',
+          0.85,
+        );
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        // Last resort: return original file and let the server reject it
+        // (better than crashing the upload entirely)
+        resolve(file);
+      };
+
+      img.src = url;
+    });
+  }
+
   private compressImage(file: File, maxSize = 1200, quality = 0.7): Promise<File> {
     return new Promise((resolve, reject) => {
       if (file.size <= 200 * 1024) {
@@ -142,7 +212,9 @@ class OffersService {
     file: File,
     onProgress?: (percent: number) => void
   ): Promise<string> {
-    const compressed = await this.compressImage(file);
+    // Convert unsupported formats (HEIC, AVIF, TIFF…) to JPEG first
+    const converted = await this.convertToJpeg(file);
+    const compressed = await this.compressImage(converted);
     const ext = compressed.name.replace(/^.*\./, '') || 'jpg';
     const fileName = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
 
