@@ -108,10 +108,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       redirectHome: getRedirectUrl(),
     });
 
+    // Track whether onAuthStateChange has fired
+    let authResolved = false;
+
     // Single listener for ALL auth events (including initial session).
     // Avoids lock contention that happens when getSession() races with onAuthStateChange.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        authResolved = true;
         authLog('Auth event', event);
         if (session) {
           const baseUser = sessionToUser(session);
@@ -139,7 +143,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     );
 
-    return () => subscription.unsubscribe();
+    // Safety fallback: if onAuthStateChange never fires (e.g. lock timeout,
+    // stale session refresh failure), force-resolve loading via getSession().
+    const safetyTimeout = setTimeout(async () => {
+      if (authResolved) return;
+      console.warn('[Auth] onAuthStateChange did not fire in time, falling back to getSession()');
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const baseUser = sessionToUser(session);
+          setToken(session.access_token);
+          const profile = await fetchUserProfile(session.user.id);
+          setUser({ ...baseUser, ...profile });
+        }
+      } catch (e) {
+        console.error('[Auth] Fallback getSession() failed:', e);
+      }
+      setLoading(false);
+    }, 3000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
+    };
   }, []);
 
   const signup = async (email: string, password: string, confirmPassword: string, name: string) => {
