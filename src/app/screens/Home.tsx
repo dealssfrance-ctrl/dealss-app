@@ -10,6 +10,35 @@ import { OfferCardGridSkeleton, HotDealsSkeleton, CategoryTabsSkeleton, LoadMore
 import { CATEGORY_KEYS, getCategoryLabel, getCategoryName, CATEGORIES, orderCategories } from '../utils/categories';
 
 const DEFAULT_CATEGORIES = CATEGORY_KEYS;
+const CACHE_KEY = 'dealss_home_cache';
+const LIMIT = 10;
+
+interface HomeCache {
+  offers: Offer[];
+  hotDeals: Offer[];
+  categories: string[];
+  selectedCategory: string;
+  total: number;
+  ts: number;
+}
+
+function readCache(category: string): HomeCache | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const cache: HomeCache = JSON.parse(raw);
+    if (cache.selectedCategory !== category) return null;
+    // Cache valid for 10 minutes
+    if (Date.now() - cache.ts > 10 * 60 * 1000) return null;
+    return cache;
+  } catch { return null; }
+}
+
+function writeCache(data: Omit<HomeCache, 'ts'>) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ...data, ts: Date.now() }));
+  } catch { /* quota exceeded — ignore */ }
+}
 
 export function Home() {
   const navigate = useNavigate();
@@ -24,54 +53,97 @@ export function Home() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Total count of offers from server for the current category
+  const [serverTotal, setServerTotal] = useState(0);
+  // How many pages have actually been fetched from the server
+  const [serverPage, setServerPage] = useState(0);
 
-  const fetchOffers = useCallback(async (reset = false) => {
+  // ─── Load cache on mount / category change ───
+  useEffect(() => {
+    const cached = readCache(selectedCategory);
+    if (cached && cached.offers.length > 0) {
+      setOffers(cached.offers);
+      setHotDeals(cached.hotDeals);
+      if (cached.categories.length > 0) setCategories(cached.categories);
+      setServerTotal(cached.total);
+      const cachedPages = Math.ceil(cached.offers.length / LIMIT);
+      setServerPage(cachedPages);
+      setPage(1);
+      setHasMore(cached.offers.length < cached.total);
+      setLoading(false);
+      // Background refresh to keep data fresh
+      fetchFromServer(true, true);
+    } else {
+      fetchFromServer(true, false);
+    }
+  }, [selectedCategory]);
+
+  // ─── Fetch from server ───
+  const fetchFromServer = useCallback(async (reset: boolean, silent: boolean) => {
     try {
-      if (reset) {
-        setLoading(true);
-        setPage(1);
-      }
+      if (!silent) setLoading(true);
+      if (reset) setPage(1);
 
       const currentPage = reset ? 1 : page;
       const result = await offersService.searchOffers({
         category: selectedCategory === 'All' ? undefined : selectedCategory,
         page: currentPage,
-        limit: 10
+        limit: LIMIT,
       });
 
       if (result.success) {
+        let newOffers: Offer[];
         if (reset) {
-          setOffers(result.data);
+          newOffers = result.data;
+          setOffers(newOffers);
+          setServerPage(1);
         } else {
-          setOffers(prev => [...prev, ...result.data]);
+          newOffers = [...offers, ...result.data];
+          // Deduplicate by id in case cache and server overlap
+          const seen = new Set<string>();
+          newOffers = newOffers.filter(o => { if (seen.has(o.id)) return false; seen.add(o.id); return true; });
+          setOffers(newOffers);
+          setServerPage(currentPage);
         }
+        setServerTotal(result.pagination.total);
         setHasMore(result.pagination.hasNext);
-        
-        // Set hot deals (discounts >= 30%)
+
+        // Hot deals
         if (reset || currentPage === 1) {
           const allOffers = await offersService.getOffers(1, 50);
           const deals = allOffers.data.filter(offer => {
             const discountValue = parseInt(offer.discount.replace(/[^0-9]/g, ''));
             return discountValue >= 30;
           });
-          setHotDeals(deals.slice(0, 5));
+          const newHotDeals = deals.slice(0, 5);
+          setHotDeals(newHotDeals);
+
+          // Save to cache
+          writeCache({
+            offers: newOffers,
+            hotDeals: newHotDeals,
+            categories,
+            selectedCategory,
+            total: result.pagination.total,
+          });
         }
       }
     } catch (error) {
       console.error('Error fetching offers:', error);
-      toast.error('Erreur lors du chargement des offres');
+      if (!silent) toast.error('Erreur lors du chargement des offres');
     } finally {
       setLoading(false);
       setLoadingMore(false);
       setRefreshing(false);
     }
-  }, [selectedCategory, page]);
+  }, [selectedCategory, page, offers, categories]);
 
   const fetchCategories = useCallback(async () => {
     try {
       const result = await offersService.getCategories();
       if (result.success) {
-        setCategories(orderCategories(result.data.filter(c => c !== 'All')));
+        const ordered = orderCategories(result.data.filter(c => c !== 'All'));
+        setCategories(ordered);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -92,26 +164,37 @@ export function Home() {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    fetchOffers(true);
-  }, [selectedCategory]);
-
   const handleLoadMore = () => {
-    if (!loadingMore && hasMore) {
-      setLoadingMore(true);
-      setPage(prev => prev + 1);
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+
+    const nextPage = page + 1;
+    const cachedCount = offers.length;
+    const neededFromCache = nextPage * LIMIT;
+
+    // If we already have enough offers cached, just show more from the existing list
+    if (cachedCount >= neededFromCache) {
+      setPage(nextPage);
+      setLoadingMore(false);
+      return;
     }
+
+    // Otherwise fetch the next server page
+    setPage(prev => prev + 1);
   };
 
+  // Fetch next page from server when page increments beyond cache
   useEffect(() => {
-    if (page > 1) {
-      fetchOffers(false);
+    if (page > 1 && page > serverPage) {
+      fetchFromServer(false, false);
     }
   }, [page]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchOffers(true);
+    // Clear cache and fetch fresh data
+    localStorage.removeItem(CACHE_KEY);
+    await fetchFromServer(true, false);
   };
 
   const handleLogout = () => {
