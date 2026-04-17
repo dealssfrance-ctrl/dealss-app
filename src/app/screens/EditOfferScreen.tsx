@@ -1,19 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
-import { ArrowLeft, Camera, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, Camera, X, Loader2, Plus } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { offersService, Offer } from '../services/offersService';
 import { toast } from 'sonner';
 import { EditOfferFormSkeleton } from '../components/Skeleton';
 import { FORM_CATEGORIES, getCategoryLabel } from '../utils/categories';
 
 const CATEGORIES = FORM_CATEGORIES;
+const MAX_IMAGES = 5;
 
 export function EditOfferScreen() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [offer, setOffer] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -24,8 +26,10 @@ export function EditOfferScreen() {
     description: '',
     category: ''
   });
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  // existingUrls = URLs already saved in DB; newFiles/newPreviews = newly added
+  const [existingUrls, setExistingUrls] = useState<string[]>([]);
+  const [newPreviews, setNewPreviews] = useState<string[]>([]);
+  const [newFiles, setNewFiles] = useState<File[]>([]);
 
   useEffect(() => {
     const fetchOffer = async () => {
@@ -40,7 +44,7 @@ export function EditOfferScreen() {
             description: response.data.description,
             category: response.data.category
           });
-          setImagePreview(response.data.imageUrl);
+          setExistingUrls(response.data.images.length > 0 ? response.data.images : [response.data.imageUrl].filter(Boolean));
         }
       } catch (error) {
         console.error('Error fetching offer:', error);
@@ -59,18 +63,21 @@ export function EditOfferScreen() {
     try {
       setSaving(true);
 
-      // Upload new image to Supabase Storage if a new file was selected
-      let finalImageUrl = imagePreview || undefined;
-      if (imageFile) {
-        finalImageUrl = await offersService.uploadImage(imageFile);
+      // Upload new images
+      let newUploadedUrls: string[] = [];
+      if (newFiles.length > 0) {
+        newUploadedUrls = await offersService.uploadImages(newFiles);
       }
+
+      const allUrls = [...existingUrls, ...newUploadedUrls];
+      const imageUrl = allUrls.length <= 1 ? (allUrls[0] || '') : JSON.stringify(allUrls);
 
       await offersService.updateOffer(id, {
         storeName: formData.storeName.trim(),
         discount: formData.discount.trim(),
         description: formData.description.trim(),
         category: formData.category,
-        imageUrl: finalImageUrl
+        imageUrl
       });
       toast.success('Offre mise à jour avec succès ! ✅');
       navigate('/profile');
@@ -86,24 +93,42 @@ export function EditOfferScreen() {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('L\'image ne doit pas dépasser 5 Mo');
-        return;
-      }
-      setImageFile(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const totalCount = existingUrls.length + newFiles.length;
+    const remaining = MAX_IMAGES - totalCount;
+    if (remaining <= 0) {
+      toast.error(`Maximum ${MAX_IMAGES} photos`);
+      return;
+    }
+
+    const toAdd = files.slice(0, remaining);
+    const oversized = toAdd.filter(f => f.size > 5 * 1024 * 1024);
+    if (oversized.length > 0) {
+      toast.error('Chaque image ne doit pas dépasser 5 Mo');
+      return;
+    }
+
+    setNewFiles(prev => [...prev, ...toAdd]);
+    toAdd.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        setNewPreviews(prev => [...prev, reader.result as string]);
       };
       reader.readAsDataURL(file);
-    }
+    });
+
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const removeImage = () => {
-    setImagePreview(null);
-    setImageFile(null);
+  const removeExisting = (index: number) => {
+    setExistingUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNew = (index: number) => {
+    setNewPreviews(prev => prev.filter((_, i) => i !== index));
+    setNewFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   if (loading) {
@@ -143,49 +168,69 @@ export function EditOfferScreen() {
         className="max-w-2xl mx-auto px-5 md:px-8 py-6"
       >
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Photo Upload */}
+          {/* Photo Upload — Multi-image */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Photo
+              Photos <span className="text-gray-400">(max {MAX_IMAGES})</span>
             </label>
-            {imagePreview ? (
-              <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-gray-100">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="absolute top-3 right-3 bg-black/50 text-white p-2 rounded-full backdrop-blur-sm"
-                >
-                  <X size={20} />
-                </button>
-                <label className="absolute bottom-3 right-3 bg-white text-gray-700 px-4 py-2 rounded-full text-sm font-medium shadow-lg cursor-pointer flex items-center gap-2">
-                  <Camera size={16} />
-                  Changer
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              <AnimatePresence>
+                {existingUrls.map((url, idx) => (
+                  <motion.div
+                    key={`existing-${idx}`}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className={`relative aspect-square rounded-2xl overflow-hidden bg-gray-100 ${idx === 0 && newPreviews.length === 0 ? 'ring-2 ring-[#1FA774] ring-offset-2' : ''}`}
+                  >
+                    <img src={url} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                    {idx === 0 && newPreviews.length === 0 && (
+                      <span className="absolute top-1.5 left-1.5 bg-[#1FA774] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">Principal</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeExisting(idx)}
+                      className="absolute top-1.5 right-1.5 bg-black/50 text-white p-1 rounded-full backdrop-blur-sm hover:bg-black/70 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </motion.div>
+                ))}
+                {newPreviews.map((preview, idx) => (
+                  <motion.div
+                    key={`new-${idx}`}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100"
+                  >
+                    <img src={preview} alt={`Nouvelle photo ${idx + 1}`} className="w-full h-full object-cover" />
+                    <span className="absolute top-1.5 left-1.5 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">Nouveau</span>
+                    <button
+                      type="button"
+                      onClick={() => removeNew(idx)}
+                      className="absolute top-1.5 right-1.5 bg-black/50 text-white p-1 rounded-full backdrop-blur-sm hover:bg-black/70 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              {(existingUrls.length + newFiles.length) < MAX_IMAGES && (
+                <label className="aspect-square flex flex-col items-center justify-center bg-white border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer hover:bg-gray-50 hover:border-[#1FA774] transition-colors">
+                  <Plus size={24} className="text-gray-400 mb-1" />
+                  <span className="text-[11px] text-gray-500 font-medium">Ajouter</span>
                   <input
+                    ref={fileInputRef}
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleImageChange}
                     className="hidden"
                   />
                 </label>
-              </div>
-            ) : (
-              <label className="w-full h-48 flex flex-col items-center justify-center bg-white border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer hover:bg-gray-50 transition-colors">
-                <Camera size={40} className="text-gray-400 mb-2" />
-                <span className="text-sm font-medium text-gray-600">Ajouter une photo</span>
-                <span className="text-xs text-gray-400 mt-1">Appuyez pour télécharger</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-              </label>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Store Name */}

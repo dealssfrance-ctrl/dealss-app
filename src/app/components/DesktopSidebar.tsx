@@ -1,13 +1,15 @@
 import { Home, Search, MessageCircle, User, Plus } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router';
+import { useNavigate, useLocation, useSearchParams } from 'react-router';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { chatService } from '../services/chatService';
 import { playMessageSound } from '../utils/sounds';
+import { CATEGORIES } from '../utils/categories';
 
 export function DesktopSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const prevUnreadRef = useRef(0);
@@ -81,6 +83,37 @@ export function DesktopSidebar() {
           );
         })}
       </nav>
+
+      {/* Category Filters — visible only on home */}
+      {(location.pathname === '/' || location.pathname === '') && (
+        <div className="px-3 pb-3 border-t border-gray-100">
+          <p className="px-4 pt-3 pb-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Catégories</p>
+          <div className="space-y-0.5 max-h-[220px] overflow-y-auto scrollbar-thin">
+            <button
+              onClick={() => navigate('/')}
+              className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-left transition-colors ${
+                !searchParams.get('category') ? 'bg-[#1FA774]/10 text-[#1FA774] font-semibold' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              🏷️ Toutes
+            </button>
+            {CATEGORIES.map((cat) => {
+              const isActive = searchParams.get('category') === cat.key;
+              return (
+                <button
+                  key={cat.key}
+                  onClick={() => navigate(`/?category=${encodeURIComponent(cat.key)}`)}
+                  className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-left transition-colors ${
+                    isActive ? 'bg-[#1FA774]/10 text-[#1FA774] font-semibold' : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {cat.emoji} {cat.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Add Offer CTA */}
       <div className="px-4 py-4 border-t border-gray-100">

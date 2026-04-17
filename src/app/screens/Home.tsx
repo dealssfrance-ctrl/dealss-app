@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Layout } from '../components/Layout';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { Plus, TrendingUp, Zap, Sparkles, LogOut, User, RefreshCw, Search, ChevronRight, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -13,8 +13,9 @@ const DEFAULT_CATEGORIES = CATEGORY_KEYS;
 
 export function Home() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, logout } = useAuth();
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'All');
   const [offers, setOffers] = useState<Offer[]>([]);
   const [hotDeals, setHotDeals] = useState<Offer[]>([]);
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
@@ -80,6 +81,16 @@ export function Home() {
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+
+  // Read category from URL on navigation (e.g. from sidebar)
+  useEffect(() => {
+    const cat = searchParams.get('category');
+    if (cat && cat !== selectedCategory) {
+      setSelectedCategory(cat);
+    } else if (!cat && selectedCategory !== 'All') {
+      setSelectedCategory('All');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchOffers(true);

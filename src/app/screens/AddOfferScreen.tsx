@@ -1,27 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
-import { ArrowLeft, Camera, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, Camera, X, Loader2, Plus, GripVertical } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { offersService } from '../services/offersService';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { FORM_CATEGORIES, getCategoryLabel } from '../utils/categories';
 
 const CATEGORIES = FORM_CATEGORIES;
+const MAX_IMAGES = 5;
 
 export function AddOfferScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     storeName: '',
     discount: '',
     description: '',
     category: ''
   });
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -78,12 +80,12 @@ export function AddOfferScreen() {
       setLoading(true);
       setUploadProgress(0);
       
-      // Upload image to Supabase Storage if a file was selected
       let imageUrl = '';
-      if (imageFile) {
-        imageUrl = await offersService.uploadImage(imageFile, (percent) => {
+      if (imageFiles.length > 0) {
+        const urls = await offersService.uploadImages(imageFiles, (percent) => {
           setUploadProgress(percent);
         });
+        imageUrl = urls.length === 1 ? urls[0] : JSON.stringify(urls);
       }
       
       await offersService.createOffer({
@@ -114,24 +116,38 @@ export function AddOfferScreen() {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('L\'image ne doit pas dépasser 5 Mo');
-        return;
-      }
-      setImageFile(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const remaining = MAX_IMAGES - imageFiles.length;
+    if (remaining <= 0) {
+      toast.error(`Maximum ${MAX_IMAGES} photos`);
+      return;
+    }
+
+    const toAdd = files.slice(0, remaining);
+    const oversized = toAdd.filter(f => f.size > 5 * 1024 * 1024);
+    if (oversized.length > 0) {
+      toast.error('Chaque image ne doit pas dépasser 5 Mo');
+      return;
+    }
+
+    setImageFiles(prev => [...prev, ...toAdd]);
+    toAdd.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        setImagePreviews(prev => [...prev, reader.result as string]);
       };
       reader.readAsDataURL(file);
-    }
+    });
+
+    // Reset file input so same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const removeImage = () => {
-    setImagePreview(null);
-    setImageFile(null);
+  const removeImage = (index: number) => {
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -156,39 +172,52 @@ export function AddOfferScreen() {
         className="max-w-2xl mx-auto px-5 md:px-8 py-6"
       >
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Photo Upload */}
+          {/* Photo Upload — Multi-image */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Photo <span className="text-gray-400">(optionnel)</span>
+              Photos <span className="text-gray-400">(max {MAX_IMAGES}, optionnel)</span>
             </label>
-            {imagePreview ? (
-              <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-gray-100">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="absolute top-3 right-3 bg-black/50 text-white p-2 rounded-full backdrop-blur-sm hover:bg-black/70 transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            ) : (
-              <label className="w-full h-48 flex flex-col items-center justify-center bg-white border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer hover:bg-gray-50 hover:border-[#1FA774] transition-colors">
-                <Camera size={40} className="text-gray-400 mb-2" />
-                <span className="text-sm font-medium text-gray-600">Ajouter une photo</span>
-                <span className="text-xs text-gray-400 mt-1">Appuyez pour télécharger</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-              </label>
-            )}
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              <AnimatePresence>
+                {imagePreviews.map((preview, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className={`relative aspect-square rounded-2xl overflow-hidden bg-gray-100 ${idx === 0 ? 'ring-2 ring-[#1FA774] ring-offset-2' : ''}`}
+                  >
+                    <img src={preview} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                    {idx === 0 && (
+                      <span className="absolute top-1.5 left-1.5 bg-[#1FA774] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        Principal
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-1.5 right-1.5 bg-black/50 text-white p-1 rounded-full backdrop-blur-sm hover:bg-black/70 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              {imagePreviews.length < MAX_IMAGES && (
+                <label className="aspect-square flex flex-col items-center justify-center bg-white border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer hover:bg-gray-50 hover:border-[#1FA774] transition-colors">
+                  <Plus size={24} className="text-gray-400 mb-1" />
+                  <span className="text-[11px] text-gray-500 font-medium">Ajouter</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
           </div>
 
           {/* Store Name */}
@@ -282,7 +311,7 @@ export function AddOfferScreen() {
           </div>
 
           {/* Upload Progress */}
-          {loading && imageFile && (
+          {loading && imageFiles.length > 0 && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -311,7 +340,7 @@ export function AddOfferScreen() {
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <Loader2 size={20} className="animate-spin" />
-                  {imageFile && uploadProgress < 100 ? `Téléchargement ${uploadProgress}%` : 'Publication en cours...'}
+                  {imageFiles.length > 0 && uploadProgress < 100 ? `Téléchargement ${uploadProgress}%` : 'Publication en cours...'}
                 </span>
               ) : (
                 'Publier l\'offre'

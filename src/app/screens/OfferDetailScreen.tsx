@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { offersService, Offer } from '../services/offersService';
 import { chatService } from '../services/chatService';
 import { reviewsService, Review } from '../services/reviewsService';
+import { supabase } from '../services/supabaseClient';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { OfferDetailSkeleton } from '../components/Skeleton';
@@ -28,6 +29,7 @@ export function OfferDetailScreen() {
   const [lightboxZoom, setLightboxZoom] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [sellerInfo, setSellerInfo] = useState<{ company?: string; jobTitle?: string; showWorkInfo: boolean } | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
   const isOwnOffer = offer?.userId === user?.id;
@@ -59,11 +61,26 @@ export function OfferDetailScreen() {
         const response = await offersService.getOfferById(id);
         if (response.success) {
           setOffer(response.data);
-          // Build gallery from the offer's actual image(s)
-          const imgs = [response.data.imageUrl].filter(Boolean);
+          // Build gallery from all offer images
+          const imgs = response.data.images.length > 0 ? response.data.images : [response.data.imageUrl].filter(Boolean);
           setGalleryImages(imgs);
           setSelectedImageIndex(0);
           await fetchReviews(id);
+          // Fetch seller profile info for work display
+          if (response.data.userId) {
+            const { data: sellerData } = await supabase
+              .from('users')
+              .select('company, job_title, show_work_info')
+              .eq('id', response.data.userId)
+              .single();
+            if (sellerData) {
+              setSellerInfo({
+                company: sellerData.company || undefined,
+                jobTitle: sellerData.job_title || undefined,
+                showWorkInfo: sellerData.show_work_info ?? true,
+              });
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching offer:', error);
@@ -354,7 +371,13 @@ export function OfferDetailScreen() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 text-sm">{offer.userName}</h3>
-                      <p className="text-xs text-gray-400">Membre Dealss</p>
+                      {sellerInfo?.showWorkInfo && (sellerInfo.jobTitle || sellerInfo.company) ? (
+                        <p className="text-xs text-gray-500">
+                          {sellerInfo.jobTitle}{sellerInfo.jobTitle && sellerInfo.company ? ' · ' : ''}{sellerInfo.company}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-400">Membre Dealss</p>
+                      )}
                     </div>
                     {!isOwnOffer && (
                       <button
@@ -400,7 +423,14 @@ export function OfferDetailScreen() {
                   </h2>
                   {!isOwnOffer && (
                     <button
-                      onClick={() => setIsOfferReviewModalOpen(true)}
+                      onClick={() => {
+                        if (!user) {
+                          toast.error('Connectez-vous pour donner un avis');
+                          navigate('/signin');
+                          return;
+                        }
+                        setIsOfferReviewModalOpen(true);
+                      }}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-[#1FA774] font-medium hover:bg-[#1FA774]/5 rounded-full transition-colors"
                     >
                       <Star size={15} />
@@ -420,13 +450,23 @@ export function OfferDetailScreen() {
                     </div>
                   )}
 
-                  {/* Review Input */}
-                  {!isOwnOffer && user && (
+                  {/* Review Input — only for logged-in users */}
+                  {!isOwnOffer && user ? (
                     <ReviewInput
                       onSubmit={handleOfferReviewSubmit}
                       userName={user.name}
                     />
-                  )}
+                  ) : !isOwnOffer && !user ? (
+                    <div className="bg-gray-50 rounded-2xl p-4 mb-4 text-center">
+                      <p className="text-sm text-gray-500 mb-2">Connectez-vous pour donner votre avis</p>
+                      <button
+                        onClick={() => navigate('/signin')}
+                        className="text-sm font-semibold text-[#1FA774] hover:underline"
+                      >
+                        Se connecter
+                      </button>
+                    </div>
+                  ) : null}
 
                   {/* Reviews List */}
                   <ReviewsList reviews={reviews} />

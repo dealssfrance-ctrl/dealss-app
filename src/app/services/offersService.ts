@@ -1,13 +1,25 @@
 import { supabase } from './supabaseClient';
 
+/** Parse image_url field: could be a JSON array string or a single URL */
+function parseImages(raw: string): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.filter(Boolean);
+  } catch { /* not JSON, treat as single URL */ }
+  return [raw];
+}
+
 function toOffer(row: any): Offer {
+  const images = parseImages(row.image_url);
   return {
     id: row.id,
     storeName: row.store_name,
     discount: row.discount,
     description: row.description,
     category: row.category,
-    imageUrl: row.image_url || '',
+    imageUrl: images[0] || '',
+    images,
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -23,6 +35,7 @@ export interface Offer {
   description: string;
   category: string;
   imageUrl: string;
+  images: string[];
   status: 'active' | 'inactive' | 'pending';
   createdAt: string;
   updatedAt: string;
@@ -147,6 +160,20 @@ class OffersService {
 
     if (onProgress) onProgress(100);
     return urlData.publicUrl;
+  }
+
+  async uploadImages(
+    files: File[],
+    onProgress?: (percent: number) => void
+  ): Promise<string[]> {
+    const urls: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const url = await this.uploadImage(files[i]);
+      urls.push(url);
+      if (onProgress) onProgress(Math.round(((i + 1) / files.length) * 90));
+    }
+    if (onProgress) onProgress(100);
+    return urls;
   }
 
   async getOffers(page = 1, limit = 10): Promise<OffersResponse> {
