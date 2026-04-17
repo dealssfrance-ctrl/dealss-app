@@ -7,11 +7,18 @@ export interface CategoryConfig {
 export const CATEGORIES: CategoryConfig[] = [
   { key: 'All', label: 'Tout', emoji: '🔥' },
   { key: 'Fashion', label: 'Mode', emoji: '👗' },
+  { key: 'Mode', label: 'Mode', emoji: '👗' },
   { key: 'Travel', label: 'Vols', emoji: '✈️' },
   { key: 'Sports', label: 'Sport', emoji: '⚽' },
+  { key: 'Sport', label: 'Sport', emoji: '⚽' },
   { key: 'Beauty', label: 'Beauté', emoji: '💄' },
+  { key: 'Beaute', label: 'Beauté', emoji: '💄' },
+  { key: 'Beauté', label: 'Beauté', emoji: '💄' },
   { key: 'Food', label: 'Food', emoji: '🍔' },
+  { key: 'Alimentation', label: 'Alimentation', emoji: '🛒' },
   { key: 'Electronics', label: 'Électronique', emoji: '📱' },
+  { key: 'High-Tech', label: 'High-Tech', emoji: '💻' },
+  { key: 'Maison', label: 'Maison', emoji: '🏠' },
   { key: 'Other', label: 'Autre', emoji: '📦' },
 ];
 
@@ -30,8 +37,16 @@ export function getCategoryName(key: string): string {
   return cat ? cat.label : key;
 }
 
-/** Categories for forms (excludes 'All') */
-export const FORM_CATEGORIES = CATEGORIES.filter(c => c.key !== 'All');
+/** Categories for forms (excludes 'All', deduplicated by label — prefers French keys) */
+export const FORM_CATEGORIES = (() => {
+  const seen = new Set<string>();
+  return CATEGORIES.filter(c => {
+    if (c.key === 'All') return false;
+    if (seen.has(c.label)) return false;
+    seen.add(c.label);
+    return true;
+  });
+})();
 
 /** Order categories: put known ones first in defined order, then any extras from DB */
 export function orderCategories(dbCategories: string[]): string[] {

@@ -15,47 +15,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { OfferDetailSkeleton } from '../components/Skeleton';
 
-/** Example placeholder images for the gallery (complements the main image) */
-const PLACEHOLDER_IMAGES = [
-  'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1607082349566-187342175e2f?w=600&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1556742111-a301076d9d18?w=600&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=600&h=400&fit=crop',
-];
-
-/** Example reviews shown as seed data when no DB reviews exist */
-function getExampleReviews(offerId: string): Review[] {
-  return [
-    {
-      id: 'example_1',
-      offerId,
-      userId: 'seed_user_1',
-      userName: 'Marie L.',
-      rating: 5,
-      comment: 'Super offre ! J\'ai économisé beaucoup grâce à cette réduction. Livraison rapide et produit conforme.',
-      createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-    },
-    {
-      id: 'example_2',
-      offerId,
-      userId: 'seed_user_2',
-      userName: 'Thomas B.',
-      rating: 4,
-      comment: 'Très bonne affaire, le code promo fonctionnait parfaitement. Je recommande !',
-      createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-    },
-    {
-      id: 'example_3',
-      offerId,
-      userId: 'seed_user_3',
-      userName: 'Sophie D.',
-      rating: 4,
-      comment: 'Bonne réduction, j\'ai pu en profiter facilement. Merci pour le partage.',
-      createdAt: new Date(Date.now() - 8 * 86400000).toISOString(),
-    },
-  ];
-}
-
 export function OfferDetailScreen() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -84,21 +43,11 @@ export function OfferDetailScreen() {
   const fetchReviews = async (offerId: string) => {
     try {
       const res = await reviewsService.getOfferReviews(offerId);
-      if (res.success && res.data.length > 0) {
-        setReviews(res.data);
-        setOfferRating(res.rating);
-      } else {
-        // Show example reviews if none exist yet
-        const examples = getExampleReviews(offerId);
-        setReviews(examples);
-        setOfferRating(computeRating(examples));
-      }
+      setReviews(res.data);
+      setOfferRating(res.rating);
     } catch (error) {
       console.error('Error fetching reviews:', error);
-      // Fallback to example reviews on error
-      const examples = getExampleReviews(offerId);
-      setReviews(examples);
-      setOfferRating(computeRating(examples));
+      // Keep current state on error
     }
   };
 
@@ -110,8 +59,8 @@ export function OfferDetailScreen() {
         const response = await offersService.getOfferById(id);
         if (response.success) {
           setOffer(response.data);
-          // Build gallery: main image + placeholder images
-          const imgs = [response.data.imageUrl, ...PLACEHOLDER_IMAGES].filter(Boolean);
+          // Build gallery from the offer's actual image(s)
+          const imgs = [response.data.imageUrl].filter(Boolean);
           setGalleryImages(imgs);
           setSelectedImageIndex(0);
           await fetchReviews(id);
@@ -197,36 +146,20 @@ export function OfferDetailScreen() {
   const handleOfferReviewSubmit = async (rating: number, comment: string) => {
     if (!user || !offer) return;
 
-    // Immediately add review to local state for instant feedback
-    const localReview: Review = {
-      id: `local_${Date.now()}`,
+    // createReview saves to localStorage instantly + fires DB persist in background
+    const result = await reviewsService.createReview({
       offerId: offer.id,
       userId: user.id,
       userName: user.name,
       rating,
       comment,
-      createdAt: new Date().toISOString(),
-    };
+    });
 
-    const updatedReviews = [localReview, ...reviews.filter(r => !r.id.startsWith('example_'))];
+    // Instant local state update
+    const updatedReviews = [result.data, ...reviews];
     setReviews(updatedReviews);
     setOfferRating(computeRating(updatedReviews));
     toast.success('Merci pour votre avis ! ⭐');
-
-    // Try to persist to database
-    try {
-      await reviewsService.createReview({
-        offerId: offer.id,
-        userId: user.id,
-        userName: user.name,
-        rating,
-        comment,
-      });
-      // Refresh from DB to get the real data
-      await fetchReviews(offer.id);
-    } catch (error) {
-      console.warn('Review saved locally only:', error);
-    }
   };
 
   return (

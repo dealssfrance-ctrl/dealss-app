@@ -29,10 +29,10 @@ export function ReviewsList({ reviews }: ReviewsListProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 mt-4">
       {reviews.map((review) => (
-        <div key={review.id} className="bg-white rounded-2xl p-4 shadow-sm">
-          <div className="flex items-start gap-3 mb-3">
+        <div key={review.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+          <div className="flex items-start gap-3 mb-2">
             <div className="w-10 h-10 rounded-full overflow-hidden bg-[#1FA774]/10 flex-shrink-0 flex items-center justify-center">
               <span className="text-[#1FA774] font-bold text-sm">
                 {review.userName.charAt(0).toUpperCase()}
@@ -40,12 +40,12 @@ export function ReviewsList({ reviews }: ReviewsListProps) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-1">
-                <h4 className="font-semibold text-gray-900 truncate">{review.userName}</h4>
+                <h4 className="font-semibold text-gray-900 truncate text-sm">{review.userName}</h4>
                 <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
                   {formatDate(review.createdAt)}
                 </span>
               </div>
-              <div className="flex items-center gap-1 mb-2">
+              <div className="flex items-center gap-0.5">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
@@ -57,7 +57,7 @@ export function ReviewsList({ reviews }: ReviewsListProps) {
             </div>
           </div>
           {review.comment && (
-            <p className="text-sm text-gray-600 leading-relaxed">{review.comment}</p>
+            <p className="text-sm text-gray-600 leading-relaxed ml-[52px]">{review.comment}</p>
           )}
         </div>
       ))}

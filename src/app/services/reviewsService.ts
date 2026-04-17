@@ -28,43 +28,147 @@ function toReview(row: any): Review {
   };
 }
 
+function computeRating(reviews: Review[]): { average: number; count: number } {
+  const count = reviews.length;
+  const average = count > 0
+    ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / count) * 10) / 10
+    : 0;
+  return { average, count };
+}
+
+// ── localStorage persistence (fallback when DB is unavailable) ──
+
+const STORAGE_KEY = 'dealss_reviews';
+
+function getLocalStore(): Record<string, Review[]> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLocalStore(store: Record<string, Review[]>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  } catch {
+    // storage full or unavailable
+  }
+}
+
+function getLocalReviewsForOffer(offerId: string): Review[] {
+  return getLocalStore()[offerId] || [];
+}
+
+function addLocalReview(review: Review) {
+  const store = getLocalStore();
+  const existing = store[review.offerId] || [];
+  if (!existing.some(r => r.id === review.id)) {
+    store[review.offerId] = [review, ...existing];
+    saveLocalStore(store);
+  }
+}
+
+function removeLocalReview(reviewId: string) {
+  const store = getLocalStore();
+  for (const offerId in store) {
+    store[offerId] = store[offerId].filter(r => r.id !== reviewId);
+  }
+  saveLocalStore(store);
+}
+
+function clearLocalReviewsForOffer(offerId: string) {
+  const store = getLocalStore();
+  delete store[offerId];
+  saveLocalStore(store);
+}
+
 export const reviewsService = {
   async getOfferReviews(offerId: string): Promise<ReviewsResponse> {
-    const { data, error } = await supabase
-      .from('reviews')
-      .select('*')
-      .eq('offer_id', offerId)
-      .order('created_at', { ascending: false });
-    if (error) throw new Error('Failed to fetch reviews');
+    let dbReviews: Review[] = [];
 
-    const reviews = (data || []).map(toReview);
-    const count = reviews.length;
-    const average = count > 0
-      ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / count) * 10) / 10
-      : 0;
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('offer_id', offerId)
+        .order('created_at', { ascending: false });
 
-    return { success: true, data: reviews, rating: { average, count } };
+      if (!error && data && data.length > 0) {
+        dbReviews = data.map(toReview);
+      }
+    } catch {
+      // DB unavailable — will use local fallback
+    }
+
+    if (dbReviews.length > 0) {
+      // DB is source of truth — clear local cache for this offer
+      clearLocalReviewsForOffer(offerId);
+      return { success: true, data: dbReviews, rating: computeRating(dbReviews) };
+    }
+
+    // No DB reviews — fall back to localStorage
+    const localReviews = getLocalReviewsForOffer(offerId);
+    return { success: true, data: localReviews, rating: computeRating(localReviews) };
   },
 
-  async createReview(review: { offerId: string; userId: string; userName: string; rating: number; comment?: string }): Promise<{ success: boolean; data: Review }> {
+  async createReview(review: {
+    offerId: string;
+    userId: string;
+    userName: string;
+    rating: number;
+    comment?: string;
+  }): Promise<{ success: boolean; data: Review }> {
     const id = `rev_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-    const { data, error } = await supabase.from('reviews').insert({
+    const newReview: Review = {
       id,
-      offer_id: review.offerId,
-      user_id: review.userId,
-      user_name: review.userName,
+      offerId: review.offerId,
+      userId: review.userId,
+      userName: review.userName,
       rating: review.rating,
-      comment: review.comment || null,
-      created_at: new Date().toISOString(),
-    }).select().single();
+      comment: review.comment,
+      createdAt: new Date().toISOString(),
+    };
 
-    if (error) throw new Error('Failed to create review');
-    return { success: true, data: toReview(data) };
+    // 1. Save to localStorage immediately (instant)
+    addLocalReview(newReview);
+
+    // 2. Fire-and-forget DB persistence
+    supabase
+      .from('reviews')
+      .insert({
+        id,
+        offer_id: review.offerId,
+        user_id: review.userId,
+        user_name: review.userName,
+        rating: review.rating,
+        comment: review.comment || null,
+        created_at: newReview.createdAt,
+      })
+      .select()
+      .single()
+      .then(({ error }) => {
+        if (error) {
+          console.warn('[Reviews] DB persist failed, localStorage fallback active:', error.message);
+        }
+      })
+      .catch(() => {
+        console.warn('[Reviews] DB unreachable, review saved locally');
+      });
+
+    return { success: true, data: newReview };
   },
 
   async deleteReview(reviewId: string): Promise<{ success: boolean }> {
-    const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
-    if (error) throw new Error('Failed to delete review');
+    removeLocalReview(reviewId);
+
+    try {
+      await supabase.from('reviews').delete().eq('id', reviewId);
+    } catch {
+      // DB delete failed but local is already removed
+    }
+
     return { success: true };
   },
 };
