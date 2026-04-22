@@ -1,0 +1,383 @@
+import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'motion/react';
+import { Layout } from '../components/Layout';
+import { useNavigate } from 'react-router';
+import { Plus, TrendingUp, Zap, Sparkles, LogOut, User, RefreshCw } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
+import { offersService, Offer } from '../services/offersService';
+import { OfferCardGridSkeleton, HotDealsSkeleton, CategoryTabsSkeleton, LoadMoreSkeleton } from '../components/Skeleton';
+import { StarRating } from '../components/StarRating';
+
+const DEFAULT_CATEGORIES = ['All', 'Fashion', 'Food', 'Sports', 'Electronics', 'Beauty', 'Vols'];
+
+const CATEGORY_EMOJIS: Record<string, string> = {
+  'All': '✨',
+  'Fashion': '👗',
+  'Food': '🍔',
+  'Sports': '🏀',
+  'Electronics': '📱',
+  'Beauty': '💄',
+  'Vols': '✈️',
+  'Other': '📦',
+};
+
+export function Home() {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [hotDeals, setHotDeals] = useState<Offer[]>([]);
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchOffers = useCallback(async (reset = false) => {
+    try {
+      if (reset) {
+        setLoading(true);
+        setPage(1);
+      }
+
+      const currentPage = reset ? 1 : page;
+      const result = await offersService.searchOffers({
+        category: selectedCategory === 'All' ? undefined : selectedCategory,
+        page: currentPage,
+        limit: 10
+      });
+
+      if (result.success) {
+        if (reset) {
+          setOffers(result.data);
+        } else {
+          // Deduplicate by ID when appending
+          setOffers(prev => {
+            const map = new Map([...prev, ...result.data].map(o => [o.id, o]));
+            return Array.from(map.values());
+          });
+        }
+        setHasMore(result.pagination.hasNext);
+        
+        // Set hot deals (discounts >= 30%)
+        if (reset || currentPage === 1) {
+          const allOffers = await offersService.getOffers(1, 50);
+          const deals = allOffers.data.filter(offer => {
+            const discountValue = parseInt(offer.discount.replace(/[^0-9]/g, ''));
+            return discountValue >= 30;
+          });
+          setHotDeals(deals.slice(0, 5));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching offers:', error);
+      toast.error('Erreur lors du chargement des offres');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
+  }, [selectedCategory, page]);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const result = await offersService.getCategories();
+      if (result.success) {
+        // Deduplicate and ensure 'All' is first
+        const seen = new Set<string>();
+        const deduped: string[] = [];
+        for (const c of result.data) {
+          const key = c.toLowerCase();
+          if (!seen.has(key)) { seen.add(key); deduped.push(c); }
+        }
+        setCategories(deduped);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    fetchOffers(true);
+  }, [selectedCategory]);
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) {
+      setLoadingMore(true);
+      setPage(prev => prev + 1);
+    }
+  };
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchOffers(false);
+    }
+  }, [page]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchOffers(true);
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Déconnexion réussie');
+    navigate('/');
+  };
+
+  return (
+    <Layout>
+    <div className="min-h-screen bg-gray-50 pb-6 md:pb-6">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-16 md:top-0 z-10">
+        <div className="px-5 md:px-8 lg:px-10 py-6">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <h1 className="text-3xl font-bold text-gray-900 md:hidden">Hyvis</h1>
+            <h1 className="hidden md:block text-2xl font-bold text-gray-900">Accueil</h1>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+                title="Actualiser"
+              >
+                <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
+              </button>
+              {user && (
+                <div className="hidden md:flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full">
+                  <User size={16} />
+                  <span className="font-medium">{user.name?.split(' ')[0] || 'User'}</span>
+                </div>
+              )}
+              {user ? (
+                <button
+                  onClick={handleLogout}
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors md:hidden"
+                  title="Se déconnecter"
+                >
+                  <LogOut size={20} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate('/signin')}
+                  className="text-sm font-semibold text-white bg-[#1FA774] px-4 py-2 rounded-full hover:bg-[#16865c] transition-colors"
+                >
+                  Connexion
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-7xl mx-auto">
+        {/* Search Bar */}
+        <div className="px-5 md:px-8 lg:px-10 pt-5 pb-4">
+          <button
+            onClick={() => navigate('/search')}
+            className="w-full md:max-w-xl bg-white rounded-full px-5 py-3.5 text-left text-gray-400 shadow-sm hover:shadow-md transition-shadow border border-gray-100"
+          >
+            Rechercher des offres...
+          </button>
+        </div>
+
+        {/* Hero Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-5 md:mx-8 lg:mx-10 mb-6 bg-gradient-to-br from-[#1FA774] to-[#16865c] rounded-3xl p-6 md:p-8 lg:p-10 text-white overflow-hidden relative"
+        >
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap size={20} fill="white" />
+              <span className="text-sm font-semibold uppercase tracking-wide">Flash Deals</span>
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold mb-1">Jusqu'à 40% de réduction</h2>
+            <p className="text-white/90 text-sm">Réductions exclusives employés</p>
+          </div>
+          <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full" />
+          <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/5 rounded-full" />
+        </motion.div>
+
+        {/* Category Tabs */}
+        <div className="px-5 md:px-8 lg:px-10 mb-6 overflow-x-auto scrollbar-hide">
+          {loading && categories.length === 0 ? (
+            <CategoryTabsSkeleton />
+          ) : (
+            <div className="flex gap-2 pb-2">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    selectedCategory === category
+                      ? 'bg-[#1FA774] text-white shadow-sm'
+                      : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50'
+                  }`}
+                >
+                  {CATEGORY_EMOJIS[category] ? `${CATEGORY_EMOJIS[category]} ` : ''}{category}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Hot Deals Section */}
+        <div className="mb-6">
+          <div className="px-5 md:px-8 lg:px-10 mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp size={20} className="text-[#1FA774]" />
+              <h3 className="font-bold text-lg text-gray-900">Hot Deals</h3>
+            </div>
+            <span className="text-sm text-gray-500">{hotDeals.length} offres</span>
+          </div>
+          <div className="px-5 md:px-8 lg:px-10 overflow-x-auto scrollbar-hide">
+            {loading ? (
+              <HotDealsSkeleton count={3} />
+            ) : hotDeals.length > 0 ? (
+              <div className="flex gap-3 pb-2">
+                {hotDeals.map((offer) => (
+                  <motion.button
+                    key={offer.id}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate(`/offer/${offer.id}`)}
+                    className="flex-shrink-0 w-44 md:w-56 lg:w-64 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="relative">
+                      <img
+                        src={offer.imageUrl}
+                        alt={offer.storeName}
+                        className="w-full h-32 object-cover"
+                        loading="lazy"
+                      />
+                      <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                        {offer.discount}
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <h4 className="font-semibold text-gray-900 text-sm mb-1 truncate">{offer.storeName}</h4>
+                      <p className="text-xs text-gray-500 line-clamp-2">{offer.description}</p>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-400 text-sm text-center py-4">Aucun hot deal disponible</p>
+            )}
+          </div>
+        </div>
+
+        {/* All Offers Section */}
+        <div className="px-5 md:px-8 lg:px-10">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles size={20} className="text-gray-600" />
+              <h3 className="font-bold text-lg text-gray-900">Toutes les offres</h3>
+            </div>
+            {!loading && (
+              <span className="text-sm text-gray-500">
+                {offers.length} {offers.length === 1 ? 'offre' : 'offres'}
+              </span>
+            )}
+          </div>
+
+          {/* Grid Layout */}
+          {loading ? (
+            <OfferCardGridSkeleton count={6} />
+          ) : offers.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-400 mb-4">Aucune offre dans cette catégorie</p>
+              <button
+                onClick={() => setSelectedCategory('All')}
+                className="text-[#1FA774] font-medium"
+              >
+                Voir toutes les offres
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-5 pb-4">
+                {offers.map((offer, index) => (
+                  <motion.button
+                    key={offer.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: Math.min(index * 0.05, 0.3) }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate(`/offer/${offer.id}`)}
+                    className="bg-white rounded-2xl overflow-hidden shadow-sm text-left hover:shadow-md transition-shadow"
+                  >
+                    <div className="relative">
+                      <img
+                        src={offer.imageUrl}
+                        alt={offer.storeName}
+                        className="w-full h-36 md:h-44 lg:h-48 object-cover"
+                        loading="lazy"
+                      />
+                      <div className="absolute top-2 right-2 bg-[#1FA774] text-white text-sm font-bold px-2.5 py-1 rounded-full shadow-md">
+                        {offer.discount}
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <h4 className="font-semibold text-gray-900 mb-1 truncate">{offer.storeName}</h4>
+                      <p className="text-xs text-gray-500 line-clamp-2 mb-2">{offer.description}</p>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full shrink-0">
+                          {offer.category}
+                        </span>
+                        {offer.averageRating !== undefined && offer.averageRating > 0 ? (
+                          <StarRating rating={offer.averageRating} reviewCount={offer.reviewCount} size={12} />
+                        ) : (
+                          offer.userName && (
+                            <span className="text-xs text-gray-400 truncate max-w-[60px]">
+                              {offer.userName.split(' ')[0]}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+
+              {/* Load More Button */}
+              {hasMore && (
+                <div className="text-center pb-4">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="px-6 py-2.5 bg-white text-[#1FA774] font-medium rounded-full shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+                  >
+                    {loadingMore ? (
+                      <LoadMoreSkeleton />
+                    ) : (
+                      'Charger plus'
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Floating Add Button */}
+      <motion.button
+        whileTap={{ scale: 0.9 }}
+        onClick={() => navigate('/add-offer')}
+        className="fixed bottom-6 right-5 bg-[#1FA774] text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center z-20 hover:bg-[#18a689] transition-colors md:hidden"
+      >
+        <Plus size={28} strokeWidth={2.5} />
+      </motion.button>
+
+    </div>
+    </Layout>
+  );
+}
