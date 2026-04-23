@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
+import { HyvisHeader } from '../components/HyvisHeader';
 import { UserOfferCard } from '../components/UserOfferCard';
 import { useAuth } from '../context/AuthContext';
 import { offersService, Offer } from '../services/offersService';
@@ -76,8 +77,9 @@ export function ProfileScreen() {
   return (
     <Layout>
     <div className="min-h-screen bg-gray-50 pb-6 md:pb-6">
+      <HyvisHeader />
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white border-b border-gray-200 sticky top-16 md:top-0 z-10">
         <div className="max-w-5xl mx-auto px-5 md:px-8 lg:px-10 py-6 flex items-center justify-between">
           <h1 className="text-xl font-semibold text-gray-900">Profile</h1>
           <div className="flex items-center gap-2">

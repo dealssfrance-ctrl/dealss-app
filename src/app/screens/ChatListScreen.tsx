@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Layout } from '../components/Layout';
+import { HyvisHeader } from '../components/HyvisHeader';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { MessageSquare } from 'lucide-react';
@@ -51,9 +52,11 @@ export function ChatListScreen() {
     return (
       <Layout>
       <div className="min-h-screen bg-gray-50 pb-6 md:pb-6">
+        <HyvisHeader />
         <div className="bg-white border-b border-gray-200 sticky top-16 md:top-0 z-10">
           <div className="max-w-4xl mx-auto px-5 md:px-8 py-6">
-            <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
+            <h1 className="text-3xl font-bold text-gray-900 md:hidden">Messages</h1>
+            <h1 className="hidden md:block text-2xl font-bold text-gray-900">Messages</h1>
           </div>
         </div>
         <div className="flex flex-col items-center justify-center py-20 px-6">
@@ -74,10 +77,12 @@ export function ChatListScreen() {
   return (
     <Layout>
     <div className="min-h-screen bg-gray-50 pb-6 md:pb-6">
+      <HyvisHeader />
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-16 md:top-0 z-10">
         <div className="max-w-4xl mx-auto px-5 md:px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
+          <h1 className="text-3xl font-bold text-gray-900 md:hidden">Messages</h1>
+          <h1 className="hidden md:block text-2xl font-bold text-gray-900">Messages</h1>
         </div>
       </div>
 

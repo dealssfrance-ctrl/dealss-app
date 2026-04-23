@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { Layout } from '../components/Layout';
+import { HyvisHeader } from '../components/HyvisHeader';
 import { useNavigate } from 'react-router';
 import { Plus, TrendingUp, Zap, Sparkles, LogOut, User, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -34,24 +35,6 @@ export function Home() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [headerVisible, setHeaderVisible] = useState(true);
-  const lastScrollRef = useRef(0);
-
-  useEffect(() => {
-    const handler = () => {
-      const y = window.scrollY;
-      if (y <= 10) {
-        setHeaderVisible(true);
-      } else if (y > lastScrollRef.current + 5) {
-        setHeaderVisible(false);
-      } else if (y < lastScrollRef.current - 5) {
-        setHeaderVisible(true);
-      }
-      lastScrollRef.current = y;
-    };
-    window.addEventListener('scroll', handler, { passive: true });
-    return () => window.removeEventListener('scroll', handler);
-  }, []);
 
   const fetchOffers = useCallback(async (reset = false) => {
     try {
@@ -152,36 +135,37 @@ export function Home() {
   return (
     <Layout>
     <div className="min-h-screen bg-gray-50 pb-6 md:pb-6">
-      {/* Mobile fixed header — hides on scroll down, reappears on scroll up */}
-      <div className={`fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-20 flex items-center px-5 justify-between md:hidden transition-transform duration-300 ${headerVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-        <h1 className="text-2xl font-bold text-gray-900">Hyvis</h1>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
-            title="Actualiser"
-          >
-            <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
-          </button>
-          {user ? (
+      {/* Mobile fixed header via shared component */}
+      <HyvisHeader
+        right={
+          <>
             <button
-              onClick={handleLogout}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-              title="Se déconnecter"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+              title="Actualiser"
             >
-              <LogOut size={20} />
+              <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
             </button>
-          ) : (
-            <button
-              onClick={() => navigate('/signin')}
-              className="text-sm font-semibold text-white bg-[#1FA774] px-4 py-2 rounded-full hover:bg-[#16865c] transition-colors"
-            >
-              Connexion
-            </button>
-          )}
-        </div>
-      </div>
+            {user ? (
+              <button
+                onClick={handleLogout}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                title="Se déconnecter"
+              >
+                <LogOut size={20} />
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/signin')}
+                className="text-sm font-semibold text-white bg-[#1FA774] px-4 py-2 rounded-full hover:bg-[#16865c] transition-colors"
+              >
+                Connexion
+              </button>
+            )}
+          </>
+        }
+      />
 
       {/* Desktop header */}
       <div className="bg-white border-b border-gray-200 hidden md:block sticky top-0 z-10">

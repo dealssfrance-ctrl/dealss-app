@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { OfferCard } from '../components/OfferCard';
 import { Layout } from '../components/Layout';
+import { HyvisHeader } from '../components/HyvisHeader';
 import { SearchResultsSkeleton, LoadMoreSkeleton } from '../components/Skeleton';
 import { ArrowLeft, Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
@@ -110,6 +111,7 @@ export function SearchScreen() {
   return (
     <Layout>
     <div className="min-h-screen bg-gray-50 pb-6 md:pb-6">
+      <HyvisHeader />
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-16 md:top-0 z-10">
         <div className="px-5 md:px-8 lg:px-10 py-4">
