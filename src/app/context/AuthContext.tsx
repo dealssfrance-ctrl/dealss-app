@@ -24,6 +24,7 @@ export interface AuthContextType {
   resetPassword: (password: string) => Promise<void>;
   markWelcomeSeen: () => void;
   clearPendingVerification: () => void;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -207,6 +208,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw new Error(error.message);
   };
 
+  const deleteAccount = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Not authenticated');
+    const response = await fetch(
+      'https://zkexqsaogphjbwkjtopq.supabase.co/functions/v1/delete-account',
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      }
+    );
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || 'Failed to delete account');
+    }
+    await supabase.auth.signOut();
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('seen_welcome');
+    localStorage.removeItem('pending_verification_email');
+  };
+
   const markWelcomeSeen = () => {
     setHasSeenWelcome(true);
     localStorage.setItem('seen_welcome', 'true');
@@ -233,6 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resetPassword,
         markWelcomeSeen,
         clearPendingVerification,
+        deleteAccount,
       }}
     >
       {children}

@@ -4,19 +4,22 @@ import { HyvisHeader } from '../components/HyvisHeader';
 import { UserOfferCard } from '../components/UserOfferCard';
 import { useAuth } from '../context/AuthContext';
 import { offersService, Offer } from '../services/offersService';
-import { motion } from 'motion/react';
-import { Edit2, LogOut } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Edit2, LogOut, Trash2, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
 
 export function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
   const navigate = useNavigate();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [userName, setUserName] = useState(user?.name || '');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -62,6 +65,20 @@ export function ProfileScreen() {
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  const handleDeleteAccount = async () => {
+    if (confirmText.trim().toLowerCase() !== 'supprimer') return;
+    try {
+      setDeleting(true);
+      await deleteAccount();
+      toast.success('Compte supprimé avec succès');
+      navigate('/');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur';
+      toast.error(msg);
+      setDeleting(false);
+    }
   };
 
   if (!user) {
@@ -186,7 +203,80 @@ export function ProfileScreen() {
             </div>
           )}
         </div>
+
+        {/* Danger Zone */}
+        <div className="mt-8 border border-red-200 rounded-2xl p-6 bg-red-50">
+          <h3 className="text-base font-semibold text-red-700 mb-1 flex items-center gap-2">
+            <AlertTriangle size={18} /> Zone dangereuse
+          </h3>
+          <p className="text-sm text-red-500 mb-4">
+            La suppression de votre compte est irréversible. Toutes vos offres, messages et données seront définitivement effacés.
+          </p>
+          <button
+            onClick={() => { setShowDeleteConfirm(true); setConfirmText(''); }}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-red-300 text-red-600 text-sm font-semibold rounded-full hover:bg-red-50 transition-colors"
+          >
+            <Trash2 size={16} /> Supprimer mon compte
+          </button>
+        </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-5"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteConfirm(false); }}
+          >
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.92, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <Trash2 size={20} className="text-red-600" />
+                </div>
+                <h2 className="text-lg font-bold text-gray-900">Supprimer mon compte</h2>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Cette action est <strong>irréversible</strong>. Toutes vos offres, messages et données seront définitivement supprimés.
+              </p>
+              <p className="text-sm text-gray-700 mb-3">
+                Tapez <span className="font-bold text-red-600">supprimer</span> pour confirmer :
+              </p>
+              <input
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder="supprimer"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-5 focus:outline-none focus:ring-2 focus:ring-red-400"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleting}
+                  className="flex-1 py-3 rounded-full font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleting || confirmText.trim().toLowerCase() !== 'supprimer'}
+                  className="flex-1 py-3 rounded-full font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-40"
+                >
+                  {deleting ? 'Suppression...' : 'Confirmer'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
     </Layout>
