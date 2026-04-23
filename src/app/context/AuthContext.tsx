@@ -2,8 +2,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '../services/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-
 export interface User {
   id: string;
   email: string;
@@ -75,17 +73,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem('pending_verification_email');
             setPendingVerification(false);
           }
-          // Auto-sync profile to backend on any sign-in (handles email confirmation flow)
+          // Ensure user row exists in users table
           if (event === 'SIGNED_IN') {
             try {
-              await fetch(`${API_URL}/auth/sync-profile`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify({ name: session.user.user_metadata?.name || '' }),
-              });
+              const meta = session.user.user_metadata || {};
+              const { data: existing } = await supabase.from('users').select('id').eq('id', session.user.id).single();
+              if (!existing) {
+                await supabase.from('users').insert({
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  password: '',
+                  name: meta.name || meta.full_name || '',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                });
+              }
             } catch (err) {
               console.error('Auto sync-profile error:', err);
             }
@@ -132,16 +134,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Sync profile to backend users table
+    // Ensure user row exists in users table
     try {
-      await fetch(`${API_URL}/auth/sync-profile`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${data.session.access_token}`,
-        },
-        body: JSON.stringify({ name }),
-      });
+      const { data: existing } = await supabase.from('users').select('id').eq('id', data.session.user.id).single();
+      if (!existing) {
+        await supabase.from('users').insert({
+          id: data.session.user.id,
+          email: data.session.user.email || '',
+          password: '',
+          name,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      }
     } catch (err) {
       console.error('Profile sync error:', err);
     }
@@ -162,14 +167,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Sync profile (ensures user row exists even after email confirmation)
     try {
-      await fetch(`${API_URL}/auth/sync-profile`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${data.session.access_token}`,
-        },
-        body: JSON.stringify({ name: data.session.user.user_metadata?.name || '' }),
-      });
+      const { data: existing } = await supabase.from('users').select('id').eq('id', data.session.user.id).single();
+      if (!existing) {
+        await supabase.from('users').insert({
+          id: data.session.user.id,
+          email: data.session.user.email || '',
+          password: '',
+          name: data.session.user.user_metadata?.name || '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      }
     } catch (err) {
       console.error('Profile sync error:', err);
     }
