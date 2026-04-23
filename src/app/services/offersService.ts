@@ -51,6 +51,9 @@ export interface SearchParams {
   page?: number;
   limit?: number;
   sortBy?: 'createdAt' | 'discount' | 'storeName';
+  sortOrder?: 'asc' | 'desc';
+}
+
 // ── helpers ─────────────────────────────────────────────────────────────────
 
 function toOffer(r: any): Offer {
