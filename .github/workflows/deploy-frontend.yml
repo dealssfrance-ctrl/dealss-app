@@ -36,9 +36,9 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_SUPABASE_URL: https://rylxeslhdpyewtfexzll.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_RAnXm0cqHKRRHuJ0u5rfYA_bS5TU6WS
-          VITE_API_URL: https://rylxeslhdpyewtfexzll.supabase.co/functions/v1/api
+          VITE_SUPABASE_URL: https://zkexqsaogphjbwkjtopq.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_PL0uI6FN2xSN8Q5oi07Icw_5ks7abh_
+          VITE_API_URL: https://zkexqsaogphjbwkjtopq.supabase.co/functions/v1/api
         run: npx vite build --base=/dealss-app/
 
       - name: Add 404.html for SPA routing
