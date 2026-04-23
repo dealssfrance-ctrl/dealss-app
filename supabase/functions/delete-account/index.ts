@@ -1,9 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SUPABASE_URL = 'https://zkexqsaogphjbwkjtopq.supabase.co';
-// Set SUPABASE_SERVICE_ROLE_KEY as a Supabase secret:
-// supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<your-key>
-const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+// Set this secret via: supabase secrets set SERVICE_ROLE_KEY=<your-key>
+const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') ?? '';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
