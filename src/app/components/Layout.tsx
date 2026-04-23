@@ -10,7 +10,7 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="md:flex md:min-h-screen">
       <DesktopSidebar />
-      <main className="flex-1 min-w-0 pt-16 md:pt-0">
+      <main className="flex-1 min-w-0 pt-16 pb-16 md:pt-0 md:pb-0">
         {children}
       </main>
       <BottomNav />

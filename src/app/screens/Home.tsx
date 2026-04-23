@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Layout } from '../components/Layout';
 import { useNavigate } from 'react-router';
@@ -34,6 +34,24 @@ export function Home() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const lastScrollRef = useRef(0);
+
+  useEffect(() => {
+    const handler = () => {
+      const y = window.scrollY;
+      if (y <= 10) {
+        setHeaderVisible(true);
+      } else if (y > lastScrollRef.current + 5) {
+        setHeaderVisible(false);
+      } else if (y < lastScrollRef.current - 5) {
+        setHeaderVisible(true);
+      }
+      lastScrollRef.current = y;
+    };
+    window.addEventListener('scroll', handler, { passive: true });
+    return () => window.removeEventListener('scroll', handler);
+  }, []);
 
   const fetchOffers = useCallback(async (reset = false) => {
     try {
@@ -134,12 +152,42 @@ export function Home() {
   return (
     <Layout>
     <div className="min-h-screen bg-gray-50 pb-6 md:pb-6">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-16 md:top-0 z-10">
-        <div className="px-5 md:px-8 lg:px-10 py-6">
+      {/* Mobile fixed header — hides on scroll down, reappears on scroll up */}
+      <div className={`fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-20 flex items-center px-5 justify-between md:hidden transition-transform duration-300 ${headerVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+        <h1 className="text-2xl font-bold text-gray-900">Hyvis</h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+            title="Actualiser"
+          >
+            <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
+          </button>
+          {user ? (
+            <button
+              onClick={handleLogout}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+              title="Se déconnecter"
+            >
+              <LogOut size={20} />
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/signin')}
+              className="text-sm font-semibold text-white bg-[#1FA774] px-4 py-2 rounded-full hover:bg-[#16865c] transition-colors"
+            >
+              Connexion
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop header */}
+      <div className="bg-white border-b border-gray-200 hidden md:block sticky top-0 z-10">
+        <div className="px-8 lg:px-10 py-6">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <h1 className="text-3xl font-bold text-gray-900 md:hidden">Hyvis</h1>
-            <h1 className="hidden md:block text-2xl font-bold text-gray-900">Accueil</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Accueil</h1>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleRefresh}
@@ -150,7 +198,7 @@ export function Home() {
                 <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
               </button>
               {user && (
-                <div className="hidden md:flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full">
+                <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full">
                   <User size={16} />
                   <span className="font-medium">{user.name?.split(' ')[0] || 'User'}</span>
                 </div>
@@ -158,7 +206,7 @@ export function Home() {
               {user ? (
                 <button
                   onClick={handleLogout}
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors md:hidden"
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
                   title="Se déconnecter"
                 >
                   <LogOut size={20} />
@@ -372,7 +420,7 @@ export function Home() {
       <motion.button
         whileTap={{ scale: 0.9 }}
         onClick={() => navigate('/add-offer')}
-        className="fixed bottom-6 right-5 bg-[#1FA774] text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center z-20 hover:bg-[#18a689] transition-colors md:hidden"
+        className="fixed bottom-20 right-5 bg-[#1FA774] text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center z-20 hover:bg-[#18a689] transition-colors md:hidden"
       >
         <Plus size={28} strokeWidth={2.5} />
       </motion.button>
