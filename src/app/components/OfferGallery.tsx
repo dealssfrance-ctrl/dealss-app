@@ -42,7 +42,7 @@ function parseImageUrls(imageUrl: string): string[] {
   };
 
   const parsed = toUrls(imageUrl).filter((url) => /^(https?:\/\/|data:image\/)/i.test(url));
-  return [...new Set(parsed)];
+  return parsed;
 }
 
 export function OfferGallery({ imageUrl, storeName, onImageError }: OfferGalleryProps) {
