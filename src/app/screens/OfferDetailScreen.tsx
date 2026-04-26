@@ -102,6 +102,7 @@ export function OfferDetailScreen() {
   };
 
   const fetchSellerInfo = async (sellerId: string, currentOfferId: string) => {
+    if (!sellerId) return;
     try {
       // Best-effort fetch; we silently ignore failures so the page still renders.
       const [{ data: userRow }, offersResp] = await Promise.all([
@@ -339,7 +340,7 @@ export function OfferDetailScreen() {
               </div>
 
               {/* Seller card */}
-              {offer.userName && !isOwnOffer && (
+              {!isOwnOffer && (
                 <div className="bg-white/95 rounded-3xl p-5 md:p-6 border border-white/80 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
                   <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
                     <span className="w-1 h-4 bg-[#1FA774] rounded-full" />
@@ -359,7 +360,7 @@ export function OfferDetailScreen() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2 mb-1">
-                        <h3 className="font-bold text-gray-900 truncate">{offer.userName}</h3>
+                        <h3 className="font-bold text-gray-900 truncate">{offer.userName || 'Vendeur'}</h3>
                         {sellerRating.reviewCount >= 3 && sellerRating.averageRating >= 4 && (
                           <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                             Vérifié

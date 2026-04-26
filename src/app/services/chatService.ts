@@ -174,16 +174,16 @@ class ChatService {
 
   // ── Image upload ────────────────────────────────────────────────────────────
 
-  /** Upload a chat image file to the 'chat' storage bucket and return its public URL. */
+  /** Upload a chat image file to storage and return its public URL. */
   async uploadChatImage(file: File): Promise<string> {
     const ext = file.name.includes('.') ? file.name.split('.').pop() : 'jpg';
-    const fileName = `${Date.now()}_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}.${ext}`;
+    const fileName = `chat/${Date.now()}_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}.${ext}`;
     const buffer = await file.arrayBuffer();
     const { data, error } = await supabase.storage
-      .from('chat')
+      .from('offers')
       .upload(fileName, buffer, { contentType: file.type, upsert: false });
     if (error) throw new Error(`Upload failed: ${error.message}`);
-    const { data: pub } = supabase.storage.from('chat').getPublicUrl(data.path);
+    const { data: pub } = supabase.storage.from('offers').getPublicUrl(data.path);
     return pub.publicUrl;
   }
 

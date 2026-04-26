@@ -426,12 +426,12 @@ export function ChatScreen() {
 
   return (
     <Layout>
-    <div className="min-h-[calc(100vh-8rem)] md:min-h-screen bg-gray-50 flex flex-col md:px-8 md:py-6">
+    <div className="h-[calc(100dvh-8rem)] md:h-screen bg-gray-50 flex flex-col md:px-8 md:py-6 overflow-hidden">
       {/* Desktop card wrapper */}
-      <div className="flex-1 flex flex-col md:max-w-4xl md:mx-auto md:w-full md:bg-white md:rounded-2xl md:shadow-sm md:overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col md:max-w-4xl md:mx-auto md:w-full md:bg-white md:rounded-2xl md:shadow-sm md:overflow-hidden">
 
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        {/* Header (fixed at top of chat container) */}
+        <div className="bg-white border-b border-gray-200 flex-shrink-0 z-10">
           <div className="max-w-3xl mx-auto px-5 md:px-6 py-4 flex items-center gap-3">
             <button
               onClick={() => navigate('/messages')}
@@ -451,9 +451,9 @@ export function ChatScreen() {
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-5 md:px-6 py-4">
-          <div className="max-w-3xl mx-auto flex flex-col gap-2">
+        {/* Messages (only this scrolls) */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 md:px-6 py-4">
+          <div className="max-w-3xl mx-auto flex flex-col gap-2 pb-2">
             {messages.map((msg) => {
               const isMine = msg.senderId === currentUserId;
               return (
@@ -517,8 +517,8 @@ export function ChatScreen() {
           </div>
         </div>
 
-        {/* Input bar with "+" actions menu (review request) */}
-        <div className="bg-white border-t border-gray-200 sticky bottom-0">
+        {/* Input bar with "+" actions menu (review request) — fixed at bottom of chat container */}
+        <div className="bg-white border-t border-gray-200 flex-shrink-0">
           <div className="max-w-3xl mx-auto px-5 md:px-6 py-3 relative">
             <AnimatePresence>
               {actionsOpen && (

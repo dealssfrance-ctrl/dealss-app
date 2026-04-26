@@ -67,6 +67,9 @@ export interface Offer {
   userName?: string;
   averageRating?: number;
   reviewCount?: number;
+  /** Aggregated rating across ALL offers from this seller (not just this one). */
+  sellerAverageRating?: number;
+  sellerReviewCount?: number;
 }
 
 export interface PaginationInfo {
@@ -169,18 +172,52 @@ function toOffer(r: any): Offer {
 async function enrichWithRatings(offers: Offer[]): Promise<Offer[]> {
   if (!offers.length) return offers;
   const ids = offers.map((o) => o.id);
-  const { data } = await supabase.from('reviews').select('offer_id, rating').in('offer_id', ids);
-  const map = new Map<string, { sum: number; count: number }>();
-  for (const r of data || []) {
-    const e = map.get(r.offer_id) || { sum: 0, count: 0 };
-    map.set(r.offer_id, { sum: e.sum + r.rating, count: e.count + 1 });
+  const sellerIds = Array.from(new Set(offers.map((o) => o.userId).filter(Boolean)));
+
+  // 1) Per-offer reviews (existing behaviour).
+  const { data: offerReviews } = await supabase
+    .from('reviews')
+    .select('offer_id, rating')
+    .in('offer_id', ids);
+  const byOffer = new Map<string, { sum: number; count: number }>();
+  for (const r of offerReviews || []) {
+    const e = byOffer.get(r.offer_id) || { sum: 0, count: 0 };
+    byOffer.set(r.offer_id, { sum: e.sum + r.rating, count: e.count + 1 });
   }
+
+  // 2) Per-seller aggregate: every review on every offer they posted.
+  const bySeller = new Map<string, { sum: number; count: number }>();
+  if (sellerIds.length) {
+    const { data: sellerOffers } = await supabase
+      .from('offers')
+      .select('id, user_id')
+      .in('user_id', sellerIds);
+    const offerToSeller = new Map<string, string>();
+    for (const so of sellerOffers || []) offerToSeller.set(so.id, so.user_id);
+    const allOfferIds = (sellerOffers || []).map((o) => o.id);
+    if (allOfferIds.length) {
+      const { data: allReviews } = await supabase
+        .from('reviews')
+        .select('offer_id, rating')
+        .in('offer_id', allOfferIds);
+      for (const r of allReviews || []) {
+        const sid = offerToSeller.get(r.offer_id);
+        if (!sid) continue;
+        const e = bySeller.get(sid) || { sum: 0, count: 0 };
+        bySeller.set(sid, { sum: e.sum + r.rating, count: e.count + 1 });
+      }
+    }
+  }
+
   return offers.map((o) => {
-    const rd = map.get(o.id);
+    const rd = byOffer.get(o.id);
+    const sd = bySeller.get(o.userId);
     return {
       ...o,
       averageRating: rd ? Math.round((rd.sum / rd.count) * 10) / 10 : 0,
       reviewCount: rd ? rd.count : 0,
+      sellerAverageRating: sd ? Math.round((sd.sum / sd.count) * 10) / 10 : 0,
+      sellerReviewCount: sd ? sd.count : 0,
     };
   });
 }

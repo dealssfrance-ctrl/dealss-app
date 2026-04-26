@@ -12,6 +12,41 @@ import { OfferCardGridSkeleton, CategoryTabsSkeleton, LoadMoreSkeleton } from '.
 import { StarRating } from '../components/StarRating';
 import { getCategoryImage } from '../constants/categoryImages';
 
+/**
+ * Returns the first usable image URL from an offer's `imageUrl` field, which
+ * may be a single URL, a comma-separated list, or a JSON-encoded array.
+ * Falls back to the per-category placeholder if nothing valid is found.
+ *
+ * Keeping the home grid thumbnail in sync with the gallery's first image
+ * (used on the offer-detail page) prevents the surprise of "I clicked image A
+ * but landed on image B".
+ */
+function getOfferThumbnail(offer: Offer): string {
+  const raw = offer.imageUrl;
+  if (typeof raw === 'string' && raw.trim()) {
+    let candidate: string | undefined;
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          const first = parsed.find((v) => typeof v === 'string' && v.trim());
+          if (typeof first === 'string') candidate = first.trim();
+        }
+      } catch {
+        // ignore — fall through
+      }
+    }
+    if (!candidate) {
+      candidate = trimmed.split(',')[0]?.trim();
+    }
+    if (candidate && /^(https?:\/\/|data:image\/)/i.test(candidate)) {
+      return candidate;
+    }
+  }
+  return getCategoryImage(offer.category);
+}
+
 const DEFAULT_CATEGORIES = ['All', 'Fashion', 'Food', 'Sports', 'Electronics', 'Beauty', 'Vols', 'Other'];
 
 const CATEGORY_EMOJIS: Record<string, string> = {
@@ -349,10 +384,13 @@ export function Home() {
                   >
                     <div className="relative">
                       <img
-                        src={getCategoryImage(offer.category)}
-                        alt={offer.category}
+                        src={getOfferThumbnail(offer)}
+                        alt={offer.storeName}
                         className="w-full h-36 md:h-44 lg:h-48 object-cover"
                         loading="lazy"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = getCategoryImage(offer.category);
+                        }}
                       />
                       <div className="absolute top-2 right-2 bg-[#1FA774] text-white text-sm font-bold px-2.5 py-1 rounded-full shadow-md">
                         {offer.discount}
@@ -361,14 +399,27 @@ export function Home() {
                     <div className="p-3">
                       <h4 className="font-semibold text-gray-900 mb-1 truncate">{offer.storeName}</h4>
                       <p className="text-xs text-gray-500 line-clamp-2 mb-2">{offer.description}</p>
-                      <p className="text-xs text-gray-500 mb-2">
-                        Moyenne vendeur: {((offer.averageRating ?? 0)).toFixed(1)}⭐ ({offer.reviewCount ?? 0})
-                      </p>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <StarRating
+                          rating={offer.sellerAverageRating ?? 0}
+                          reviewCount={offer.sellerReviewCount ?? 0}
+                          size={12}
+                        />
+                        <span className="text-[11px] text-gray-500">
+                          {(offer.sellerAverageRating ?? 0) > 0
+                            ? `${(offer.sellerAverageRating ?? 0).toFixed(1)} · ${offer.sellerReviewCount ?? 0} avis`
+                            : 'Aucun avis vendeur'}
+                        </span>
+                      </div>
                       <div className="flex items-center justify-between gap-1">
                         <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full shrink-0">
                           {offer.category}
                         </span>
-                        <StarRating rating={offer.averageRating ?? 0} reviewCount={offer.reviewCount ?? 0} size={12} />
+                        {offer.userName && (
+                          <span className="text-[11px] text-gray-400 truncate ml-2">
+                            par {offer.userName}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </motion.button>
