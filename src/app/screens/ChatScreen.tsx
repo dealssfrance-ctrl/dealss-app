@@ -4,6 +4,8 @@ import { ArrowLeft, Send, Image as ImageIcon, Star, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import { useChatNotifications } from '../context/ChatNotificationsContext';
+import { playMessageSound } from '../utils/sounds';
 import { chatService, ChatMessage, ConversationDetail, ReviewRequestPayload } from '../services/chatService';
 import { offersService } from '../services/offersService';
 import { reviewsService } from '../services/reviewsService';
@@ -75,6 +77,7 @@ export function ChatScreen() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageTimeRef = useRef<string | null>(null);
   const currentUserId = user?.id || '';
+  const { markConversationRead } = useChatNotifications();
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -128,6 +131,11 @@ export function ChatScreen() {
           const existingIds = new Set(prev.map(m => m.id));
           const newMsgs = response.data.filter(m => !existingIds.has(m.id));
           if (newMsgs.length > 0) {
+            // Play a soft sound for incoming messages from the other user.
+            const fromOther = newMsgs.some((m) => m.senderId && m.senderId !== currentUserId);
+            if (fromOther) {
+              try { playMessageSound(); } catch { /* noop */ }
+            }
             setTimeout(scrollToBottom, 100);
             return [...prev, ...newMsgs];
           }
@@ -142,13 +150,17 @@ export function ChatScreen() {
       // Update last message time for next poll
       if (response.data.length > 0) {
         lastMessageTimeRef.current = response.data[response.data.length - 1].createdAt;
+        // Mark this conversation as read up to the latest fetched message.
+        if (conversationId) {
+          markConversationRead(conversationId, response.data[response.data.length - 1].createdAt);
+        }
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
       setLoading(false);
     }
-  }, [conversationId, scrollToBottom]);
+  }, [conversationId, scrollToBottom, currentUserId, markConversationRead]);
 
   // Load older messages when user scrolls near the top of the message list.
   const loadOlderMessages = useCallback(async () => {

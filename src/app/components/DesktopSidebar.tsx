@@ -2,17 +2,19 @@ import { Home, Search, MessageCircle, User, Plus, Sliders } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { useFilters } from '../context/FilterContext';
+import { useChatNotifications } from '../context/ChatNotificationsContext';
 
 export function DesktopSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const { filters, setFilters, resetFilters } = useFilters();
+  const { unreadCount } = useChatNotifications();
 
   const navItems = [
     { icon: Home, label: 'Accueil', path: '/' },
     { icon: Search, label: 'Rechercher', path: '/search' },
-    { icon: MessageCircle, label: 'Messages', path: '/messages' },
+    { icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadCount },
     { icon: User, label: 'Profil', path: '/profile' },
   ];
 
@@ -30,6 +32,7 @@ export function DesktopSidebar() {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
+          const badge = (item as { badge?: number }).badge || 0;
 
           return (
             <button
@@ -41,7 +44,14 @@ export function DesktopSidebar() {
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
-              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+              <span className="relative">
+                <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                {badge > 0 && (
+                  <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
+                    {badge > 9 ? '9+' : badge}
+                  </span>
+                )}
+              </span>
               <span className="text-sm">{item.label}</span>
             </button>
           );

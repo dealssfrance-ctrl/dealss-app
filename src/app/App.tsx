@@ -2,6 +2,7 @@ import { RouterProvider } from 'react-router';
 import { router } from './routes';
 import { AuthProvider } from './context/AuthContext';
 import { FilterProvider } from './context/FilterContext';
+import { ChatNotificationsProvider } from './context/ChatNotificationsContext';
 import { Toaster } from 'sonner';
 import { useEffect } from 'react';
 
@@ -23,11 +24,13 @@ export default function App() {
   return (
     <AuthProvider>
       <FilterProvider>
-        <div className="min-h-screen bg-gray-50">
-          <HashErrorHandler />
-          <RouterProvider router={router} />
-          <Toaster position="top-center" richColors />
-        </div>
+        <ChatNotificationsProvider>
+          <div className="min-h-screen bg-gray-50">
+            <HashErrorHandler />
+            <RouterProvider router={router} />
+            <Toaster position="top-center" richColors />
+          </div>
+        </ChatNotificationsProvider>
       </FilterProvider>
     </AuthProvider>
   );

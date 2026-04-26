@@ -32,6 +32,7 @@ export interface ConversationSummary {
   otherUserName: string;
   lastMessage: string;
   lastMessageTime: string;
+  lastMessageSenderId?: string;
   updatedAt: string;
   createdAt: string;
 }
@@ -222,6 +223,7 @@ class ChatService {
           otherUserName: (otherUser as any)?.name || '',
           lastMessage: lastMsg ? lastMessagePreview(lastMsg) : '',
           lastMessageTime: lastMsg?.created_at || c.updated_at,
+          lastMessageSenderId: lastMsg?.sender_id || undefined,
           updatedAt: c.updated_at,
           createdAt: c.created_at,
         };
