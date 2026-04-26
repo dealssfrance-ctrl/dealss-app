@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Layout } from '../components/Layout';
 import { HyvisHeader } from '../components/HyvisHeader';
 import { useNavigate } from 'react-router';
-import { Plus, Sparkles, LogOut, User, RefreshCw, Shield, MapPin, Percent, ArrowRight, ShoppingBag } from 'lucide-react';
+import { Plus, Sparkles, LogOut, User, RefreshCw, Shield, MapPin, Percent, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFilters } from '../context/FilterContext';
 import { toast } from 'sonner';
@@ -411,16 +411,38 @@ export function Home() {
             </div>
 
             {/* Right: Decorative illustration */}
-            <div className="hidden md:flex relative w-48 lg:w-56 h-48 lg:h-56 items-center justify-center shrink-0">
+            <div className="hidden md:flex relative w-56 lg:w-64 h-56 lg:h-64 items-center justify-center shrink-0">
+              {/* Soft glow */}
               <div className="absolute inset-0 bg-white/5 rounded-full blur-2xl" />
-              <div className="relative w-32 lg:w-40 h-36 lg:h-44 bg-gradient-to-br from-[#1FA774] to-[#16865c] rounded-2xl shadow-2xl flex items-center justify-center border-2 border-white/20">
-                <ShoppingBag size={56} className="text-white/90" strokeWidth={1.5} />
-                <Percent size={36} strokeWidth={3} className="absolute text-white" />
-              </div>
-              <div className="absolute -top-2 right-2 bg-[#0f5f42] text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg border border-white/10">
+
+              {/* Sparkles */}
+              <span className="absolute top-2 left-4 text-2xl drop-shadow-lg select-none" aria-hidden="true">✨</span>
+              <span className="absolute top-8 right-2 text-xl drop-shadow-lg select-none" aria-hidden="true">✨</span>
+              <span className="absolute bottom-6 left-2 text-lg drop-shadow-lg select-none" aria-hidden="true">✨</span>
+
+              {/* Main shopping bag emoji */}
+              <span
+                className="relative text-[140px] lg:text-[170px] leading-none select-none drop-shadow-2xl"
+                aria-hidden="true"
+                style={{ filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.35))' }}
+              >
+                🛍️
+              </span>
+
+              {/* Gift box emoji bottom-left */}
+              <span
+                className="absolute bottom-2 left-4 text-5xl lg:text-6xl select-none"
+                aria-hidden="true"
+                style={{ filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.35))' }}
+              >
+                🎁
+              </span>
+
+              {/* Discount badges */}
+              <div className="absolute top-0 right-0 bg-[#0f3a28] text-white text-sm font-bold px-3.5 py-1.5 rounded-full shadow-xl border border-white/10">
                 -40%
               </div>
-              <div className="absolute bottom-2 -right-1 bg-[#0f5f42] text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg border border-white/10">
+              <div className="absolute bottom-4 -right-1 bg-[#0f3a28] text-white text-sm font-bold px-3.5 py-1.5 rounded-full shadow-xl border border-white/10">
                 -70%
               </div>
             </div>
