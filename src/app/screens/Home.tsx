@@ -10,18 +10,16 @@ import { offersService, Offer } from '../services/offersService';
 import { OfferCardGridSkeleton, HotDealsSkeleton, CategoryTabsSkeleton, LoadMoreSkeleton } from '../components/Skeleton';
 import { StarRating } from '../components/StarRating';
 
-const DEFAULT_CATEGORIES = ['All', 'Mode', 'Fashion', 'Beauté', 'Voyage', 'Sport'];
+const DEFAULT_CATEGORIES = ['All', 'Fashion', 'Food', 'Sports', 'Electronics', 'Beauty', 'Vols', 'Other'];
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   'All':    '✨',
-  'Mode':   '👔',
   'Fashion':'👗',
-  'Beauté': '💄',
-  'Voyage': '✈️',
-  'Sport':  '🏃',
-  // retained for any legacy data still in the DB
   'Food':   '🍔',
+  'Sports': '🏀',
   'Electronics': '📱',
+  'Beauty': '💄',
+  'Vols':   '✈️',
   'Other':  '📦',
 };
 
