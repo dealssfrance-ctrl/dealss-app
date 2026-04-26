@@ -7,10 +7,13 @@ import { useAuth } from '../context/AuthContext';
 import { offersService, Offer } from '../services/offersService';
 import { reviewsService } from '../services/reviewsService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Edit2, LogOut, Trash2, AlertTriangle, Plus } from 'lucide-react';
+import { Edit2, LogOut, Trash2, AlertTriangle, Plus, Briefcase } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
+import { supabase } from '../services/supabaseClient';
+
+const DEFAULT_COMPANY = 'Free Lanceur';
 
 const REQUEST_TIMEOUT_MS = 12000;
 
@@ -30,6 +33,8 @@ export function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [userName, setUserName] = useState(user?.name || '');
+  const [company, setCompany] = useState<string>(DEFAULT_COMPANY);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState('');
@@ -39,9 +44,26 @@ export function ProfileScreen() {
     if (user) {
       loadUserOffers();
       loadSellerRating();
+      loadProfileExtras();
       setUserName(user.name);
     }
   }, [user]);
+
+  const loadProfileExtras = async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('company')
+        .eq('id', user.id)
+        .maybeSingle();
+      const c = ((data as any)?.company || '').trim();
+      setCompany(c || DEFAULT_COMPANY);
+    } catch (err) {
+      console.error('Error loading profile extras:', err);
+      setCompany(DEFAULT_COMPANY);
+    }
+  };
 
   const loadUserOffers = async () => {
     if (!user) return;
@@ -66,15 +88,42 @@ export function ProfileScreen() {
     }
   };
 
-  const handleSave = () => {
-    // Name editing would require a backend endpoint for user update
-    setIsEditing(false);
-    toast.success('Profile updated');
+  const handleSave = async () => {
+    if (!user) return;
+    const trimmedName = userName.trim();
+    const trimmedCompany = company.trim() || DEFAULT_COMPANY;
+    if (!trimmedName) {
+      toast.error('Le nom ne peut pas être vide');
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: trimmedName,
+          company: trimmedCompany,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+      if (error) throw error;
+      // Best-effort sync of auth metadata so the name is reflected on next session.
+      await supabase.auth.updateUser({ data: { name: trimmedName } }).catch(() => undefined);
+      setCompany(trimmedCompany);
+      setIsEditing(false);
+      toast.success('Profil mis à jour');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la mise à jour';
+      toast.error(msg);
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const handleCancel = () => {
     setUserName(user?.name || '');
     setIsEditing(false);
+    loadProfileExtras();
   };
 
   const handleDeleteOffer = async (id: string) => {
@@ -189,19 +238,38 @@ export function ProfileScreen() {
                 />
               </div>
 
+              {/* Company Edit */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Entreprise
+                </label>
+                <input
+                  type="text"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  placeholder={DEFAULT_COMPANY}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent"
+                />
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Par défaut : {DEFAULT_COMPANY}
+                </p>
+              </div>
+
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={handleCancel}
-                  className="flex-1 py-3 rounded-full font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                  disabled={savingProfile}
+                  className="flex-1 py-3 rounded-full font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={handleSave}
-                  className="flex-1 py-3 rounded-full font-semibold text-white bg-[#1FA774] hover:bg-[#16865c] transition-colors"
+                  disabled={savingProfile}
+                  className="flex-1 py-3 rounded-full font-semibold text-white bg-[#1FA774] hover:bg-[#16865c] transition-colors disabled:opacity-60"
                 >
-                  Enregistrer
+                  {savingProfile ? 'Enregistrement…' : 'Enregistrer'}
                 </button>
               </div>
             </div>
@@ -218,7 +286,11 @@ export function ProfileScreen() {
                 <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1 truncate">
                   {user.name}
                 </h2>
-                <p className="text-gray-500 text-sm mb-3 truncate">{user.email}</p>
+                <p className="text-gray-500 text-sm mb-1 truncate">{user.email}</p>
+                <p className="text-gray-600 text-sm mb-3 inline-flex items-center justify-center gap-1.5">
+                  <Briefcase size={13} className="text-gray-400" />
+                  <span className="truncate">{company || DEFAULT_COMPANY}</span>
+                </p>
 
                 {/* Seller Rating */}
                 {sellerRating.reviewCount > 0 && (
