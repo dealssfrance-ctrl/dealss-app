@@ -118,46 +118,60 @@ export function ProfileScreen() {
 
   return (
     <Layout>
-    <div className="min-h-screen bg-gray-50 pb-6 md:pb-6">
+    <div className="min-h-screen bg-gradient-to-b from-[#f4fbf8] via-white to-gray-50 pb-6 md:pb-6">
       <PersistentNavbar />
-      
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-16 md:top-0 z-10">
-        <div className="max-w-5xl mx-auto px-5 md:px-8 lg:px-10 py-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-900">Profile</h1>
-          <div className="flex items-center gap-2">
-            {!isEditing && (
+
+      {/* Gradient hero header */}
+      <div className="relative bg-gradient-to-br from-[#1FA774] to-[#16865c] text-white overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-10 pointer-events-none"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 15% 20%, rgba(255,255,255,0.6) 0, transparent 40%), radial-gradient(circle at 85% 80%, rgba(255,255,255,0.4) 0, transparent 40%)',
+          }}
+        />
+        <div className="relative max-w-5xl mx-auto px-5 md:px-8 lg:px-10 pt-7 pb-12">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-white/70 mb-0.5">Mon espace</p>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Profil</h1>
+            </div>
+            <div className="flex items-center gap-1">
+              {!isEditing && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-2 px-3.5 py-2 text-white/95 font-medium text-sm rounded-full hover:bg-white/15 transition-colors"
+                >
+                  <Edit2 size={16} />
+                  <span className="hidden sm:inline">Modifier</span>
+                </button>
+              )}
               <button
-                onClick={() => setIsEditing(true)}
-                className="flex items-center gap-2 px-4 py-2 text-[#1FA774] font-medium"
+                onClick={handleLogout}
+                aria-label="Se déconnecter"
+                className="flex items-center gap-2 p-2 text-white/95 rounded-full hover:bg-white/15 transition-colors"
               >
-                <Edit2 size={18} />
-                Edit
+                <LogOut size={18} />
               </button>
-            )}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-red-500 font-medium"
-            >
-              <LogOut size={18} />
-            </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-5 md:px-8 lg:px-10 py-6 md:py-8">
-        {/* User Info */}
+      <div className="max-w-5xl mx-auto px-5 md:px-8 lg:px-10 -mt-8 md:-mt-10">
+        {/* User Info card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl p-6 md:p-8 shadow-sm mb-6"
+          className="bg-white rounded-3xl p-6 md:p-8 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 mb-6"
         >
           {isEditing ? (
             <div className="space-y-5">
               {/* Avatar */}
               <div className="flex flex-col items-center gap-3">
-                <div className="w-24 h-24 rounded-full bg-[#1FA774] flex items-center justify-center">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#1FA774] to-[#16865c] flex items-center justify-center shadow-md">
                   <span className="text-white text-3xl font-bold">{userInitial}</span>
                 </div>
               </div>
@@ -165,7 +179,7 @@ export function ProfileScreen() {
               {/* Name Edit */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name
+                  Nom complet
                 </label>
                 <input
                   type="text"
@@ -179,40 +193,60 @@ export function ProfileScreen() {
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={handleCancel}
-                  className="flex-1 py-3 rounded-full font-semibold text-gray-600 bg-gray-100"
+                  className="flex-1 py-3 rounded-full font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
                 >
-                  Cancel
+                  Annuler
                 </button>
                 <button
                   onClick={handleSave}
-                  className="flex-1 py-3 rounded-full font-semibold text-white bg-[#1FA774]"
+                  className="flex-1 py-3 rounded-full font-semibold text-white bg-[#1FA774] hover:bg-[#16865c] transition-colors"
                 >
-                  Save
+                  Enregistrer
                 </button>
               </div>
             </div>
           ) : (
-            <div className="flex items-start gap-4 md:gap-6">
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#1FA774] flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-2xl md:text-3xl font-bold">{userInitial}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{user.name}</h2>
-                <p className="text-gray-500 text-sm mb-3">{user.email}</p>
-                
-                {/* Seller Rating */}
-                {sellerRating.reviewCount > 0 && (
-                  <div className="mb-3">
+            <div>
+              <div className="flex items-start gap-4 md:gap-6">
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-[#1FA774] to-[#16865c] flex items-center justify-center flex-shrink-0 shadow-md ring-4 ring-white">
+                  <span className="text-white text-2xl md:text-3xl font-bold">{userInitial}</span>
+                </div>
+                <div className="flex-1 min-w-0 pt-1">
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1 truncate">
+                    {user.name}
+                  </h2>
+                  <p className="text-gray-500 text-sm mb-3 truncate">{user.email}</p>
+
+                  {/* Seller Rating */}
+                  {sellerRating.reviewCount > 0 && (
                     <RatingSummary
                       averageRating={sellerRating.averageRating}
                       reviewCount={sellerRating.reviewCount}
                       size="md"
                       showLabel={true}
                     />
-                  </div>
-                )}
-                
-                <p className="text-gray-400 text-sm">{offers.length} active offers</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Stats grid */}
+              <div className="grid grid-cols-2 gap-3 mt-6 pt-6 border-t border-gray-100">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900">{offers.length}</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mt-0.5">
+                    {offers.length <= 1 ? 'Offre active' : 'Offres actives'}
+                  </p>
+                </div>
+                <div className="text-center border-l border-gray-100">
+                  <p className="text-2xl font-bold text-gray-900">
+                    {sellerRating.reviewCount > 0
+                      ? sellerRating.averageRating.toFixed(1)
+                      : '—'}
+                  </p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mt-0.5">
+                    Note moyenne
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -220,15 +254,34 @@ export function ProfileScreen() {
 
         {/* My Offers Section */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">My Offers</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Mes offres</h3>
+            {offers.length > 0 && (
+              <button
+                onClick={() => navigate('/add-offer')}
+                className="flex items-center gap-1.5 text-[#1FA774] text-sm font-semibold hover:underline"
+              >
+                <Plus size={16} />
+                Nouvelle
+              </button>
+            )}
+          </div>
           {loading ? (
             <ProfileOffersSkeleton count={3} />
           ) : offers.length === 0 ? (
-            <div className="bg-white rounded-2xl p-8 text-center flex flex-col items-center gap-4">
-              <p className="text-gray-400">Vous n'avez pas encore d'offre</p>
+            <div className="bg-white rounded-3xl p-10 text-center flex flex-col items-center gap-4 ring-1 ring-gray-100 shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-[#1FA774]/10 flex items-center justify-center">
+                <Plus size={28} className="text-[#1FA774]" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900 mb-1">Vous n'avez pas encore d'offre</p>
+                <p className="text-sm text-gray-500">
+                  Publiez votre première réduction et commencez à échanger.
+                </p>
+              </div>
               <button
                 onClick={() => navigate('/add-offer')}
-                className="flex items-center gap-2 bg-[#1FA774] text-white px-6 py-3 rounded-full font-semibold hover:bg-[#16865c] transition-colors"
+                className="flex items-center gap-2 bg-[#1FA774] text-white px-6 py-3 rounded-full font-semibold hover:bg-[#16865c] transition-colors shadow-md shadow-[#1FA774]/30"
               >
                 <Plus size={18} />
                 <span>Ajouter une offre</span>
@@ -251,7 +304,7 @@ export function ProfileScreen() {
         </div>
 
         {/* Danger Zone */}
-        <div className="mt-8 border border-red-200 rounded-2xl p-6 bg-red-50">
+        <div className="mt-10 border border-red-200 rounded-3xl p-6 bg-red-50/60">
           <h3 className="text-base font-semibold text-red-700 mb-1 flex items-center gap-2">
             <AlertTriangle size={18} /> Zone dangereuse
           </h3>

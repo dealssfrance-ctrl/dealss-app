@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { Button } from '../components/Button';
-import { TrendingUp, Users, Shield } from 'lucide-react';
+import { Repeat, MapPin, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export function WelcomeScreen() {
@@ -16,19 +16,53 @@ export function WelcomeScreen() {
     }
   }, [isAuthenticated, navigate]);
 
+  const features = [
+    {
+      icon: Repeat,
+      iconBg: 'bg-indigo-500/90',
+      title: 'Troc entre employés',
+      description: "Échange ta réduc Zara contre une réduc McDonald's et plus encore",
+    },
+    {
+      icon: MapPin,
+      iconBg: 'bg-rose-500/90',
+      title: 'En magasin, près de toi',
+      description: 'Les échanges se font physiquement dans ton quartier',
+    },
+    {
+      icon: Star,
+      iconBg: 'bg-amber-400/95',
+      title: 'Communauté fiable',
+      description: 'Profils notés et échanges confirmés mutuellement',
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1FA774] to-[#16865c] flex flex-col overflow-y-auto">
+    <div className="min-h-screen bg-gradient-to-br from-[#1FA774] to-[#16865c] flex flex-col overflow-y-auto relative">
+      {/* Subtle pattern overlay */}
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-[0.08] pointer-events-none"
+        style={{
+          backgroundImage:
+            'linear-gradient(45deg, rgba(255,255,255,0.4) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.4) 25%, transparent 25%)',
+          backgroundSize: '24px 24px',
+        }}
+      />
+
       {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
+      <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-10">
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
+          initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
           className="text-center mb-8"
         >
-          <h1 className="text-6xl font-bold text-white mb-4">Hyvis</h1>
-          <p className="text-xl text-white/90 max-w-md">
-            Share and discover exclusive employee discounts
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-5 tracking-tight">Hyvis</h1>
+          <p className="text-xl md:text-2xl text-white font-semibold leading-snug max-w-md mx-auto">
+            Troque ta réduction employeur
+            <br />
+            contre une autre, près de chez toi
           </p>
         </motion.div>
 
@@ -37,37 +71,32 @@ export function WelcomeScreen() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="space-y-5 mb-8 max-w-sm"
+          className="space-y-4 mb-8 w-full max-w-md"
         >
-          <div className="flex items-center gap-4 text-white">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-              <TrendingUp size={24} />
-            </div>
-            <div className="text-left">
-              <h3 className="font-semibold">Hot Deals</h3>
-              <p className="text-sm text-white/80">Up to 40% off on top brands</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 text-white">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-              <Users size={24} />
-            </div>
-            <div className="text-left">
-              <h3 className="font-semibold">Community</h3>
-              <p className="text-sm text-white/80">Connect with other employees</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 text-white">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-              <Shield size={24} />
-            </div>
-            <div className="text-left">
-              <h3 className="font-semibold">Trusted</h3>
-              <p className="text-sm text-white/80">Verified sellers and reviews</p>
-            </div>
-          </div>
+          {features.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 + index * 0.1 }}
+                className="flex items-start gap-4 bg-white/15 backdrop-blur-md rounded-2xl p-4 border border-white/20"
+              >
+                <div
+                  className={`w-12 h-12 ${feature.iconBg} rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg`}
+                >
+                  <Icon size={22} className="text-white" strokeWidth={2.5} />
+                </div>
+                <div className="text-left flex-1 min-w-0">
+                  <h3 className="font-bold text-white text-lg leading-tight mb-1">
+                    {feature.title}
+                  </h3>
+                  <p className="text-sm text-white/85 leading-snug">{feature.description}</p>
+                </div>
+              </motion.div>
+            );
+          })}
         </motion.div>
       </div>
 
@@ -75,8 +104,8 @@ export function WelcomeScreen() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="px-6 pb-8 space-y-3"
+        transition={{ delay: 0.7 }}
+        className="relative px-6 pb-8 space-y-3"
       >
         <Button
           onClick={() => {
@@ -85,7 +114,7 @@ export function WelcomeScreen() {
           }}
           className="bg-white !text-[#1FA774] hover:bg-gray-100"
         >
-          Create Account
+          Créer un compte
         </Button>
         <button
           onClick={() => {
@@ -94,7 +123,7 @@ export function WelcomeScreen() {
           }}
           className="w-full py-4 rounded-full font-semibold text-white border-2 border-white/30 hover:bg-white/10 transition-colors"
         >
-          Sign In
+          Se connecter
         </button>
         <button
           onClick={() => {
@@ -103,7 +132,7 @@ export function WelcomeScreen() {
           }}
           className="w-full py-4 rounded-full font-semibold text-white/70 hover:text-white hover:bg-white/5 transition-colors text-sm"
         >
-          Continue as Guest
+          Continuer en invité
         </button>
       </motion.div>
     </div>
