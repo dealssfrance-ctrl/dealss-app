@@ -61,6 +61,17 @@ export function OfferGallery({ imageUrl, storeName, onImageError }: OfferGallery
       </div>
     );
   }
+
+  if (validImages.length === 0) {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center">
+        <div className="text-center px-6">
+          <p className="text-sm font-medium text-slate-600">Image indisponible</p>
+          <p className="text-xs text-slate-500 mt-1">Le visuel de cette offre ne peut pas etre charge</p>
+        </div>
+      </div>
+    );
+  }
   
   const handleImageError = (idx: number) => {
     const newErrors = new Set(imageErrors);

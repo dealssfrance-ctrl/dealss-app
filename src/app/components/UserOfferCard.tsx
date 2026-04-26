@@ -17,26 +17,34 @@ export function UserOfferCard({ offer, onDelete }: UserOfferCardProps) {
   // Parse first image from potentially multi-image URL
   const getFirstImage = (imageUrl?: string): string | undefined => {
     if (!imageUrl) return undefined;
-    
-    const trimmed = imageUrl.trim();
-    
-    // Try JSON array first
-    if (trimmed.startsWith('[')) {
-      try {
-        const parsed = JSON.parse(trimmed);
-        if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'string') {
-          return parsed[0];
+
+    const extractFirst = (value: string): string | undefined => {
+      const trimmed = value.trim();
+      if (!trimmed) return undefined;
+
+      if (trimmed.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const firstItem = parsed.find((item) => typeof item === 'string' && item.trim().length > 0);
+            if (typeof firstItem === 'string') {
+              const firstTrimmed = firstItem.trim();
+              return firstTrimmed.startsWith('[') ? extractFirst(firstTrimmed) : firstTrimmed;
+            }
+          }
+        } catch {
+          // Fall through to URL parsing
         }
-      } catch {
-        // Fall through to single URL parsing
       }
-    }
-    
-    // Return single URL if valid
-    if (/^https?:\/\//i.test(trimmed)) {
+
       return trimmed;
+    };
+
+    const candidate = extractFirst(imageUrl);
+    if (candidate && /^(https?:\/\/|data:image\/)/i.test(candidate)) {
+      return candidate;
     }
-    
+
     return undefined;
   };
 
