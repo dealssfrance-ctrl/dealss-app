@@ -478,15 +478,28 @@ export function Home() {
           {loading ? (
             <OfferCardGridSkeleton count={6} />
           ) : filteredOffers.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-400 mb-4">Aucune offre correspondant à vos critères</p>
-              <button
-                onClick={() => setSelectedCategory('All')}
-                className="text-[#1FA774] font-medium"
-              >
-                Réinitialiser les filtres
-              </button>
-            </div>
+            <>
+              <div className="text-center py-12">
+                <p className="text-gray-400 mb-4">Aucune offre correspondant à vos critères</p>
+                <button
+                  onClick={() => setSelectedCategory('All')}
+                  className="text-[#1FA774] font-medium"
+                >
+                  Réinitialiser les filtres
+                </button>
+              </div>
+              {/* Keep paging through the server even when local filters hide every item on this page. */}
+              {hasMore && (
+                <>
+                  <div ref={loadMoreSentinelRef} className="h-1 w-full" aria-hidden />
+                  {loadingMore && (
+                    <div className="text-center pb-4 mt-6">
+                      <LoadMoreSkeleton />
+                    </div>
+                  )}
+                </>
+              )}
+            </>
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
