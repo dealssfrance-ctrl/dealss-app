@@ -49,6 +49,7 @@ export function ChatListScreen() {
   const [tab, setTab] = useState<'all' | 'archived'>('all');
   const [pinned, setPinned] = useState<Set<string>>(new Set());
   const [archived, setArchived] = useState<Set<string>>(new Set());
+  const [hidden, setHidden] = useState<Record<string, string>>({});
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,6 +60,7 @@ export function ChatListScreen() {
     const sync = () => {
       setPinned(chatPrefs.getPinned(user.id));
       setArchived(chatPrefs.getArchived(user.id));
+      setHidden(chatPrefs.getHidden(user.id));
     };
     sync();
     window.addEventListener('chat:prefs-changed', sync);
@@ -102,9 +104,38 @@ export function ChatListScreen() {
   );
   const isPinned = useCallback((c: ConversationSummary) => pinned.has(c.id), [pinned]);
 
+  // A conversation is hidden iff ALL its sibling IDs are hidden AND its
+  // last message is not newer than the most recent hide timestamp among
+  // those siblings. A new incoming message resurfaces it automatically.
+  const isHidden = useCallback(
+    (c: ConversationSummary) => {
+      const ids = c.siblingConversationIds?.length ? c.siblingConversationIds : [c.id];
+      const stamps = ids.map((id) => hidden[id]).filter(Boolean) as string[];
+      if (stamps.length === 0 || stamps.length < ids.length) return false;
+      const latestHide = stamps.reduce((a, b) => (a > b ? a : b));
+      return !(c.lastMessageTime && c.lastMessageTime > latestHide);
+    },
+    [hidden],
+  );
+
+  // Auto-cleanup: once a hidden conversation has resurfaced (new message
+  // newer than the hide timestamp), drop the hide marker so it stays visible.
+  useEffect(() => {
+    if (!user) return;
+    const ids: string[] = [];
+    for (const c of conversations) {
+      const sibs = c.siblingConversationIds?.length ? c.siblingConversationIds : [c.id];
+      for (const id of sibs) {
+        const stamp = hidden[id];
+        if (stamp && c.lastMessageTime && c.lastMessageTime > stamp) ids.push(id);
+      }
+    }
+    if (ids.length > 0) chatPrefs.unhide(user.id, ids);
+  }, [conversations, hidden, user]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let list = conversations;
+    let list = conversations.filter((c) => !isHidden(c));
     list = list.filter((c) => (tab === 'archived' ? isArchived(c) : !isArchived(c)));
     if (q) {
       list = list.filter(
@@ -125,11 +156,16 @@ export function ChatListScreen() {
         new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
       );
     });
-  }, [conversations, query, tab, isArchived, isPinned]);
+  }, [conversations, query, tab, isArchived, isPinned, isHidden]);
 
   const archivedCount = useMemo(
-    () => conversations.filter((c) => isArchived(c)).length,
-    [conversations, isArchived],
+    () => conversations.filter((c) => !isHidden(c) && isArchived(c)).length,
+    [conversations, isArchived, isHidden],
+  );
+
+  const visibleCount = useMemo(
+    () => conversations.filter((c) => !isHidden(c)).length,
+    [conversations, isHidden],
   );
 
   const formatTime = (dateStr: string) => {
@@ -172,8 +208,10 @@ export function ChatListScreen() {
     setMenuOpenId(null);
     const ids = c.siblingConversationIds?.length ? c.siblingConversationIds : [c.id];
     try {
-      await chatService.deleteConversations(ids);
-      chatPrefs.remove(user.id, ids);
+      // Soft-delete: hide for this user only. The other participant keeps
+      // their copy. If the other user sends a new message later, the
+      // conversation will resurface (lastMessageTime > hiddenAt).
+      chatPrefs.hide(user.id, ids);
       setConversations((prev) => prev.filter((x) => !ids.includes(x.id)));
       toast.success('Conversation supprimée');
     } catch (err) {
@@ -268,7 +306,7 @@ export function ChatListScreen() {
             {/* Tabs */}
             <div className="mt-4 flex gap-2">
               {([
-                { key: 'all', label: 'Toutes', count: conversations.length - archivedCount },
+                { key: 'all', label: 'Toutes', count: visibleCount - archivedCount },
                 { key: 'archived', label: 'Archivées', count: archivedCount },
               ] as const).map((t) => (
                 <button
