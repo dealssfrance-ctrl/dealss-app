@@ -371,6 +371,77 @@ class ChatService {
     return out;
   }
 
+  /**
+   * Per-sibling branch info used by the conversation list when a person has
+   * chatted about multiple offers. Returns one entry per conversation id with
+   * the offer's image / store + the last message preview/time.
+   */
+  async getConversationBranches(
+    conversationIds: string[],
+  ): Promise<Array<{
+    id: string;
+    offerId: string;
+    storeName: string;
+    offerImageUrl?: string;
+    lastMessage: string;
+    lastMessageTime: string;
+    lastMessageSenderId?: string;
+  }>> {
+    if (!conversationIds.length) return [];
+    const { data: convs } = await supabase
+      .from('conversations')
+      .select('id, offer_id, updated_at')
+      .in('id', conversationIds);
+    const offerIds = Array.from(new Set((convs || []).map((c: any) => c.offer_id).filter(Boolean)));
+    const [offersRes, messagesRes] = await Promise.all([
+      offerIds.length
+        ? supabase.from('offers').select('id, store_name, image_url').in('id', offerIds)
+        : Promise.resolve({ data: [] as any[] }),
+      supabase
+        .from('messages')
+        .select('*')
+        .in('conversation_id', conversationIds)
+        .order('created_at', { ascending: false }),
+    ]);
+    const offerMap = new Map<string, { storeName: string; offerImageUrl?: string }>();
+    for (const o of (offersRes as any).data || []) {
+      let firstImg = String((o as any).image_url ?? '').trim();
+      if (firstImg.startsWith('[')) {
+        try {
+          const arr = JSON.parse(firstImg);
+          if (Array.isArray(arr)) firstImg = String(arr[0] ?? '').trim();
+        } catch { /* ignore */ }
+      }
+      offerMap.set((o as any).id, {
+        storeName: (o as any).store_name || '',
+        offerImageUrl: /^https?:\/\//i.test(firstImg) ? firstImg : undefined,
+      });
+    }
+    // Pick most-recent message per conversation.
+    const lastByConv = new Map<string, any>();
+    for (const m of (messagesRes as any).data || []) {
+      if (!lastByConv.has(m.conversation_id)) lastByConv.set(m.conversation_id, m);
+    }
+    const out = (convs || []).map((c: any) => {
+      const meta = offerMap.get(c.offer_id);
+      const last = lastByConv.get(c.id);
+      return {
+        id: c.id,
+        offerId: c.offer_id,
+        storeName: meta?.storeName || '',
+        offerImageUrl: meta?.offerImageUrl,
+        lastMessage: last ? lastMessagePreview(last) : '',
+        lastMessageTime: last?.created_at || c.updated_at,
+        lastMessageSenderId: last?.sender_id || undefined,
+      };
+    });
+    out.sort(
+      (a, b) =>
+        new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime(),
+    );
+    return out;
+  }
+
   // ── Messages ─────────────────────────────────────────────────────────────
 
   /**

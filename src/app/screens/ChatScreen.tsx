@@ -53,6 +53,9 @@ export function ChatScreen() {
   const draftReceiverId = searchParams.get('receiverId') || '';
   const draftStoreName = searchParams.get('storeName') || '';
   const draftOtherName = searchParams.get('otherName') || '';
+  // When `focus=offer` is set, scope the thread to the route conversation only
+  // (no merging across siblings) so the user sees a single offer's discussion.
+  const focusSingleOffer = searchParams.get('focus') === 'offer';
 
   // Effective conversation id used for DB calls. In draft mode this is empty until
   // the first message materializes the conversation.
@@ -184,7 +187,15 @@ export function ChatScreen() {
       try {
         const response = await chatService.getConversation(conversationId, user.id);
         setConversation(response.data);
-        if (response.data.siblingConversationIds?.length) {
+        if (focusSingleOffer) {
+          // Single-offer view: keep only this conversation in the thread, but
+          // still load its own offer meta so the in-thread separator works.
+          setSiblingIds([conversationId]);
+          chatService
+            .getConversationsMeta([conversationId])
+            .then(setConversationsMeta)
+            .catch(() => { /* non-blocking */ });
+        } else if (response.data.siblingConversationIds?.length) {
           setSiblingIds(response.data.siblingConversationIds);
           chatService
             .getConversationsMeta(response.data.siblingConversationIds)

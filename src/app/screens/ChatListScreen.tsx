@@ -3,7 +3,7 @@ import { Layout } from '../components/Layout';
 import { HyvisHeader } from '../components/HyvisHeader';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, Search, MoreVertical, Pin, Archive, Trash2, ArchiveRestore } from 'lucide-react';
+import { MessageSquare, Search, MoreVertical, Pin, Archive, Trash2, ArchiveRestore, ChevronRight, Tag, Package } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { chatService, ConversationSummary } from '../services/chatService';
 import { ChatListSkeleton } from '../components/Skeleton';
@@ -52,6 +52,17 @@ export function ChatListScreen() {
   const [hidden, setHidden] = useState<Record<string, string>>({});
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [branchesById, setBranchesById] = useState<Record<string, Array<{
+    id: string;
+    offerId: string;
+    storeName: string;
+    offerImageUrl?: string;
+    lastMessage: string;
+    lastMessageTime: string;
+    lastMessageSenderId?: string;
+  }>>>({});
+  const [branchLoadingId, setBranchLoadingId] = useState<string | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Hydrate prefs from localStorage and stay in sync with cross-tab updates.
@@ -234,6 +245,36 @@ export function ChatListScreen() {
     }
   };
 
+  // Open a conversation row.
+  // - Single offer → go straight into the chat.
+  // - Multiple offers → toggle an inline branch picker (one entry per offer).
+  const openConversation = useCallback(async (c: ConversationSummary) => {
+    setMenuOpenId(null);
+    const sibs = c.siblingConversationIds?.length ? c.siblingConversationIds : [c.id];
+    if (sibs.length <= 1 || c.offerCount <= 1) {
+      navigate(`/chat/${c.id}`);
+      return;
+    }
+    if (expandedId === c.id) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(c.id);
+    if (!branchesById[c.id]) {
+      try {
+        setBranchLoadingId(c.id);
+        const branches = await chatService.getConversationBranches(sibs);
+        setBranchesById((prev) => ({ ...prev, [c.id]: branches }));
+      } catch (err) {
+        console.error('Failed to load branches', err);
+        toast.error('Impossible de charger les discussions');
+        setExpandedId(null);
+      } finally {
+        setBranchLoadingId(null);
+      }
+    }
+  }, [navigate, expandedId, branchesById]);
+
   if (!isAuthenticated) {
     return (
       <Layout>
@@ -357,6 +398,10 @@ export function ChatListScreen() {
                 const pinnedRow = isPinned(conversation);
                 const archivedRow = isArchived(conversation);
                 const open = menuOpenId === conversation.id;
+                const expanded = expandedId === conversation.id;
+                const hasBranches = (conversation.offerCount || 1) > 1;
+                const branches = branchesById[conversation.id] || [];
+                const branchesLoading = branchLoadingId === conversation.id;
                 return (
                   <motion.div
                     key={conversation.id}
@@ -368,8 +413,8 @@ export function ChatListScreen() {
                     <div
                       role="button"
                       tabIndex={0}
-                      onClick={() => navigate(`/chat/${conversation.id}`)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/chat/${conversation.id}`); }}
+                      onClick={() => openConversation(conversation)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') openConversation(conversation); }}
                       onContextMenu={(e) => {
                         e.preventDefault();
                         setMenuOpenId(open ? null : conversation.id);
@@ -378,7 +423,7 @@ export function ChatListScreen() {
                       onTouchEnd={cancelLongPress}
                       onTouchCancel={cancelLongPress}
                       onTouchMove={cancelLongPress}
-                      className="w-full px-5 md:px-6 py-4 flex items-center gap-4 hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer"
+                      className={`w-full px-5 md:px-6 py-4 flex items-center gap-4 hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer ${expanded ? 'bg-emerald-50/40' : ''}`}
                     >
                       {/* Gradient avatar */}
                       <div
@@ -410,6 +455,12 @@ export function ChatListScreen() {
                                 +{conversation.offerCount - 1} autre{conversation.offerCount > 2 ? 's' : ''}
                               </span>
                             )}
+                            {hasBranches && (
+                              <ChevronRight
+                                size={12}
+                                className={`inline-block ml-1 text-emerald-500 transition-transform ${expanded ? 'rotate-90' : ''}`}
+                              />
+                            )}
                           </p>
                         )}
                         <p className="text-sm text-gray-500 truncate">
@@ -432,6 +483,103 @@ export function ChatListScreen() {
                         <MoreVertical size={18} />
                       </button>
                     </div>
+
+                    {/* Branches (per-offer threads) — shown when this person
+                        has multiple offer conversations and the row is expanded. */}
+                    <AnimatePresence initial={false}>
+                      {expanded && hasBranches && (
+                        <motion.div
+                          key="branches"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.18 }}
+                          className="overflow-hidden bg-gradient-to-b from-emerald-50/60 to-white border-t border-emerald-100"
+                        >
+                          <div className="px-5 md:px-6 py-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Package size={14} className="text-emerald-600" />
+                              <span className="text-[11px] uppercase tracking-wider font-semibold text-emerald-700">
+                                {conversation.offerCount} offres en discussion
+                              </span>
+                            </div>
+
+                            {branchesLoading ? (
+                              <div className="space-y-2">
+                                {Array.from({ length: Math.min(3, conversation.offerCount) }).map((_, i) => (
+                                  <div key={i} className="h-14 rounded-xl bg-white/70 animate-pulse" />
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {branches.map((b, bi) => (
+                                  <motion.button
+                                    key={b.id}
+                                    type="button"
+                                    initial={{ opacity: 0, y: 4 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: Math.min(bi * 0.04, 0.16) }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/chat/${b.id}`);
+                                    }}
+                                    className="w-full group flex items-center gap-3 p-2 pr-3 rounded-xl bg-white hover:bg-emerald-50 border border-emerald-100/60 hover:border-emerald-300 shadow-sm transition-all text-left"
+                                  >
+                                    {/* Offer thumbnail */}
+                                    <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                      {b.offerImageUrl ? (
+                                        <img
+                                          src={b.offerImageUrl}
+                                          alt={b.storeName}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-emerald-600">
+                                          <Tag size={18} />
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-baseline justify-between gap-2">
+                                        <span className="text-[13px] font-semibold text-gray-900 truncate">
+                                          {b.storeName || 'Offre'}
+                                        </span>
+                                        <span className="text-[11px] text-gray-400 flex-shrink-0">
+                                          {formatTime(b.lastMessageTime)}
+                                        </span>
+                                      </div>
+                                      <p className="text-xs text-gray-500 truncate">
+                                        {b.lastMessage || (
+                                          <span className="italic text-gray-400">Aucun message</span>
+                                        )}
+                                      </p>
+                                    </div>
+
+                                    <ChevronRight
+                                      size={16}
+                                      className="text-gray-300 group-hover:text-emerald-500 transition-colors flex-shrink-0"
+                                    />
+                                  </motion.button>
+                                ))}
+
+                                {/* Footer action: open the merged thread */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/chat/${conversation.id}`);
+                                  }}
+                                  className="w-full mt-1 text-xs text-emerald-700 hover:text-emerald-900 font-medium py-2 hover:bg-emerald-100/60 rounded-lg transition-colors"
+                                >
+                                  Voir toutes les discussions fusionnées →
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     {/* Context menu */}
                     <AnimatePresence>
