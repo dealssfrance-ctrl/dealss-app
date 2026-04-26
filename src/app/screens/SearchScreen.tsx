@@ -19,6 +19,12 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   'Beauty': '💄',
   'Vols': '✈️',
   'Other': '📦',
+  'High-tech': '💻',
+  'Maison': '🏠',
+  'Mode': '👔',
+  'Beaute': '💄',
+  'Voyage': '✈️',
+  'Sport': '🏃',
 };
 
 export function SearchScreen() {
