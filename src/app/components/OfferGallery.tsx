@@ -10,29 +10,39 @@ interface OfferGalleryProps {
 
 function parseImageUrls(imageUrl: string): string[] {
   if (!imageUrl || typeof imageUrl !== 'string') return [];
-  
-  const trimmed = imageUrl.trim();
-  
-  // Try JSON array first
-  if (trimmed.startsWith('[')) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) {
-        return parsed
-          .filter((url) => typeof url === 'string' && url.trim().length > 0)
-          .map((url) => url.trim());
+
+  const toUrls = (value: string): string[] => {
+    const trimmed = value.trim();
+
+    if (!trimmed) return [];
+
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed.flatMap((item) => {
+            if (typeof item !== 'string') return [];
+            const itemTrimmed = item.trim();
+            if (!itemTrimmed) return [];
+            // Some records may contain a JSON array string inside another array.
+            return itemTrimmed.startsWith('[') ? toUrls(itemTrimmed) : [itemTrimmed];
+          });
+        }
+      } catch {
+        // Continue to fallback parsing
       }
-    } catch {
-      // Continue to fallback parsing
     }
-  }
-  
-  // Try comma-separated (fallback)
-  const urls = trimmed.split(',')
-    .map((url) => url.trim())
-    .filter((url) => url.length > 0 && /^https?:\/\//i.test(url));
-  
-  return urls.length > 0 ? urls : [imageUrl];
+
+    const commaSeparated = trimmed
+      .split(',')
+      .map((url) => url.trim())
+      .filter((url) => url.length > 0);
+
+    return commaSeparated.length > 0 ? commaSeparated : [trimmed];
+  };
+
+  const parsed = toUrls(imageUrl).filter((url) => /^(https?:\/\/|data:image\/)/i.test(url));
+  return [...new Set(parsed)];
 }
 
 export function OfferGallery({ imageUrl, storeName, onImageError }: OfferGalleryProps) {
@@ -41,7 +51,8 @@ export function OfferGallery({ imageUrl, storeName, onImageError }: OfferGallery
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   
   const validImages = images.filter((_, idx) => !imageErrors.has(idx));
-  const currentImage = validImages[currentIndex] || images[0];
+  const safeIndex = Math.min(currentIndex, Math.max(validImages.length - 1, 0));
+  const currentImage = validImages[safeIndex] || images[0];
   
   if (images.length === 0) {
     return (
@@ -102,7 +113,7 @@ export function OfferGallery({ imageUrl, storeName, onImageError }: OfferGallery
       {/* Main image area */}
       <div className="flex-1 relative bg-gray-100 rounded-2xl overflow-hidden group">
         <motion.img
-          key={currentIndex}
+          key={safeIndex}
           src={currentImage}
           alt={storeName}
           initial={{ opacity: 0 }}
@@ -110,7 +121,7 @@ export function OfferGallery({ imageUrl, storeName, onImageError }: OfferGallery
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
           className="w-full h-full object-cover cursor-zoom-in group-hover:scale-105 transition-transform duration-300"
-          onError={() => handleImageError(currentIndex)}
+          onError={() => handleImageError(safeIndex)}
         />
         
         {/* Navigation arrows (visible on desktop, mobile carousel dots) */}
@@ -152,7 +163,7 @@ export function OfferGallery({ imageUrl, storeName, onImageError }: OfferGallery
             
             {/* Image counter */}
             <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium">
-              {currentIndex + 1} / {validImages.length}
+              {safeIndex + 1} / {validImages.length}
             </div>
           </>
         )}

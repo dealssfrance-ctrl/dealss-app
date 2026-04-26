@@ -3,10 +3,9 @@ import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { Button } from '../components/Button';
 import { OfferGallery } from '../components/OfferGallery';
+import { PersistentNavbar } from '../components/PersistentNavbar';
 import { RatingSummary } from '../components/RatingSummary';
-import { OfferReviewModal } from '../components/OfferReviewModal';
 import { ReviewsList } from '../components/ReviewsList';
-import { ReviewInput } from '../components/ReviewInput';
 import { useAuth } from '../context/AuthContext';
 import { offersService, Offer } from '../services/offersService';
 import { chatService } from '../services/chatService';
@@ -32,7 +31,6 @@ export function OfferDetailScreen() {
   const { user } = useAuth();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isOfferReviewModalOpen, setIsOfferReviewModalOpen] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
   const [offerRating, setOfferRating] = useState<{ average: number; count: number }>({ average: 0, count: 0 });
   const [sellerRating, setSellerRating] = useState<{ averageRating: number; reviewCount: number }>({ averageRating: 0, reviewCount: 0 });
@@ -116,31 +114,14 @@ export function OfferDetailScreen() {
     }
   };
 
-  const handleOfferReviewSubmit = async (rating: number, comment: string) => {
-    if (!user || !offer) return;
-    try {
-      await reviewsService.createReview({
-        offerId: offer.id,
-        userId: user.id,
-        userName: user.name,
-        rating,
-        comment,
-      });
-      toast.success('Merci pour votre avis ! ⭐');
-      await fetchReviews(offer.id);
-      await fetchSellerRating(offer.userId);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Erreur';
-      toast.error(msg);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f4fbf8_0%,#f8fafc_45%,#f1f5f9_100%)]">
+      <PersistentNavbar title="Détail offre" showBackButton={true} onBackClick={() => navigate(-1)} />
+
+      {/* Desktop Header */}
+      <div className="hidden md:block bg-white/75 backdrop-blur-md border-b border-gray-200/70 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-5 md:px-8 py-4">
-          <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
+          <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <ArrowLeft size={24} className="text-gray-900" />
           </button>
         </div>
@@ -153,9 +134,9 @@ export function OfferDetailScreen() {
         className="max-w-6xl mx-auto"
       >
         {/* Desktop: side-by-side layout */}
-        <div className="md:flex md:gap-0">
+        <div className="md:flex md:gap-0 pb-8 md:pb-12">
         {/* Gallery */}
-        <div className="w-full md:w-1/2 h-72 md:h-auto md:min-h-[500px] bg-gray-100 overflow-hidden md:rounded-2xl md:m-8 md:mr-0 md:sticky md:top-20 md:self-start">
+        <div className="w-full md:w-1/2 h-72 md:h-auto md:min-h-[560px] bg-gray-100 overflow-hidden md:rounded-3xl md:m-8 md:mr-0 md:sticky md:top-20 md:self-start md:shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
           <OfferGallery 
             imageUrl={offer.imageUrl} 
             storeName={offer.storeName}
@@ -165,27 +146,27 @@ export function OfferDetailScreen() {
         {/* Offer Details */}
         <div className="p-6 md:p-8 space-y-6 md:flex-1 md:max-w-xl">
           {/* Store Name & Discount */}
-          <div>
+          <div className="bg-white/90 backdrop-blur rounded-3xl p-5 md:p-6 border border-white/80 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
             <div className="flex items-start justify-between mb-3 gap-4">
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900">{offer.storeName}</h1>
-              <span className="text-3xl md:text-4xl font-bold text-[#1FA774] shrink-0">{offer.discount}</span>
+              <span className="text-3xl md:text-4xl font-extrabold text-[#1FA774] shrink-0">{offer.discount}</span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="inline-block px-3 py-1.5 bg-gray-100 text-gray-600 text-sm font-medium rounded-full">
+              <span className="inline-block px-3 py-1.5 bg-emerald-50 text-emerald-700 text-sm font-semibold rounded-full border border-emerald-100">
                 {offer.category}
               </span>
             </div>
           </div>
 
           {/* Description */}
-          <div className="bg-white md:bg-gray-50 rounded-2xl md:p-5">
+          <div className="bg-white/95 rounded-3xl p-5 border border-white/80 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
             <h2 className="text-sm font-semibold text-gray-700 mb-2">Description</h2>
             <p className="text-gray-600 leading-relaxed">{offer.description}</p>
           </div>
 
           {/* Offer Rating */}
           {!isOwnOffer && offerRating.count > 0 && (
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 md:p-5">
+            <div className="bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 border border-amber-200 rounded-3xl p-4 md:p-5 shadow-[0_8px_24px_rgba(251,146,60,0.18)]">
               <h2 className="text-sm font-semibold text-gray-700 mb-3">Avis pour cette offre</h2>
               <RatingSummary
                 averageRating={offerRating.average}
@@ -198,7 +179,7 @@ export function OfferDetailScreen() {
 
           {/* Seller Info */}
           {offer.userName && !isOwnOffer && (
-            <div className="bg-white md:bg-gray-50 rounded-2xl p-4 md:p-5">
+            <div className="bg-white/95 rounded-3xl p-4 md:p-5 border border-white/80 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
               <h2 className="text-sm font-semibold text-gray-700 mb-3">Vendeur</h2>
               <div className="flex items-start gap-3">
                 <div className="w-12 h-12 rounded-full overflow-hidden bg-[#1FA774]/10 flex items-center justify-center flex-shrink-0">
@@ -232,64 +213,21 @@ export function OfferDetailScreen() {
           )}
 
           {/* Reviews Section */}
-          <div className="border-t border-gray-200 pt-6">
+          <div className="border-t border-gray-200/70 pt-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-gray-900">
                 Avis {offerRating.count > 0 && `(${offerRating.count})`}
               </h2>
-              {!isOwnOffer && (
-                <button
-                  onClick={() => {
-                    if (!user) {
-                      toast.error('Connectez-vous pour laisser un avis');
-                      navigate('/signin');
-                      return;
-                    }
-                    setIsOfferReviewModalOpen(true);
-                  }}
-                  className="flex items-center gap-1 text-sm text-[#1FA774] font-medium hover:underline"
-                >
-                  Donner un avis
-                </button>
-              )}
+              <span className="text-xs px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-500">
+                Liste des avis
+              </span>
             </div>
-
-            {/* Review Input */}
-            {!isOwnOffer && (
-              user ? (
-                <ReviewInput
-                  onSubmit={handleOfferReviewSubmit}
-                  userName={user.name}
-                />
-              ) : (
-                <div className="bg-gray-50 rounded-2xl p-4 mb-4 flex items-center justify-between gap-3">
-                  <p className="text-sm text-gray-500">Connectez-vous pour laisser un commentaire</p>
-                  <button
-                    onClick={() => navigate('/signin')}
-                    className="shrink-0 text-sm font-semibold text-white bg-[#1FA774] px-4 py-2 rounded-full hover:bg-[#16865c] transition-colors"
-                  >
-                    Se connecter
-                  </button>
-                </div>
-              )
-            )}
 
             {/* Reviews List */}
             <ReviewsList reviews={reviews} />
           </div>
         </div>
         </div> {/* end desktop flex */}
-
-        {/* Review Modal */}
-        {offer && (
-          <OfferReviewModal
-            isOpen={isOfferReviewModalOpen}
-            onClose={() => setIsOfferReviewModalOpen(false)}
-            offerName={offer.storeName}
-            offerImage={offer.imageUrl}
-            onSubmit={handleOfferReviewSubmit}
-          />
-        )}
       </motion.div>
     </div>
   );
