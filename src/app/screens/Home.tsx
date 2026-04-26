@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Layout } from '../components/Layout';
 import { HyvisHeader } from '../components/HyvisHeader';
 import { useNavigate } from 'react-router';
-import { Plus, Sparkles, LogOut, User, RefreshCw, Shield, MapPin, Percent, ArrowRight } from 'lucide-react';
+import { Plus, Sparkles, LogOut, User, RefreshCw, Shield, MapPin, Percent } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFilters } from '../context/FilterContext';
 import { toast } from 'sonner';
@@ -396,18 +396,6 @@ export function Home() {
                   </div>
                 </div>
               </div>
-
-              {/* CTA */}
-              <button
-                onClick={() => {
-                  const el = document.getElementById('all-offers');
-                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }}
-                className="inline-flex items-center gap-2 bg-white text-gray-900 hover:bg-gray-50 transition-colors rounded-full px-6 py-3 font-semibold shadow-lg"
-              >
-                Découvrir les offres
-                <ArrowRight size={18} className="text-[#1FA774]" />
-              </button>
             </div>
 
             {/* Right: Decorative illustration */}
