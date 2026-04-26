@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router';
 import { Layout } from '../components/Layout';
 import { OfferCard } from '../components/OfferCard';
 import { offersService, Offer } from '../services/offersService';
+import { reviewsService } from '../services/reviewsService';
 import { supabase } from '../services/supabaseClient';
 import { motion } from 'motion/react';
-import { ArrowLeft, Package, Briefcase, EyeOff } from 'lucide-react';
+import { ArrowLeft, Package, Briefcase, EyeOff, Star } from 'lucide-react';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
 
 interface PublicUser {
@@ -23,6 +24,7 @@ export function PublicProfileScreen() {
   const navigate = useNavigate();
   const [user, setUser] = useState<PublicUser | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [rating, setRating] = useState<{ averageRating: number; reviewCount: number }>({ averageRating: 0, reviewCount: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -61,9 +63,13 @@ export function PublicProfileScreen() {
         createdAt: userData.created_at,
       });
 
-      // Fetch user's active offers
-      const response = await offersService.getMyOffers(userId!);
+      // Fetch user's active offers + aggregated seller rating
+      const [response, sellerRating] = await Promise.all([
+        offersService.getMyOffers(userId!),
+        reviewsService.getSellerRating(userId!),
+      ]);
       setOffers(response.data.filter(o => o.status === 'active'));
+      setRating(sellerRating);
     } catch {
       navigate('/', { replace: true });
     } finally {
@@ -136,6 +142,17 @@ export function PublicProfileScreen() {
                 <p className="text-gray-500 text-sm mt-1 flex items-center gap-1">
                   <Package size={14} />
                   {offers.length} offre{offers.length !== 1 ? 's' : ''} active{offers.length !== 1 ? 's' : ''}
+                </p>
+                <p className="text-gray-600 text-sm mt-1 flex items-center gap-1">
+                  <Star size={14} className={rating.reviewCount > 0 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'} />
+                  {rating.reviewCount > 0 ? (
+                    <>
+                      <span className="font-semibold text-gray-900">{rating.averageRating.toFixed(1)}</span>
+                      <span className="text-gray-500">({rating.reviewCount} avis)</span>
+                    </>
+                  ) : (
+                    <span className="text-gray-400">Aucun avis</span>
+                  )}
                 </p>
               </div>
             </div>
