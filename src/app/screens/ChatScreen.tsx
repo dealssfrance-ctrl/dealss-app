@@ -87,23 +87,87 @@ export function ChatScreen() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  // Fetch conversation details (skip in draft mode — we synthesize it from URL params).
+  // State for the "target offer" card displayed at the top in draft mode (and
+  // anytime the user opened the chat from a specific offer).
+  const [draftOffer, setDraftOffer] = useState<{
+    id: string;
+    storeName: string;
+    discount?: string;
+    imageUrl?: string;
+  } | null>(null);
+
+  // Fetch conversation details + siblings.
   useEffect(() => {
     if (isDraft) {
       if (!draftOfferId || !draftReceiverId || !user) return;
-      // Synthesize a conversation detail so the header/UI renders correctly.
-      setConversation({
-        id: '',
-        offerId: draftOfferId,
-        participants: [user.id, draftReceiverId],
-        storeName: draftStoreName,
-        otherUserId: draftReceiverId,
-        otherUserName: draftOtherName,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        siblingConversationIds: [],
-      });
-      setLoading(false);
+
+      // 1) Pre-load target offer details to render the context card at the top.
+      offersService
+        .getOfferById(draftOfferId)
+        .then((res) => {
+          if (res?.data) {
+            setDraftOffer({
+              id: res.data.id,
+              storeName: res.data.storeName,
+              discount: res.data.discount,
+              imageUrl: res.data.imageUrl,
+            });
+          }
+        })
+        .catch(() => { /* non-blocking */ });
+
+      // 2) Look up any existing conversations with this seller (any offer)
+      //    so prior chat history is loaded immediately.
+      (async () => {
+        try {
+          const sibs = await chatService.findSiblingConversations(user.id, draftReceiverId);
+          if (sibs.length > 0) {
+            setSiblingIds(sibs);
+            chatService.getConversationsMeta(sibs).then(setConversationsMeta).catch(() => {});
+            // Pull the real seller name from one of the existing conversations.
+            try {
+              const det = await chatService.getConversation(sibs[0], user.id);
+              setConversation({
+                ...det.data,
+                // Override offer context with the offer the user just clicked from.
+                offerId: draftOfferId,
+                storeName: draftStoreName || det.data.storeName,
+                siblingConversationIds: sibs,
+              });
+            } catch {
+              // Fallback synthesis if details fetch fails.
+              setConversation({
+                id: '',
+                offerId: draftOfferId,
+                participants: [user.id, draftReceiverId],
+                storeName: draftStoreName,
+                otherUserId: draftReceiverId,
+                otherUserName: draftOtherName,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                siblingConversationIds: sibs,
+              });
+            }
+          } else {
+            // No prior thread — synthesize empty conversation from URL params.
+            setConversation({
+              id: '',
+              offerId: draftOfferId,
+              participants: [user.id, draftReceiverId],
+              storeName: draftStoreName,
+              otherUserId: draftReceiverId,
+              otherUserName: draftOtherName,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              siblingConversationIds: [],
+            });
+          }
+        } catch (err) {
+          console.error('Error loading draft conversation context:', err);
+        } finally {
+          setLoading(false);
+        }
+      })();
       return;
     }
     const fetchConversation = async () => {
@@ -125,9 +189,10 @@ export function ChatScreen() {
     fetchConversation();
   }, [isDraft, conversationId, user, draftOfferId, draftReceiverId, draftStoreName, draftOtherName]);
 
-  // Fetch messages (initial + polling). In draft mode there are no messages yet.
+  // Fetch messages (initial + polling). In draft mode with no prior siblings
+  // there are no messages yet; otherwise we still load the merged thread.
   const fetchMessages = useCallback(async () => {
-    if (!conversationId) {
+    if (!conversationId && siblingIds.length === 0) {
       setLoading(false);
       return;
     }
@@ -234,10 +299,10 @@ export function ChatScreen() {
 
   useEffect(() => {
     fetchMessages();
-    if (!conversationId) return;
+    if (!conversationId && siblingIds.length === 0) return;
     const interval = setInterval(fetchMessages, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [fetchMessages, conversationId]);
+  }, [fetchMessages, conversationId, siblingIds]);
 
   useEffect(() => {
     scrollToBottom();
@@ -340,6 +405,25 @@ export function ChatScreen() {
       setInputText(text);
       setSending(false);
       return;
+    }
+
+    // Pre-populate sibling list and offer meta so the inline offer separator
+    // appears immediately above the user's first message — without waiting
+    // for the next polling cycle.
+    if (draftOffer && draftOffer.id) {
+      setSiblingIds((prev) => (prev.includes(convId) ? prev : [...prev, convId]));
+      setConversationsMeta((prev) =>
+        prev[convId]
+          ? prev
+          : {
+              ...prev,
+              [convId]: {
+                offerId: draftOffer.id,
+                storeName: draftOffer.storeName || draftStoreName,
+                offerImageUrl: draftOffer.imageUrl,
+              },
+            },
+      );
     }
 
     // Optimistic update
@@ -567,14 +651,17 @@ export function ChatScreen() {
             {messages.map((msg, idx) => {
               const isMine = msg.senderId === currentUserId;
               const prev = idx > 0 ? messages[idx - 1] : undefined;
-              const showOfferSep =
-                siblingIds.length > 1 &&
-                msg.conversationId &&
-                msg.conversationId !== prev?.conversationId;
-              const meta = showOfferSep ? conversationsMeta[msg.conversationId] : undefined;
+              const meta = msg.conversationId ? conversationsMeta[msg.conversationId] : undefined;
+              // Show the offer-context pill at the start of the thread, and at
+              // every boundary where the message belongs to a different offer
+              // than the previous one.
+              const showOfferSep = Boolean(
+                meta && (meta.storeName || meta.offerImageUrl) &&
+                  (idx === 0 || msg.conversationId !== prev?.conversationId),
+              );
               return (
                 <div key={msg.id}>
-                  {showOfferSep && meta && (meta.storeName || meta.offerImageUrl) && (
+                  {showOfferSep && meta && (
                     <div className="my-4 flex items-center gap-3" aria-label="Séparateur d'offre">
                       <div className="flex-1 h-px bg-gradient-to-r from-transparent to-gray-200" />
                       <button
@@ -671,6 +758,43 @@ export function ChatScreen() {
 
         {/* Input bar with "+" actions menu (review request) — fixed at bottom of chat container */}
         <div className="bg-white border-t border-gray-200 flex-shrink-0">
+          {/* Draft mode: show the offer the user is contacting about, pinned
+              above the composer until the first message is sent. */}
+          {!conversationId && draftOffer && (
+            <div className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
+              <div className="max-w-3xl mx-auto px-5 md:px-6 py-2.5 flex items-center gap-3">
+                <span className="text-[10px] uppercase tracking-wider text-emerald-700 font-semibold flex-shrink-0">
+                  À propos de
+                </span>
+                {draftOffer.imageUrl ? (
+                  <img
+                    src={draftOffer.imageUrl}
+                    alt=""
+                    className="w-9 h-9 rounded-lg object-cover ring-1 ring-emerald-200 flex-shrink-0"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <span className="w-9 h-9 rounded-lg bg-emerald-200 flex items-center justify-center text-emerald-800 font-bold flex-shrink-0">
+                    {(draftOffer.storeName || '?').charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => navigate(`/offer/${draftOffer.id}`)}
+                  className="flex-1 min-w-0 text-left"
+                >
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {draftOffer.storeName}
+                  </p>
+                  {draftOffer.discount && (
+                    <p className="text-xs text-emerald-700 font-medium truncate">
+                      {draftOffer.discount}
+                    </p>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="max-w-3xl mx-auto px-5 md:px-6 py-3 relative">
             <AnimatePresence>
               {actionsOpen && (

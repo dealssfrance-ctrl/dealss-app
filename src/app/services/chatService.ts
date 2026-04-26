@@ -438,6 +438,23 @@ class ChatService {
     return null;
   }
 
+  /**
+   * Find ALL conversations between two users, regardless of offer.
+   * Used in draft mode to surface prior chat history when contacting
+   * a seller about a new offer.
+   */
+  async findSiblingConversations(
+    userId: string,
+    otherUserId: string,
+  ): Promise<string[]> {
+    const { data } = await supabase
+      .from('conversations')
+      .select('id, updated_at')
+      .contains('participants', [userId, otherUserId])
+      .order('updated_at', { ascending: false });
+    return (data || []).map((r: any) => r.id);
+  }
+
   async createOrGetConversation(
     offerId: string,
     senderId: string,
