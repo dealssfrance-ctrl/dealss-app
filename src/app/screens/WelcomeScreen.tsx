@@ -38,18 +38,7 @@ export function WelcomeScreen() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1FA774] to-[#16865c] flex flex-col overflow-y-auto relative">
-      {/* Subtle pattern overlay */}
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-[0.08] pointer-events-none"
-        style={{
-          backgroundImage:
-            'linear-gradient(45deg, rgba(255,255,255,0.4) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.4) 25%, transparent 25%)',
-          backgroundSize: '24px 24px',
-        }}
-      />
-
+    <div className="min-h-screen bg-[#1FA774] flex flex-col overflow-y-auto relative">
       {/* Skip (top right) */}
       <button
         onClick={() => {
