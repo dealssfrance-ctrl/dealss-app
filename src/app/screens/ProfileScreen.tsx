@@ -131,7 +131,7 @@ export function ProfileScreen() {
               'radial-gradient(circle at 15% 20%, rgba(255,255,255,0.6) 0, transparent 40%), radial-gradient(circle at 85% 80%, rgba(255,255,255,0.4) 0, transparent 40%)',
           }}
         />
-        <div className="relative max-w-5xl mx-auto px-5 md:px-8 lg:px-10 pt-7 pb-12">
+        <div className="relative max-w-5xl mx-auto px-5 md:px-8 lg:px-10 pt-7 pb-20 md:pb-24">
           <div className="flex items-center justify-between mb-2">
             <div>
               <p className="text-xs uppercase tracking-widest text-white/70 mb-0.5">Mon espace</p>
@@ -160,12 +160,12 @@ export function ProfileScreen() {
       </div>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-5 md:px-8 lg:px-10 -mt-8 md:-mt-10">
+      <div className="max-w-5xl mx-auto px-5 md:px-8 lg:px-10 -mt-16 md:-mt-20">
         {/* User Info card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl p-6 md:p-8 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 mb-6"
+          className="relative bg-white rounded-3xl px-6 pb-6 pt-14 md:pt-16 md:px-8 md:pb-8 shadow-lg shadow-gray-200/60 ring-1 ring-gray-100 mb-6"
         >
           {isEditing ? (
             <div className="space-y-5">
@@ -207,26 +207,30 @@ export function ProfileScreen() {
             </div>
           ) : (
             <div>
-              <div className="flex items-start gap-4 md:gap-6">
-                <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-[#1FA774] to-[#16865c] flex items-center justify-center flex-shrink-0 shadow-md ring-4 ring-white">
-                  <span className="text-white text-2xl md:text-3xl font-bold">{userInitial}</span>
+              {/* Floating avatar (overlaps top of card) */}
+              <div className="absolute left-1/2 -translate-x-1/2 -top-12 md:-top-14">
+                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-[#1FA774] to-[#16865c] flex items-center justify-center shadow-xl ring-4 ring-white">
+                  <span className="text-white text-3xl md:text-4xl font-bold">{userInitial}</span>
                 </div>
-                <div className="flex-1 min-w-0 pt-1">
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1 truncate">
-                    {user.name}
-                  </h2>
-                  <p className="text-gray-500 text-sm mb-3 truncate">{user.email}</p>
+              </div>
 
-                  {/* Seller Rating */}
-                  {sellerRating.reviewCount > 0 && (
+              <div className="text-center">
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1 truncate">
+                  {user.name}
+                </h2>
+                <p className="text-gray-500 text-sm mb-3 truncate">{user.email}</p>
+
+                {/* Seller Rating */}
+                {sellerRating.reviewCount > 0 && (
+                  <div className="flex justify-center">
                     <RatingSummary
                       averageRating={sellerRating.averageRating}
                       reviewCount={sellerRating.reviewCount}
                       size="md"
                       showLabel={true}
                     />
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Stats grid */}
