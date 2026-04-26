@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { offersService, Offer } from '../services/offersService';
 import { reviewsService } from '../services/reviewsService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Edit2, LogOut, Trash2, AlertTriangle } from 'lucide-react';
+import { Edit2, LogOut, Trash2, AlertTriangle, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
@@ -224,8 +224,15 @@ export function ProfileScreen() {
           {loading ? (
             <ProfileOffersSkeleton count={3} />
           ) : offers.length === 0 ? (
-            <div className="bg-white rounded-2xl p-8 text-center">
-              <p className="text-gray-400">No offers yet</p>
+            <div className="bg-white rounded-2xl p-8 text-center flex flex-col items-center gap-4">
+              <p className="text-gray-400">Vous n'avez pas encore d'offre</p>
+              <button
+                onClick={() => navigate('/add-offer')}
+                className="flex items-center gap-2 bg-[#1FA774] text-white px-6 py-3 rounded-full font-semibold hover:bg-[#16865c] transition-colors"
+              >
+                <Plus size={18} />
+                <span>Ajouter une offre</span>
+              </button>
             </div>
           ) : (
             <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:space-y-0">

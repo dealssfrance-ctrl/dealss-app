@@ -110,14 +110,26 @@ export function OfferDetailScreen() {
     if (!offer) return;
 
     try {
-      const response = await chatService.createOrGetConversation(
+      // Don't persist a conversation row until the first message is actually sent.
+      const existing = await chatService.findExistingConversation(
         offer.id,
         user.id,
         offer.userId
       );
-      navigate(`/chat/${response.data.id}`);
+      if (existing) {
+        navigate(`/chat/${existing.id}`);
+        return;
+      }
+      // Draft mode: navigate with offer/receiver context as query params.
+      const params = new URLSearchParams({
+        offerId: offer.id,
+        receiverId: offer.userId,
+        storeName: offer.storeName || '',
+        otherName: offer.userName || '',
+      });
+      navigate(`/chat/new?${params.toString()}`);
     } catch (error) {
-      toast.error('Erreur lors de la création de la conversation');
+      toast.error('Erreur lors de l\u2019ouverture de la conversation');
     }
   };
 

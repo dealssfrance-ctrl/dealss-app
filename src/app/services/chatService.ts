@@ -291,6 +291,21 @@ class ChatService {
     return { success: true, data: (data || []).map(toMessage) };
   }
 
+  async findExistingConversation(
+    offerId: string,
+    senderId: string,
+    receiverId: string
+  ): Promise<{ id: string } | null> {
+    const { data: existing } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('offer_id', offerId)
+      .contains('participants', [senderId, receiverId])
+      .limit(1);
+    if (existing && existing.length > 0) return { id: existing[0].id };
+    return null;
+  }
+
   async createOrGetConversation(
     offerId: string,
     senderId: string,

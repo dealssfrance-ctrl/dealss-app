@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, useSearchParams } from 'react-router';
 import { ArrowLeft, Send, Image as ImageIcon, Star, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -40,9 +40,22 @@ function ReviewBubble({ rating, comment, isMine }: { rating: number; comment?: s
 }
 
 export function ChatScreen() {
-  const { id } = useParams();
+  const { id: routeId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
+
+  // Draft mode: route id is "new" — conversation is not yet persisted in DB.
+  const isDraft = routeId === 'new';
+  const draftOfferId = searchParams.get('offerId') || '';
+  const draftReceiverId = searchParams.get('receiverId') || '';
+  const draftStoreName = searchParams.get('storeName') || '';
+  const draftOtherName = searchParams.get('otherName') || '';
+
+  // Effective conversation id used for DB calls. In draft mode this is empty until
+  // the first message materializes the conversation.
+  const [conversationId, setConversationId] = useState<string>(isDraft ? '' : routeId || '');
+
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -64,25 +77,44 @@ export function ChatScreen() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  // Fetch conversation details
+  // Fetch conversation details (skip in draft mode — we synthesize it from URL params).
   useEffect(() => {
+    if (isDraft) {
+      if (!draftOfferId || !draftReceiverId || !user) return;
+      // Synthesize a conversation detail so the header/UI renders correctly.
+      setConversation({
+        id: '',
+        offerId: draftOfferId,
+        participants: [user.id, draftReceiverId],
+        storeName: draftStoreName,
+        otherUserId: draftReceiverId,
+        otherUserName: draftOtherName,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      setLoading(false);
+      return;
+    }
     const fetchConversation = async () => {
-      if (!id || !user) return;
+      if (!conversationId || !user) return;
       try {
-        const response = await chatService.getConversation(id, user.id);
+        const response = await chatService.getConversation(conversationId, user.id);
         setConversation(response.data);
       } catch (error) {
         console.error('Error fetching conversation:', error);
       }
     };
     fetchConversation();
-  }, [id, user]);
+  }, [isDraft, conversationId, user, draftOfferId, draftReceiverId, draftStoreName, draftOtherName]);
 
-  // Fetch messages (initial + polling)
+  // Fetch messages (initial + polling). In draft mode there are no messages yet.
   const fetchMessages = useCallback(async () => {
-    if (!id) return;
+    if (!conversationId) {
+      setLoading(false);
+      return;
+    }
     try {
-      const response = await chatService.getMessages(id, lastMessageTimeRef.current || undefined);
+      const response = await chatService.getMessages(conversationId, lastMessageTimeRef.current || undefined);
       if (lastMessageTimeRef.current && response.data.length > 0) {
         // Polling: append new messages
         setMessages(prev => {
@@ -108,13 +140,14 @@ export function ChatScreen() {
     } finally {
       setLoading(false);
     }
-  }, [id, scrollToBottom]);
+  }, [conversationId, scrollToBottom]);
 
   useEffect(() => {
     fetchMessages();
+    if (!conversationId) return;
     const interval = setInterval(fetchMessages, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [fetchMessages]);
+  }, [fetchMessages, conversationId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -177,18 +210,52 @@ export function ChatScreen() {
     );
   }
 
+  /**
+   * Returns a real (DB-persisted) conversation id. In draft mode this lazily
+   * creates the conversation on the first message and updates state + URL.
+   * Returns null on failure.
+   */
+  const ensureConversation = async (): Promise<string | null> => {
+    if (conversationId) return conversationId;
+    if (!user || !draftOfferId || !draftReceiverId) return null;
+    try {
+      const resp = await chatService.createOrGetConversation(
+        draftOfferId,
+        user.id,
+        draftReceiverId
+      );
+      const newId = resp.data.id;
+      setConversationId(newId);
+      // Replace URL so subsequent renders use the real id and refresh works.
+      navigate(`/chat/${newId}`, { replace: true });
+      return newId;
+    } catch (err) {
+      console.error('Error materializing conversation:', err);
+      toast.error('Impossible de créer la conversation');
+      return null;
+    }
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !user || !id || sending) return;
+    if (!inputText.trim() || !user || sending) return;
 
     const text = inputText.trim();
     setInputText('');
     setSending(true);
 
+    // Materialize conversation if we're in draft mode.
+    const convId = await ensureConversation();
+    if (!convId) {
+      setInputText(text);
+      setSending(false);
+      return;
+    }
+
     // Optimistic update
     const optimisticMsg: ChatMessage = {
       id: `temp-${Date.now()}`,
-      conversationId: id,
+      conversationId: convId,
       senderId: user.id,
       messageType: 'text',
       text,
@@ -198,7 +265,7 @@ export function ChatScreen() {
     scrollToBottom();
 
     try {
-      const response = await chatService.sendMessage(id, user.id, text);
+      const response = await chatService.sendMessage(convId, user.id, text);
       // Replace optimistic message with real one
       setMessages(prev => prev.map(m => m.id === optimisticMsg.id ? response.data : m));
       lastMessageTimeRef.current = response.data.createdAt;
@@ -216,14 +283,19 @@ export function ChatScreen() {
     const file = e.target.files?.[0];
     // Reset so the same file can be picked again
     e.target.value = '';
-    if (!file || !user || !id) return;
+    if (!file || !user) return;
 
     setUploadingImage(true);
+    const convId = await ensureConversation();
+    if (!convId) {
+      setUploadingImage(false);
+      return;
+    }
     // Optimistic placeholder with a local blob URL for instant preview
     const blobUrl = URL.createObjectURL(file);
     const optimistic: ChatMessage = {
       id: `temp-img-${Date.now()}`,
-      conversationId: id,
+      conversationId: convId,
       senderId: user.id,
       messageType: 'photo',
       imageUrl: blobUrl,
@@ -235,7 +307,7 @@ export function ChatScreen() {
     try {
       // Upload file to Supabase storage; store the public URL, not a base64 blob
       const imageUrl = await chatService.uploadChatImage(file);
-      const response = await chatService.sendMessage(id, user.id, undefined, imageUrl);
+      const response = await chatService.sendMessage(convId, user.id, undefined, imageUrl);
       setMessages(prev => prev.map(m => m.id === optimistic.id ? response.data : m));
       lastMessageTimeRef.current = response.data.createdAt;
     } catch (error) {
@@ -248,8 +320,22 @@ export function ChatScreen() {
   };
 
   const handleRequestReview = async () => {
-    if (!user || !id || !conversation || sending) return;
+    if (!user || !conversation || sending) return;
     setActionsOpen(false);
+
+    // Guard: requester must own at least one offer to be allowed to ask for a review.
+    try {
+      const myOffersResp = await offersService.getMyOffers(user.id);
+      if (!myOffersResp.data || myOffersResp.data.length === 0) {
+        toast.error("Impossible de demander un avis si tu n'as pas d'offre");
+        return;
+      }
+    } catch (err) {
+      console.error('Error checking user offers:', err);
+      toast.error("Impossible de vérifier vos offres pour le moment");
+      return;
+    }
+
     setSending(true);
     try {
       // Use the offer attached to the conversation as target.
@@ -265,9 +351,12 @@ export function ChatScreen() {
         offerImageUrl: offer.imageUrl,
         discount: offer.discount,
       };
+      // Materialize the conversation on first interaction (draft → persisted).
+      const convId = await ensureConversation();
+      if (!convId) return;
       const optimistic: ChatMessage = {
         id: `temp-rr-${Date.now()}`,
-        conversationId: id,
+        conversationId: convId,
         senderId: user.id,
         messageType: 'review_request',
         reviewRequestPayload: payload,
@@ -276,7 +365,7 @@ export function ChatScreen() {
       setMessages((prev) => [...prev, optimistic]);
       scrollToBottom();
 
-      const response = await chatService.sendReviewRequest(id, user.id, payload);
+      const response = await chatService.sendReviewRequest(convId, user.id, payload);
       setMessages((prev) => prev.map((m) => (m.id === optimistic.id ? response.data : m)));
       lastMessageTimeRef.current = response.data.createdAt;
       toast.success('Demande d\'avis envoyée');
