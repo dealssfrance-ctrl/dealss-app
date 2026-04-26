@@ -66,69 +66,73 @@ export function UserOfferCard({ offer, onDelete }: UserOfferCardProps) {
   return (
     <motion.div
       whileTap={{ scale: 0.98 }}
-      className="w-full bg-white rounded-2xl overflow-hidden shadow-sm"
+      onClick={() => navigate(`/offer/${offer.id}`)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          navigate(`/offer/${offer.id}`);
+        }
+      }}
+      className="w-full bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer"
     >
-      <button
-        onClick={() => navigate(`/offer/${offer.id}`)}
-        className="w-full"
-      >
-        <div className="flex gap-3 p-3">
-          <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
-            {showImage ? (
-              <img
-                src={imageUrl}
-                alt={offer.storeName}
-                className="w-full h-full object-cover"
-                onError={() => setImageError(true)}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 px-2 text-center">
-                No image
-              </div>
-            )}
+      <div className="flex gap-3 p-3">
+        <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+          {showImage ? (
+            <img
+              src={imageUrl}
+              alt={offer.storeName}
+              className="w-full h-full object-cover"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 px-2 text-center">
+              No image
+            </div>
+          )}
+        </div>
+        <div className="flex-1 text-left min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <h3 className="font-semibold text-gray-900 truncate">{offer.storeName}</h3>
+            <span className="text-[#1FA774] font-bold text-lg flex-shrink-0">{offer.discount}</span>
           </div>
-          <div className="flex-1 text-left min-w-0">
-            <div className="flex items-start justify-between gap-2 mb-1">
-              <h3 className="font-semibold text-gray-900 truncate">{offer.storeName}</h3>
-              <span className="text-[#1FA774] font-bold text-lg flex-shrink-0">{offer.discount}</span>
-            </div>
-            <p className="text-sm text-gray-600 line-clamp-2 mb-2">{offer.description}</p>
-            <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full mb-3">
-              {offer.category}
-            </span>
+          <p className="text-sm text-gray-600 line-clamp-2 mb-2">{offer.description}</p>
+          <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full mb-3">
+            {offer.category}
+          </span>
 
-            {/* Offer Rating */}
-            {offer.reviewCount !== undefined && offer.reviewCount > 0 && (
-              <div className="mb-3">
-                <RatingSummary
-                  averageRating={offer.averageRating || 0}
-                  reviewCount={offer.reviewCount}
-                  size="sm"
-                  showLabel={true}
-                />
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={handleEdit}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium active:bg-gray-200"
-              >
-                <Edit2 size={16} />
-                Modifier
-              </button>
-              <button
-                onClick={handleDelete}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-full text-sm font-medium active:bg-red-100"
-              >
-                <Trash2 size={16} />
-                Supprimer
-              </button>
+          {/* Offer Rating */}
+          {offer.reviewCount !== undefined && offer.reviewCount > 0 && (
+            <div className="mb-3">
+              <RatingSummary
+                averageRating={offer.averageRating || 0}
+                reviewCount={offer.reviewCount}
+                size="sm"
+                showLabel={true}
+              />
             </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 min-w-0">
+            <button
+              onClick={handleEdit}
+              className="flex-1 min-w-0 flex items-center justify-center gap-1.5 px-2 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium active:bg-gray-200"
+            >
+              <Edit2 size={14} className="flex-shrink-0" />
+              <span className="truncate">Modifier</span>
+            </button>
+            <button
+              onClick={handleDelete}
+              className="flex-1 min-w-0 flex items-center justify-center gap-1.5 px-2 py-2 bg-red-50 text-red-600 rounded-full text-sm font-medium active:bg-red-100"
+            >
+              <Trash2 size={14} className="flex-shrink-0" />
+              <span className="truncate">Supprimer</span>
+            </button>
           </div>
         </div>
-      </button>
+      </div>
     </motion.div>
   );
 }
