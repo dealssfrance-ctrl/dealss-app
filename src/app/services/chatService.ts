@@ -41,16 +41,46 @@ export interface ConversationDetail {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function sanitizeMessageImageUrl(value: unknown): string | undefined {
+  let raw = String(value ?? '').trim();
+  if (!raw) return undefined;
+
+  if (raw.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const first = parsed.find((item) => typeof item === 'string' && item.trim().length > 0);
+        raw = String(first ?? '').trim();
+      }
+    } catch {
+      // Continue with fallback cleanup below.
+    }
+  }
+
+  raw = raw.replace(/^['\"]+|['\"]+$/g, '').trim();
+
+  if (raw.startsWith('%22http')) {
+    try {
+      raw = decodeURIComponent(raw).replace(/^['\"]+|['\"]+$/g, '').trim();
+    } catch {
+      return undefined;
+    }
+  }
+
+  return /^https?:\/\//i.test(raw) ? raw : undefined;
+}
+
 /**
  * Normalise a raw DB row into a typed ChatMessage.
  * Infers message type from the `message_type` column when present, or falls back
  * to inspecting `image_url` / `text` for rows that pre-date the column.
  */
 function toMessage(m: any): ChatMessage {
+  const imageUrl = sanitizeMessageImageUrl(m.image_url);
   const type: MessageType =
     m.message_type === 'review'
       ? 'review'
-      : m.message_type === 'photo' || (!m.message_type && m.image_url && !m.text)
+      : m.message_type === 'photo' || (!m.message_type && imageUrl && !m.text)
       ? 'photo'
       : 'text';
 
@@ -60,7 +90,7 @@ function toMessage(m: any): ChatMessage {
     senderId: m.sender_id,
     messageType: type,
     text: m.text ?? undefined,
-    imageUrl: m.image_url ?? undefined,
+    imageUrl,
     reviewRating: m.review_rating ?? undefined,
     reviewComment: m.review_comment ?? undefined,
     createdAt: m.created_at,
@@ -69,10 +99,11 @@ function toMessage(m: any): ChatMessage {
 
 /** Returns a concise, human-readable last-message preview for the conversation list. */
 function lastMessagePreview(msg: any): string {
+  const imageUrl = sanitizeMessageImageUrl(msg.image_url);
   const type: MessageType =
     msg.message_type === 'review'
       ? 'review'
-      : msg.message_type === 'photo' || (!msg.message_type && msg.image_url && !msg.text)
+      : msg.message_type === 'photo' || (!msg.message_type && imageUrl && !msg.text)
       ? 'photo'
       : 'text';
 
@@ -87,6 +118,15 @@ function lastMessagePreview(msg: any): string {
 // ── Service ───────────────────────────────────────────────────────────────────
 
 class ChatService {
+  private supportsRichMessageColumns: boolean = false;
+
+  private buildLegacyReviewText(rating: number, comment?: string): string {
+    const safeRating = Math.min(5, Math.max(1, rating));
+    const stars = '⭐'.repeat(safeRating);
+    const c = (comment || '').trim();
+    return c ? `${stars} ${c}` : stars;
+  }
+
   // ── Image upload ────────────────────────────────────────────────────────────
 
   /** Upload a chat image file to the 'chat' storage bucket and return its public URL. */
@@ -119,7 +159,7 @@ class ChatService {
         const [{ data: lastMsgs }, { data: offer }, { data: otherUser }] = await Promise.all([
           supabase
             .from('messages')
-            .select('text, image_url, message_type, review_rating, review_comment, created_at')
+            .select('*')
             .eq('conversation_id', c.id)
             .order('created_at', { ascending: false })
             .limit(1),
@@ -194,6 +234,15 @@ class ChatService {
     if (after) q = q.gt('created_at', after);
     const { data, error } = await q;
     if (error) throw new Error(error.message);
+
+    if (!this.supportsRichMessageColumns && data && data.length > 0) {
+      const probe = data[0] as any;
+      this.supportsRichMessageColumns =
+        Object.prototype.hasOwnProperty.call(probe, 'message_type') ||
+        Object.prototype.hasOwnProperty.call(probe, 'review_rating') ||
+        Object.prototype.hasOwnProperty.call(probe, 'review_comment');
+    }
+
     return { success: true, data: (data || []).map(toMessage) };
   }
 
@@ -238,18 +287,23 @@ class ChatService {
   ): Promise<{ success: boolean; data: ChatMessage }> {
     const now = new Date().toISOString();
     const type: MessageType = imageUrl ? 'photo' : 'text';
-    const row = {
+    const rowBase = {
       id: `msg_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`,
       conversation_id: conversationId,
       sender_id: senderId,
-      message_type: type,
       text: text || null,
-      image_url: imageUrl || null,
+      image_url: sanitizeMessageImageUrl(imageUrl) || null,
       created_at: now,
     };
 
+    const row = this.supportsRichMessageColumns ? { ...rowBase, message_type: type } : rowBase;
     const { data, error } = await supabase.from('messages').insert(row).select().single();
     if (error || !data) throw new Error(error?.message || 'Failed to send message');
+
+    if (!this.supportsRichMessageColumns && (data as any)?.message_type !== undefined) {
+      this.supportsRichMessageColumns = true;
+    }
+
     await supabase.from('conversations').update({ updated_at: now }).eq('id', conversationId);
     return { success: true, data: toMessage(data) };
   }
@@ -261,20 +315,33 @@ class ChatService {
     comment: string
   ): Promise<{ success: boolean; data: ChatMessage }> {
     const now = new Date().toISOString();
-    const row = {
+    const legacyText = this.buildLegacyReviewText(rating, comment);
+    const rowBase = {
       id: `msg_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`,
       conversation_id: conversationId,
       sender_id: senderId,
-      message_type: 'review',
-      text: null,
+      text: legacyText,
       image_url: null,
-      review_rating: rating,
-      review_comment: comment || null,
       created_at: now,
     };
 
+    const row = this.supportsRichMessageColumns
+      ? {
+          ...rowBase,
+          message_type: 'review',
+          text: null,
+          review_rating: rating,
+          review_comment: comment || null,
+        }
+      : rowBase;
+
     const { data, error } = await supabase.from('messages').insert(row).select().single();
     if (error || !data) throw new Error(error?.message || 'Failed to send review');
+
+    if (!this.supportsRichMessageColumns && (data as any)?.message_type !== undefined) {
+      this.supportsRichMessageColumns = true;
+    }
+
     await supabase.from('conversations').update({ updated_at: now }).eq('id', conversationId);
     return { success: true, data: toMessage(data) };
   }

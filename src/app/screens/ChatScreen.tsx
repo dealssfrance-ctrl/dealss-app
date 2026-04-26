@@ -43,6 +43,7 @@ export function ChatScreen() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [failedImageMessageIds, setFailedImageMessageIds] = useState<Set<string>>(new Set());
   // Review inline panel
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
@@ -275,12 +276,25 @@ export function ChatScreen() {
                       />
                     ) : msg.messageType === 'photo' ? (
                       <div className={`rounded-2xl overflow-hidden ${isMine ? 'rounded-br-md' : 'rounded-bl-md'}`}>
-                        <img
-                          src={msg.imageUrl}
-                          alt="Photo partagée"
-                          className="max-w-full max-h-72 w-auto object-cover block"
-                          loading="lazy"
-                        />
+                        {msg.imageUrl && !failedImageMessageIds.has(msg.id) ? (
+                          <img
+                            src={msg.imageUrl}
+                            alt="Photo partagée"
+                            className="max-w-full max-h-72 w-auto object-cover block"
+                            loading="lazy"
+                            onError={() => {
+                              setFailedImageMessageIds((prev) => {
+                                const next = new Set(prev);
+                                next.add(msg.id);
+                                return next;
+                              });
+                            }}
+                          />
+                        ) : (
+                          <div className="px-3 py-2 text-xs text-gray-500 bg-gray-100 rounded-xl">
+                            Image indisponible
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div

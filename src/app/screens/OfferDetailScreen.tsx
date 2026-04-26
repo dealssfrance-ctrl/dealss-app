@@ -20,6 +20,7 @@ export function OfferDetailScreen() {
   const { user } = useAuth();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
   const [isOfferReviewModalOpen, setIsOfferReviewModalOpen] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [offerRating, setOfferRating] = useState<{ average: number; count: number }>({ average: 0, count: 0 });
@@ -131,11 +132,18 @@ export function OfferDetailScreen() {
         <div className="md:flex md:gap-0">
         {/* Store Image */}
         <div className="w-full md:w-1/2 h-72 md:h-auto md:min-h-[500px] bg-gray-100 overflow-hidden md:rounded-2xl md:m-8 md:mr-0 md:sticky md:top-20 md:self-start">
-          <img
-            src={offer.imageUrl}
-            alt={offer.storeName}
-            className="w-full h-full object-cover"
-          />
+          {offer.imageUrl && !imageError ? (
+            <img
+              src={offer.imageUrl}
+              alt={offer.storeName}
+              className="w-full h-full object-cover"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
+              Image indisponible
+            </div>
+          )}
         </div>
 
         {/* Offer Details */}

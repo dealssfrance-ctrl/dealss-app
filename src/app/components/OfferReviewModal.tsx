@@ -15,6 +15,7 @@ export function OfferReviewModal({ isOpen, onClose, offerName, offerImage, onSub
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [imageError, setImageError] = useState(false);
 
   const handleSubmit = () => {
     if (rating > 0) {
@@ -60,11 +61,18 @@ export function OfferReviewModal({ isOpen, onClose, offerName, offerImage, onSub
               {/* Offer Info */}
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100">
-                  <img
-                    src={offerImage}
-                    alt={offerName}
-                    className="w-full h-full object-cover"
-                  />
+                  {offerImage && !imageError ? (
+                    <img
+                      src={offerImage}
+                      alt={offerName}
+                      className="w-full h-full object-cover"
+                      onError={() => setImageError(true)}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">
+                      No image
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900">{offerName}</h3>

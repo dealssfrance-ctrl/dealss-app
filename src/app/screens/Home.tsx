@@ -37,6 +37,7 @@ export function Home() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [failedOfferImageIds, setFailedOfferImageIds] = useState<Set<string>>(new Set());
 
   // Generation counter: any in-flight fetch whose gen !== current is stale and discarded.
   const fetchGenRef = useRef(0);
@@ -298,12 +299,25 @@ export function Home() {
                     className="flex-shrink-0 w-44 md:w-56 lg:w-64 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                   >
                     <div className="relative">
-                      <img
-                        src={offer.imageUrl}
-                        alt={offer.storeName}
-                        className="w-full h-32 object-cover"
-                        loading="lazy"
-                      />
+                      {offer.imageUrl && !failedOfferImageIds.has(offer.id) ? (
+                        <img
+                          src={offer.imageUrl}
+                          alt={offer.storeName}
+                          className="w-full h-32 object-cover"
+                          loading="lazy"
+                          onError={() => {
+                            setFailedOfferImageIds((prev) => {
+                              const next = new Set(prev);
+                              next.add(offer.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-32 bg-gray-100 flex items-center justify-center text-xs text-gray-400">
+                          Image indisponible
+                        </div>
+                      )}
                       <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
                         {offer.discount}
                       </div>
@@ -349,12 +363,25 @@ export function Home() {
               </button>
             </div>
           ) : (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-5 pb-4">
-                {offers.map((offer, index) => (
-                  <motion.button
-                    key={offer.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
+            <>{offer.imageUrl && !failedOfferImageIds.has(offer.id) ? (
+                        <img
+                          src={offer.imageUrl}
+                          alt={offer.storeName}
+                          className="w-full h-36 md:h-44 lg:h-48 object-cover"
+                          loading="lazy"
+                          onError={() => {
+                            setFailedOfferImageIds((prev) => {
+                              const next = new Set(prev);
+                              next.add(offer.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-36 md:h-44 lg:h-48 bg-gray-100 flex items-center justify-center text-xs text-gray-400">
+                          Image indisponible
+                        </div>
+                      )}ial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: Math.min(index * 0.05, 0.3) }}
                     whileTap={{ scale: 0.95 }}
