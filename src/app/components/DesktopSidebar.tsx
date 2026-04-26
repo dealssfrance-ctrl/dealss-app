@@ -1,11 +1,15 @@
-import { Home, Search, MessageCircle, User, Plus } from 'lucide-react';
+import { Home, Search, MessageCircle, User, Plus, Sliders } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import { useFilters } from '../context/FilterContext';
+import { useState } from 'react';
 
 export function DesktopSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { filters, setFilters, resetFilters } = useFilters();
+  const [expandFilters, setExpandFilters] = useState(false);
 
   const navItems = [
     { icon: Home, label: 'Accueil', path: '/' },
@@ -45,6 +49,127 @@ export function DesktopSidebar() {
           );
         })}
       </nav>
+
+      {/* Filters Section */}
+      <div className="px-3 py-4 border-t border-gray-100 space-y-3 max-h-64 overflow-y-auto">
+        <button
+          onClick={() => setExpandFilters(!expandFilters)}
+          className="w-full flex items-center gap-2 text-sm font-semibold text-gray-700 px-4 py-2 hover:bg-gray-50 rounded-lg transition-colors"
+        >
+          <Sliders size={18} />
+          <span>Filtres</span>
+          {expandFilters && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                resetFilters();
+              }}
+              className="ml-auto text-xs text-[#1FA774] hover:underline"
+            >
+              Réinitialiser
+            </button>
+          )}
+        </button>
+
+        {expandFilters && (
+          <div className="space-y-4 px-4">
+            {/* Discount Range */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2">
+                Réduction: {filters.discountMin}% - {filters.discountMax}%
+              </label>
+              <div className="space-y-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={filters.discountMin}
+                  onChange={(e) =>
+                    setFilters({
+                      ...filters,
+                      discountMin: Math.min(parseInt(e.target.value), filters.discountMax),
+                    })
+                  }
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={filters.discountMax}
+                  onChange={(e) =>
+                    setFilters({
+                      ...filters,
+                      discountMax: Math.max(parseInt(e.target.value), filters.discountMin),
+                    })
+                  }
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Sort by Date */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2">Tri par date</label>
+              <select
+                value={filters.sortByDate}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    sortByDate: e.target.value as 'newest' | 'oldest' | 'none',
+                  })
+                }
+                className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1FA774]"
+              >
+                <option value="none">Aucun</option>
+                <option value="newest">Plus récent</option>
+                <option value="oldest">Plus ancien</option>
+              </select>
+            </div>
+
+            {/* Min Rating */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2">
+                Note minimale: {filters.minRating}⭐
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="5"
+                step="0.5"
+                value={filters.minRating}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    minRating: parseFloat(e.target.value),
+                  })
+                }
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            {/* Min Comments */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2">
+                Minimum de commentaires: {filters.minComments}
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="50"
+                value={filters.minComments}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    minComments: parseInt(e.target.value),
+                  })
+                }
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Add Offer CTA */}
       <div className="px-4 py-4 border-t border-gray-100">

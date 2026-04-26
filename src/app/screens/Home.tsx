@@ -5,10 +5,12 @@ import { HyvisHeader } from '../components/HyvisHeader';
 import { useNavigate } from 'react-router';
 import { Plus, Zap, Sparkles, LogOut, User, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useFilters } from '../context/FilterContext';
 import { toast } from 'sonner';
 import { offersService, Offer } from '../services/offersService';
 import { OfferCardGridSkeleton, CategoryTabsSkeleton, LoadMoreSkeleton } from '../components/Skeleton';
 import { StarRating } from '../components/StarRating';
+import { getCategoryImage } from '../constants/categoryImages';
 
 const DEFAULT_CATEGORIES = ['All', 'Fashion', 'Food', 'Sports', 'Electronics', 'Beauty', 'Vols', 'Other'];
 
@@ -32,8 +34,10 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 export function Home() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { filters } = useFilters();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [filteredOffers, setFilteredOffers] = useState<Offer[]>([]);
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -44,6 +48,40 @@ export function Home() {
 
   // Generation counter: any in-flight fetch whose gen !== current is stale and discarded.
   const fetchGenRef = useRef(0);
+
+  // Apply filters to offers
+  useEffect(() => {
+    let result = offers;
+
+    // Filter by discount
+    result = result.filter(offer => {
+      const discount = parseInt(offer.discount.replace(/[^0-9]/g, '')) || 0;
+      return discount >= filters.discountMin && discount <= filters.discountMax;
+    });
+
+    // Filter by rating
+    if (filters.minRating > 0) {
+      result = result.filter(offer => (offer.averageRating || 0) >= filters.minRating);
+    }
+
+    // Filter by comments
+    if (filters.minComments > 0) {
+      result = result.filter(offer => (offer.reviewCount || 0) >= filters.minComments);
+    }
+
+    // Sort by date
+    if (filters.sortByDate === 'newest') {
+      result = [...result].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    } else if (filters.sortByDate === 'oldest') {
+      result = [...result].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+    }
+
+    setFilteredOffers(result);
+  }, [offers, filters]);
 
   const fetchOffers = useCallback(async (reset: boolean, pageNum: number) => {
     const gen = ++fetchGenRef.current;
@@ -278,7 +316,7 @@ export function Home() {
             </div>
             {!loading && (
               <span className="text-sm text-gray-500">
-                {offers.length} {offers.length === 1 ? 'offre' : 'offres'}
+                {filteredOffers.length} {filteredOffers.length === 1 ? 'offre' : 'offres'}
               </span>
             )}
           </div>
@@ -286,36 +324,23 @@ export function Home() {
           {/* Grid Layout */}
           {loading ? (
             <OfferCardGridSkeleton count={6} />
-          ) : offers.length === 0 ? (
+          ) : filteredOffers.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-400 mb-4">Aucune offre dans cette catégorie</p>
+              <p className="text-gray-400 mb-4">Aucune offre correspondant à vos critères</p>
               <button
                 onClick={() => setSelectedCategory('All')}
                 className="text-[#1FA774] font-medium"
               >
-                Voir toutes les offres
+                Réinitialiser les filtres
               </button>
             </div>
           ) : (
-            <>{offer.imageUrl && !failedOfferImageIds.has(offer.id) ? (
-                        <img
-                          src={offer.imageUrl}
-                          alt={offer.storeName}
-                          className="w-full h-36 md:h-44 lg:h-48 object-cover"
-                          loading="lazy"
-                          onError={() => {
-                            setFailedOfferImageIds((prev) => {
-                              const next = new Set(prev);
-                              next.add(offer.id);
-                              return next;
-                            });
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-36 md:h-44 lg:h-48 bg-gray-100 flex items-center justify-center text-xs text-gray-400">
-                          Image indisponible
-                        </div>
-                      )}ial={{ opacity: 0, scale: 0.9 }}
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredOffers.map((offer, index) => (
+                  <motion.button
+                    key={offer.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: Math.min(index * 0.05, 0.3) }}
                     whileTap={{ scale: 0.95 }}
@@ -324,8 +349,8 @@ export function Home() {
                   >
                     <div className="relative">
                       <img
-                        src={offer.imageUrl}
-                        alt={offer.storeName}
+                        src={getCategoryImage(offer.category)}
+                        alt={offer.category}
                         className="w-full h-36 md:h-44 lg:h-48 object-cover"
                         loading="lazy"
                       />
@@ -357,7 +382,7 @@ export function Home() {
 
               {/* Load More Button */}
               {hasMore && (
-                <div className="text-center pb-4">
+                <div className="text-center pb-4 mt-6">
                   <button
                     onClick={handleLoadMore}
                     disabled={loadingMore}
