@@ -3,11 +3,11 @@ import { motion } from 'motion/react';
 import { Layout } from '../components/Layout';
 import { HyvisHeader } from '../components/HyvisHeader';
 import { useNavigate } from 'react-router';
-import { Plus, TrendingUp, Zap, Sparkles, LogOut, User, RefreshCw } from 'lucide-react';
+import { Plus, Zap, Sparkles, LogOut, User, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { offersService, Offer } from '../services/offersService';
-import { OfferCardGridSkeleton, HotDealsSkeleton, CategoryTabsSkeleton, LoadMoreSkeleton } from '../components/Skeleton';
+import { OfferCardGridSkeleton, CategoryTabsSkeleton, LoadMoreSkeleton } from '../components/Skeleton';
 import { StarRating } from '../components/StarRating';
 
 const DEFAULT_CATEGORIES = ['All', 'Fashion', 'Food', 'Sports', 'Electronics', 'Beauty', 'Vols', 'Other'];
@@ -34,7 +34,6 @@ export function Home() {
   const { user, logout } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [offers, setOffers] = useState<Offer[]>([]);
-  const [hotDeals, setHotDeals] = useState<Offer[]>([]);
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -76,21 +75,6 @@ export function Home() {
           });
         }
         setHasMore(result.pagination.hasNext);
-
-        // Refresh hot deals only on a fresh load (not on "load more").
-        if (reset || pageNum === 1) {
-          const hotDealsResult = await offersService.searchOffers({
-            category: selectedCategory === 'All' ? undefined : selectedCategory,
-            page: 1,
-            limit: 50
-          });
-          if (gen !== fetchGenRef.current) return;
-          const deals = hotDealsResult.data.filter(offer => {
-            const discountValue = parseInt(offer.discount.replace(/[^0-9]/g, ''));
-            return discountValue >= 30;
-          });
-          setHotDeals(deals.slice(0, 5));
-        }
       }
     } catch (error) {
       if (gen !== fetchGenRef.current) return;
@@ -283,64 +267,6 @@ export function Home() {
               ))}
             </div>
           )}
-        </div>
-
-        {/* Hot Deals Section */}
-        <div className="mb-6">
-          <div className="px-5 md:px-8 lg:px-10 mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <TrendingUp size={20} className="text-[#1FA774]" />
-              <h3 className="font-bold text-lg text-gray-900">Hot Deals</h3>
-            </div>
-            <span className="text-sm text-gray-500">{hotDeals.length} offres</span>
-          </div>
-          <div className="px-5 md:px-8 lg:px-10 overflow-x-auto scrollbar-hide">
-            {loading ? (
-              <HotDealsSkeleton count={3} />
-            ) : hotDeals.length > 0 ? (
-              <div className="flex gap-3 pb-2">
-                {hotDeals.map((offer) => (
-                  <motion.button
-                    key={offer.id}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => navigate(`/offer/${offer.id}`)}
-                    className="flex-shrink-0 w-44 md:w-56 lg:w-64 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="relative">
-                      {offer.imageUrl && !failedOfferImageIds.has(offer.id) ? (
-                        <img
-                          src={offer.imageUrl}
-                          alt={offer.storeName}
-                          className="w-full h-32 object-cover"
-                          loading="lazy"
-                          onError={() => {
-                            setFailedOfferImageIds((prev) => {
-                              const next = new Set(prev);
-                              next.add(offer.id);
-                              return next;
-                            });
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-32 bg-gray-100 flex items-center justify-center text-xs text-gray-400">
-                          Image indisponible
-                        </div>
-                      )}
-                      <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                        {offer.discount}
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <h4 className="font-semibold text-gray-900 text-sm mb-1 truncate">{offer.storeName}</h4>
-                      <p className="text-xs text-gray-500 line-clamp-2">{offer.description}</p>
-                    </div>
-                  </motion.button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-400 text-sm text-center py-4">Aucun hot deal disponible</p>
-            )}
-          </div>
         </div>
 
         {/* All Offers Section */}
