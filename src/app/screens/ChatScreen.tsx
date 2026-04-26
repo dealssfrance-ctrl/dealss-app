@@ -685,6 +685,30 @@ export function ChatScreen() {
   const formatTime = (dateStr: string) =>
     new Date(dateStr).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
+  // Group messages by conversation (offer) so each offer appears as one
+  // contiguous block with a single separator. Group order = chronological
+  // order of the FIRST message of each conversation. This avoids a back-
+  // and-forth visual when messages from different offers interleave in
+  // real time (e.g. lingering replies on a finished offer arriving after
+  // a new offer has started).
+  const messageGroups = (() => {
+    const order: string[] = [];
+    const map = new Map<string, { firstAt: string; items: ChatMessage[] }>();
+    for (const m of messages) {
+      const cid = m.conversationId || '__unknown__';
+      const existing = map.get(cid);
+      if (!existing) {
+        order.push(cid);
+        map.set(cid, { firstAt: m.createdAt, items: [m] });
+      } else {
+        existing.items.push(m);
+      }
+    }
+    return order
+      .map((cid) => ({ conversationId: cid, ...map.get(cid)! }))
+      .sort((a, b) => new Date(a.firstAt).getTime() - new Date(b.firstAt).getTime());
+  })();
+
   return (
     <Layout>
     <div className="h-[calc(100dvh-8rem)] md:h-screen bg-gray-50 flex flex-col md:px-8 md:py-6 overflow-hidden">
@@ -733,49 +757,50 @@ export function ChatScreen() {
                 )}
               </div>
             )}
-            {[...messages]
-              .sort(
-                (a, b) =>
-                  new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-              )
-              .map((msg, idx, sortedMsgs) => {
-              const isMine = msg.senderId === currentUserId;
-              const prev = idx > 0 ? sortedMsgs[idx - 1] : undefined;
-              const meta = msg.conversationId ? conversationsMeta[msg.conversationId] : undefined;
-              // Show the offer-context divider at the very start of the thread
-              // and at every boundary where the offer truly changes from the
-              // previous message. Both sides order messages identically by
-              // created_at, so the divider positions are timeline-consistent.
-              const showOfferSep = Boolean(
-                meta && (meta.storeName || meta.offerImageUrl) &&
-                  (idx === 0 || msg.conversationId !== prev?.conversationId),
-              );
+            {messageGroups.map((group) => {
+              const meta = conversationsMeta[group.conversationId];
+              const showOfferSep = Boolean(meta && (meta.storeName || meta.offerImageUrl));
               return (
-                <div key={msg.id}>
+                <div key={`grp-${group.conversationId}`} className="flex flex-col gap-2">
                   {showOfferSep && meta && (
-                    <button
-                      type="button"
-                      onClick={() => meta.offerId && navigate(`/offer/${meta.offerId}`)}
-                      className="group w-full my-3 flex items-center gap-2 select-none"
-                      aria-label={`Contexte: ${meta.storeName || 'offre'}`}
-                    >
-                      <div className="flex-1 h-px bg-gray-200" />
-                      <span className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 group-hover:text-[#1FA774] transition-colors">
+                    <div className="my-4 flex items-center gap-3" aria-label="Séparateur d'offre">
+                      <div className="flex-1 h-px bg-gradient-to-r from-transparent to-gray-200" />
+                      <button
+                        type="button"
+                        onClick={() => meta.offerId && navigate(`/offer/${meta.offerId}`)}
+                        className="group flex items-center gap-3 bg-white border border-gray-200 rounded-2xl pl-2 pr-4 py-2 shadow-sm hover:shadow-md hover:border-[#1FA774]/40 transition-all"
+                      >
                         {meta.offerImageUrl ? (
                           <img
                             src={meta.offerImageUrl}
                             alt=""
-                            className="w-4 h-4 rounded-full object-cover ring-1 ring-gray-200"
+                            className="w-11 h-11 rounded-xl object-cover ring-1 ring-gray-100"
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
-                        ) : null}
-                        <span className="truncate max-w-[200px]">
-                          {meta.storeName || 'cette offre'}
+                        ) : (
+                          <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center text-emerald-700 font-bold">
+                            {(meta.storeName || '?').charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                        <div className="flex flex-col items-start min-w-0">
+                          <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
+                            À propos de
+                          </span>
+                          <span className="text-sm font-semibold text-gray-900 truncate max-w-[200px] group-hover:text-[#1FA774] transition-colors">
+                            {meta.storeName || 'cette offre'}
+                          </span>
+                        </div>
+                        <span className="text-[#1FA774] text-xs font-medium ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          Voir →
                         </span>
-                      </span>
-                      <div className="flex-1 h-px bg-gray-200" />
-                    </button>
+                      </button>
+                      <div className="flex-1 h-px bg-gradient-to-l from-transparent to-gray-200" />
+                    </div>
                   )}
+                  {group.items.map((msg) => {
+                    const isMine = msg.senderId === currentUserId;
+                    return (
+                      <div key={msg.id}>
                 <div
                   className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                 >
@@ -829,6 +854,9 @@ export function ChatScreen() {
                     <span className="text-xs text-gray-400 mt-1 px-1">{formatTime(msg.createdAt)}</span>
                   </div>
                 </div>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
