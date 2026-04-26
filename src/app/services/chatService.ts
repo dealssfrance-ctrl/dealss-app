@@ -269,14 +269,34 @@ class ChatService {
 
   // ── Messages ─────────────────────────────────────────────────────────────
 
-  async getMessages(conversationId: string, after?: string): Promise<{ success: boolean; data: ChatMessage[] }> {
+  /**
+   * Fetch messages for a conversation.
+   * - `after`  → only newer messages (used by polling).
+   * - `before` → only older messages, returned newest-first then reversed (used by infinite scroll).
+   * - `limit`  → caps result size (default 30 for paginated reads).
+   */
+  async getMessages(
+    conversationId: string,
+    opts: string | { after?: string; before?: string; limit?: number } = {},
+  ): Promise<{ success: boolean; data: ChatMessage[]; hasMore?: boolean }> {
+    // Back-compat: previous callers passed `after` as a string.
+    const options = typeof opts === 'string' ? { after: opts } : opts;
+    const { after, before, limit } = options;
+
     let q = supabase
       .from('messages')
       .select('*')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
-      .order('id', { ascending: true }); // stable tie-breaker for same-timestamp messages
-    if (after) q = q.gt('created_at', after);
+      .eq('conversation_id', conversationId);
+
+    if (before) {
+      // Newest-first window so `limit` returns the most recent N older messages.
+      q = q.lt('created_at', before).order('created_at', { ascending: false }).order('id', { ascending: false });
+    } else {
+      q = q.order('created_at', { ascending: true }).order('id', { ascending: true });
+      if (after) q = q.gt('created_at', after);
+    }
+    if (limit) q = q.limit(limit);
+
     const { data, error } = await q;
     if (error) throw new Error(error.message);
 
@@ -288,7 +308,10 @@ class ChatService {
         Object.prototype.hasOwnProperty.call(probe, 'review_comment');
     }
 
-    return { success: true, data: (data || []).map(toMessage) };
+    let rows = (data || []).map(toMessage);
+    if (before) rows = rows.reverse(); // present caller with chronological order
+    const hasMore = limit ? (data || []).length === limit : false;
+    return { success: true, data: rows, hasMore };
   }
 
   async findExistingConversation(

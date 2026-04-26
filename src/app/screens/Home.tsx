@@ -192,14 +192,29 @@ export function Home() {
     fetchOffers(true, 1);
   }, [selectedCategory, fetchOffers]);
 
-  const handleLoadMore = () => {
-    if (!loadingMore && hasMore) {
+  const handleLoadMore = useCallback(() => {
+    if (!loadingMore && hasMore && !loading) {
       setLoadingMore(true);
       const nextPage = page + 1;
       setPage(nextPage);
       fetchOffers(false, nextPage);
     }
-  };
+  }, [loadingMore, hasMore, loading, page, fetchOffers]);
+
+  // Auto-load more when the sentinel near the bottom of the list enters the viewport.
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = loadMoreSentinelRef.current;
+    if (!node || !hasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) handleLoadMore();
+      },
+      { rootMargin: '600px 0px' }, // start loading well before the sentinel is visible
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, handleLoadMore]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -426,21 +441,23 @@ export function Home() {
                 ))}
               </div>
 
-              {/* Load More Button */}
+              {/* Auto load-more sentinel + manual fallback button */}
               {hasMore && (
-                <div className="text-center pb-4 mt-6">
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="px-6 py-2.5 bg-white text-[#1FA774] font-medium rounded-full shadow-sm hover:shadow-md transition-all disabled:opacity-50"
-                  >
+                <>
+                  <div ref={loadMoreSentinelRef} className="h-1 w-full" aria-hidden />
+                  <div className="text-center pb-4 mt-6">
                     {loadingMore ? (
                       <LoadMoreSkeleton />
                     ) : (
-                      'Charger plus'
+                      <button
+                        onClick={handleLoadMore}
+                        className="px-6 py-2.5 bg-white text-[#1FA774] font-medium rounded-full shadow-sm hover:shadow-md transition-all"
+                      >
+                        Charger plus
+                      </button>
                     )}
-                  </button>
-                </div>
+                  </div>
+                </>
               )}
             </>
           )}

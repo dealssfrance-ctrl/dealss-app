@@ -8,6 +8,8 @@ import {
   Clock,
   ShieldCheck,
   Store,
+  Briefcase,
+  Star,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -63,6 +65,10 @@ function formatJoined(dateStr: string): string {
 
 interface SellerInfo {
   joinedAt?: string;
+  name?: string;
+  company?: string;
+  jobTitle?: string;
+  showWorkInfo?: boolean;
   activeOffersCount: number;
 }
 
@@ -106,14 +112,23 @@ export function OfferDetailScreen() {
     try {
       // Best-effort fetch; we silently ignore failures so the page still renders.
       const [{ data: userRow }, offersResp] = await Promise.all([
-        supabase.from('users').select('created_at').eq('id', sellerId).maybeSingle(),
+        supabase
+          .from('users')
+          .select('name, company, job_title, show_work_info, created_at')
+          .eq('id', sellerId)
+          .maybeSingle(),
         offersService.getMyOffers(sellerId),
       ]);
       const activeOthers = (offersResp.data || []).filter(
         (o) => o.status === 'active' && o.id !== currentOfferId,
       ).length;
+      const u: any = userRow || {};
       setSellerInfo({
-        joinedAt: (userRow as any)?.created_at,
+        joinedAt: u?.created_at,
+        name: u?.name,
+        company: u?.company,
+        jobTitle: u?.job_title,
+        showWorkInfo: u?.show_work_info,
         activeOffersCount: activeOthers,
       });
     } catch (error) {
@@ -213,7 +228,7 @@ export function OfferDetailScreen() {
     }
   };
 
-  const sellerInitial = (offer.userName || '?').charAt(0).toUpperCase();
+  const sellerInitial = (sellerInfo.name || offer.userName || '?').charAt(0).toUpperCase();
   const longDescription = (offer.description || '').length > 280;
 
   return (
@@ -359,22 +374,37 @@ export function OfferDetailScreen() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <h3 className="font-bold text-gray-900 truncate">{offer.userName || 'Vendeur'}</h3>
+                      <div className="flex items-baseline gap-2 mb-1 flex-wrap">
+                        <h3 className="font-bold text-gray-900 truncate">
+                          {sellerInfo.name || offer.userName || 'Vendeur'}
+                        </h3>
                         {sellerRating.reviewCount >= 3 && sellerRating.averageRating >= 4 && (
                           <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                             Vérifié
                           </span>
                         )}
                       </div>
+                      {/* Work info — only when seller has opted in */}
+                      {sellerInfo.showWorkInfo && (sellerInfo.company || sellerInfo.jobTitle) && (
+                        <p className="text-xs text-gray-500 mb-2 flex items-center gap-1.5 truncate">
+                          <Briefcase size={12} className="text-gray-400 shrink-0" />
+                          <span className="truncate">
+                            {[sellerInfo.jobTitle, sellerInfo.company].filter(Boolean).join(' · ')}
+                          </span>
+                        </p>
+                      )}
                       {sellerRating.reviewCount > 0 ? (
-                        <div className="mb-2">
+                        <div className="mb-2 flex items-center gap-2 flex-wrap">
                           <RatingSummary
                             averageRating={sellerRating.averageRating}
                             reviewCount={sellerRating.reviewCount}
                             size="sm"
                             showLabel={true}
                           />
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                            <Star size={11} className="fill-amber-400 text-amber-400" />
+                            {sellerRating.reviewCount} avis
+                          </span>
                         </div>
                       ) : (
                         <p className="text-xs text-gray-400 mb-2">Aucun avis pour le moment</p>

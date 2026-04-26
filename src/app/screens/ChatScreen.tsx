@@ -69,7 +69,10 @@ export function ChatScreen() {
   const [activeReviewPayload, setActiveReviewPayload] = useState<ReviewRequestPayload | null>(null);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [submittedOfferIds, setSubmittedOfferIds] = useState<Set<string>>(new Set());
+  const [hasMoreOlder, setHasMoreOlder] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageTimeRef = useRef<string | null>(null);
   const currentUserId = user?.id || '';
 
@@ -114,8 +117,12 @@ export function ChatScreen() {
       return;
     }
     try {
-      const response = await chatService.getMessages(conversationId, lastMessageTimeRef.current || undefined);
-      if (lastMessageTimeRef.current && response.data.length > 0) {
+      const isInitial = !lastMessageTimeRef.current;
+      const response = await chatService.getMessages(
+        conversationId,
+        isInitial ? { limit: 30 } : { after: lastMessageTimeRef.current || undefined },
+      );
+      if (!isInitial && response.data.length > 0) {
         // Polling: append new messages
         setMessages(prev => {
           const existingIds = new Set(prev.map(m => m.id));
@@ -126,9 +133,10 @@ export function ChatScreen() {
           }
           return prev;
         });
-      } else if (!lastMessageTimeRef.current) {
-        // Initial load
+      } else if (isInitial) {
+        // Initial load — most recent N messages.
         setMessages(response.data);
+        setHasMoreOlder(Boolean(response.hasMore));
         setTimeout(scrollToBottom, 100);
       }
       // Update last message time for next poll
@@ -141,6 +149,55 @@ export function ChatScreen() {
       setLoading(false);
     }
   }, [conversationId, scrollToBottom]);
+
+  // Load older messages when user scrolls near the top of the message list.
+  const loadOlderMessages = useCallback(async () => {
+    if (!conversationId || loadingOlder || !hasMoreOlder) return;
+    const oldest = messages[0];
+    if (!oldest) return;
+    const container = messagesContainerRef.current;
+    const prevScrollHeight = container?.scrollHeight ?? 0;
+    const prevScrollTop = container?.scrollTop ?? 0;
+    setLoadingOlder(true);
+    try {
+      const response = await chatService.getMessages(conversationId, {
+        before: oldest.createdAt,
+        limit: 30,
+      });
+      if (response.data.length > 0) {
+        setMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const merged = [...response.data.filter((m) => !existingIds.has(m.id)), ...prev];
+          return merged;
+        });
+      }
+      setHasMoreOlder(Boolean(response.hasMore));
+      // Preserve scroll position so the viewport doesn't jump after prepending.
+      requestAnimationFrame(() => {
+        if (container) {
+          const newScrollHeight = container.scrollHeight;
+          container.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
+        }
+      });
+    } catch (error) {
+      console.error('Error loading older messages:', error);
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [conversationId, loadingOlder, hasMoreOlder, messages]);
+
+  // Auto-trigger when the user scrolls to the top of the messages container.
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const onScroll = () => {
+      if (container.scrollTop < 80 && hasMoreOlder && !loadingOlder) {
+        loadOlderMessages();
+      }
+    };
+    container.addEventListener('scroll', onScroll, { passive: true });
+    return () => container.removeEventListener('scroll', onScroll);
+  }, [loadOlderMessages, hasMoreOlder, loadingOlder]);
 
   useEffect(() => {
     fetchMessages();
@@ -452,8 +509,26 @@ export function ChatScreen() {
         </div>
 
         {/* Messages (only this scrolls) */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 md:px-6 py-4">
+        <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto px-5 md:px-6 py-4">
           <div className="max-w-3xl mx-auto flex flex-col gap-2 pb-2">
+            {/* Top loader for older messages */}
+            {hasMoreOlder && messages.length > 0 && (
+              <div className="flex justify-center py-2">
+                {loadingOlder ? (
+                  <div className="text-xs text-gray-400 flex items-center gap-2">
+                    <span className="inline-block w-3 h-3 border-2 border-gray-300 border-t-[#1FA774] rounded-full animate-spin" />
+                    Chargement…
+                  </div>
+                ) : (
+                  <button
+                    onClick={loadOlderMessages}
+                    className="text-xs text-[#1FA774] font-medium hover:underline"
+                  >
+                    Voir les messages plus anciens
+                  </button>
+                )}
+              </div>
+            )}
             {messages.map((msg) => {
               const isMine = msg.senderId === currentUserId;
               return (
