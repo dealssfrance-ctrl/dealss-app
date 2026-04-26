@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { Button } from '../components/Button';
 import { ArrowLeft, Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 
 export function SignInScreen() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/';
   const { signin, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -42,7 +44,7 @@ export function SignInScreen() {
 
   // Redirect once React has applied the auth state update (same pattern as SignUpScreen)
   if (isAuthenticated) {
-    navigate('/', { replace: true });
+    navigate(redirectTo, { replace: true });
     return null;
   }
 

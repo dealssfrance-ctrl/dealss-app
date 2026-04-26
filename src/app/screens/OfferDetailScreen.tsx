@@ -184,7 +184,8 @@ export function OfferDetailScreen() {
   const handleContactClick = async () => {
     if (!user) {
       toast.error('Connectez-vous pour envoyer un message');
-      navigate('/signin');
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+      navigate(`/signin?redirect=${redirect}`);
       return;
     }
     if (!offer) return;

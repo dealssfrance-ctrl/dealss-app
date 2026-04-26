@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router';
+import { Navigate, useSearchParams } from 'react-router';
 import { useAuth } from './AuthContext';
 import { ReactNode } from 'react';
 import { FullPageSkeleton } from '../components/Skeleton';
@@ -31,13 +31,15 @@ export function ProtectedRoute({ children, requireAuth = false }: ProtectedRoute
 // Redirect authenticated users away from auth screens (welcome, signin, signup)
 export function AuthRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, loading, pendingVerification } = useAuth();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/';
 
   if (loading) {
     return <FullPageSkeleton />;
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={redirectTo} replace />;
   }
 
   // If there's a pending email verification, redirect to verification screen
