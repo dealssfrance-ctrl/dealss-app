@@ -2,7 +2,14 @@ import { supabase } from './supabaseClient';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type MessageType = 'text' | 'photo' | 'review';
+export type MessageType = 'text' | 'photo' | 'review' | 'review_request';
+
+export interface ReviewRequestPayload {
+  offerId: string;
+  offerTitle: string;
+  offerImageUrl?: string;
+  discount?: string;
+}
 
 export interface ChatMessage {
   id: string;
@@ -13,6 +20,7 @@ export interface ChatMessage {
   imageUrl?: string;
   reviewRating?: number;
   reviewComment?: string;
+  reviewRequestPayload?: ReviewRequestPayload;
   createdAt: string;
 }
 
@@ -40,6 +48,35 @@ export interface ConversationDetail {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+const REVIEW_REQUEST_PREFIX = '__review_request__:';
+
+function parseReviewRequestText(value: unknown): ReviewRequestPayload | undefined {
+  const raw = String(value ?? '').trim();
+  if (!raw.startsWith(REVIEW_REQUEST_PREFIX)) return undefined;
+
+  const payloadStr = raw.slice(REVIEW_REQUEST_PREFIX.length).trim();
+  if (!payloadStr) return undefined;
+
+  try {
+    const parsed = JSON.parse(payloadStr);
+    if (!parsed || typeof parsed !== 'object') return undefined;
+
+    const offerId = String((parsed as any).offerId || '').trim();
+    const offerTitle = String((parsed as any).offerTitle || '').trim();
+    const offerImageUrl = String((parsed as any).offerImageUrl || '').trim() || undefined;
+    const discount = String((parsed as any).discount || '').trim() || undefined;
+
+    if (!offerId || !offerTitle) return undefined;
+    return { offerId, offerTitle, offerImageUrl, discount };
+  } catch {
+    return undefined;
+  }
+}
+
+function encodeReviewRequestText(payload: ReviewRequestPayload): string {
+  return `${REVIEW_REQUEST_PREFIX}${JSON.stringify(payload)}`;
+}
 
 function sanitizeMessageImageUrl(value: unknown): string | undefined {
   let raw = String(value ?? '').trim();
@@ -77,8 +114,11 @@ function sanitizeMessageImageUrl(value: unknown): string | undefined {
  */
 function toMessage(m: any): ChatMessage {
   const imageUrl = sanitizeMessageImageUrl(m.image_url);
+  const reviewRequestPayload = parseReviewRequestText(m.text);
   const type: MessageType =
-    m.message_type === 'review'
+    reviewRequestPayload
+      ? 'review_request'
+      : m.message_type === 'review'
       ? 'review'
       : m.message_type === 'photo' || (!m.message_type && imageUrl && !m.text)
       ? 'photo'
@@ -93,6 +133,7 @@ function toMessage(m: any): ChatMessage {
     imageUrl,
     reviewRating: m.review_rating ?? undefined,
     reviewComment: m.review_comment ?? undefined,
+    reviewRequestPayload,
     createdAt: m.created_at,
   };
 }
@@ -100,13 +141,17 @@ function toMessage(m: any): ChatMessage {
 /** Returns a concise, human-readable last-message preview for the conversation list. */
 function lastMessagePreview(msg: any): string {
   const imageUrl = sanitizeMessageImageUrl(msg.image_url);
+  const reviewRequestPayload = parseReviewRequestText(msg.text);
   const type: MessageType =
-    msg.message_type === 'review'
+    reviewRequestPayload
+      ? 'review_request'
+      : msg.message_type === 'review'
       ? 'review'
       : msg.message_type === 'photo' || (!msg.message_type && imageUrl && !msg.text)
       ? 'photo'
       : 'text';
 
+  if (type === 'review_request') return '📝 Demande d\'avis';
   if (type === 'photo') return '📷 Photo';
   if (type === 'review') {
     const stars = '⭐'.repeat(Math.min(5, Math.max(0, msg.review_rating || 0)));
@@ -344,6 +389,14 @@ class ChatService {
 
     await supabase.from('conversations').update({ updated_at: now }).eq('id', conversationId);
     return { success: true, data: toMessage(data) };
+  }
+
+  async sendReviewRequest(
+    conversationId: string,
+    senderId: string,
+    payload: ReviewRequestPayload
+  ): Promise<{ success: boolean; data: ChatMessage }> {
+    return this.sendMessage(conversationId, senderId, encodeReviewRequestText(payload));
   }
 }
 

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { Button } from '../components/Button';
 import { OfferGallery } from '../components/OfferGallery';
+import { Layout } from '../components/Layout';
 import { PersistentNavbar } from '../components/PersistentNavbar';
 import { RatingSummary } from '../components/RatingSummary';
 import { ReviewsList } from '../components/ReviewsList';
@@ -80,17 +81,23 @@ export function OfferDetailScreen() {
   }, [id]);
 
   if (loading) {
-    return <OfferDetailSkeleton />;
+    return (
+      <Layout>
+        <OfferDetailSkeleton />
+      </Layout>
+    );
   }
 
   if (!offer) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
-        <p className="text-gray-400">Offre introuvable</p>
-        <button onClick={() => navigate('/')} className="text-[#1FA774] font-medium">
-          Retour à l'accueil
-        </button>
-      </div>
+      <Layout>
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
+          <p className="text-gray-400">Offre introuvable</p>
+          <button onClick={() => navigate('/')} className="text-[#1FA774] font-medium">
+            Retour à l'accueil
+          </button>
+        </div>
+      </Layout>
     );
   }
 
@@ -115,6 +122,7 @@ export function OfferDetailScreen() {
   };
 
   return (
+    <Layout>
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f4fbf8_0%,#f8fafc_45%,#f1f5f9_100%)]">
       <PersistentNavbar title="Détail offre" showBackButton={true} onBackClick={() => navigate(-1)} />
 
@@ -230,5 +238,6 @@ export function OfferDetailScreen() {
         </div> {/* end desktop flex */}
       </motion.div>
     </div>
+    </Layout>
   );
 }

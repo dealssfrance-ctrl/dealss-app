@@ -12,23 +12,26 @@ interface ReviewRequestCardProps {
   payload: ReviewRequestPayload;
   onReviewClick: () => void;
   isReceiver: boolean;
+  hasSubmitted?: boolean;
 }
 
 export function ReviewRequestCard({
   payload,
   onReviewClick,
   isReceiver,
+  hasSubmitted = false,
 }: ReviewRequestCardProps) {
   const showImage = Boolean(payload.offerImageUrl) && payload.offerImageUrl.trim().length > 0;
+  const canReview = isReceiver && !hasSubmitted;
 
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      whileTap={isReceiver ? { scale: 0.98 } : {}}
-      onClick={isReceiver ? onReviewClick : undefined}
-      className={`rounded-2xl p-3 overflow-hidden cursor-${isReceiver ? 'pointer' : 'default'} ${
-        isReceiver
+      whileTap={canReview ? { scale: 0.98 } : {}}
+      onClick={canReview ? onReviewClick : undefined}
+      className={`rounded-2xl p-3 overflow-hidden cursor-${canReview ? 'pointer' : 'default'} ${
+        canReview
           ? 'bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 hover:shadow-md transition-shadow'
           : 'bg-gradient-to-br from-[#1FA774]/10 to-emerald-50 border border-[#1FA774]/25'
       }`}
@@ -65,7 +68,7 @@ export function ReviewRequestCard({
           </div>
 
           {/* CTA Button for receiver */}
-          {isReceiver && (
+          {canReview && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -74,6 +77,16 @@ export function ReviewRequestCard({
             >
               <span>Évaluer</span>
               <ChevronRight size={12} />
+            </motion.div>
+          )}
+
+          {hasSubmitted && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-1 text-xs font-semibold text-[#1FA774]"
+            >
+              Review submitted ✅
             </motion.div>
           )}
         </div>
