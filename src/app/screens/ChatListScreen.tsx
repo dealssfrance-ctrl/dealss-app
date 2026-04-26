@@ -36,16 +36,16 @@ export function ChatListScreen() {
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+    const diff = Date.now() - date.getTime();
+    const mins = Math.floor(diff / 60_000);
+    const hours = Math.floor(diff / 3_600_000);
+    const days = Math.floor(diff / 86_400_000);
 
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
+    if (mins < 1) return "À l'instant";
+    if (mins < 60) return `${mins} min`;
+    if (hours < 24) return `${hours}h`;
+    if (days < 7) return `${days}j`;
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   };
 
   if (!isAuthenticated) {
@@ -100,32 +100,32 @@ export function ChatListScreen() {
             {conversations.map((conversation, index) => (
               <motion.button
                 key={conversation.id}
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -16 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
+                transition={{ delay: Math.min(index * 0.04, 0.2) }}
                 onClick={() => navigate(`/chat/${conversation.id}`)}
                 className="w-full bg-white px-5 md:px-6 py-4 flex items-center gap-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
               >
-                <div className="relative flex-shrink-0">
-                  <div className="w-14 h-14 rounded-full bg-[#1FA774]/10 flex items-center justify-center">
-                    <span className="text-[#1FA774] font-bold text-lg">
-                      {conversation.otherUserName.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
+                {/* Avatar */}
+                <div className="w-12 h-12 rounded-full bg-[#1FA774]/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-[#1FA774] font-bold text-base">
+                    {(conversation.otherUserName || '?').charAt(0).toUpperCase()}
+                  </span>
                 </div>
 
+                {/* Content */}
                 <div className="flex-1 text-left min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-semibold text-gray-900 truncate">
-                      {conversation.otherUserName}
+                  <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                    <h3 className="font-semibold text-gray-900 truncate text-[15px]">
+                      {conversation.otherUserName || 'Utilisateur'}
                     </h3>
-                    <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                    <span className="text-xs text-gray-400 flex-shrink-0">
                       {formatTime(conversation.lastMessageTime)}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500 mb-1 truncate">Re: {conversation.storeName}</p>
+                  <p className="text-xs text-gray-400 truncate mb-0.5">{conversation.storeName}</p>
                   <p className="text-sm text-gray-500 truncate">
-                    {conversation.lastMessage || 'No messages yet'}
+                    {conversation.lastMessage || <span className="italic text-gray-400">Aucun message</span>}
                   </p>
                 </div>
               </motion.button>

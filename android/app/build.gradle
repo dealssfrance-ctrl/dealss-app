@@ -1,10 +1,16 @@
 apply plugin: 'com.android.application'
 
+def signingProps = new Properties()
+def signingFile = rootProject.file('../.apk.env.configs')
+if (signingFile.exists()) {
+    signingFile.withInputStream { signingProps.load(it) }
+}
+
 android {
-    namespace = "com.dealss.app"
+    namespace = "com.hyvis.fr"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.dealss.app"
+        applicationId "com.hyvis.fr"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -16,8 +22,22 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (signingProps.getProperty('APK_KEYSTORE_PATH')) {
+                storeFile file(signingProps.getProperty('APK_KEYSTORE_PATH'))
+                storePassword signingProps.getProperty('APK_STORE_PASSWORD')
+                keyAlias signingProps.getProperty('APK_KEY_ALIAS')
+                keyPassword signingProps.getProperty('APK_KEY_PASSWORD')
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (signingProps.getProperty('APK_KEYSTORE_PATH')) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

@@ -1,4 +1,4 @@
-package com.dealss.app;
+package com.hyvis.fr;
 
 import com.getcapacitor.BridgeActivity;
 

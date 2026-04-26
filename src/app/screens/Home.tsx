@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Layout } from '../components/Layout';
 import { HyvisHeader } from '../components/HyvisHeader';
@@ -10,17 +10,19 @@ import { offersService, Offer } from '../services/offersService';
 import { OfferCardGridSkeleton, HotDealsSkeleton, CategoryTabsSkeleton, LoadMoreSkeleton } from '../components/Skeleton';
 import { StarRating } from '../components/StarRating';
 
-const DEFAULT_CATEGORIES = ['All', 'Fashion', 'Food', 'Sports', 'Electronics', 'Beauty', 'Vols'];
+const DEFAULT_CATEGORIES = ['All', 'Mode', 'Fashion', 'Beauté', 'Voyage', 'Sport'];
 
 const CATEGORY_EMOJIS: Record<string, string> = {
-  'All': '✨',
-  'Fashion': '👗',
-  'Food': '🍔',
-  'Sports': '🏀',
+  'All':    '✨',
+  'Mode':   '👔',
+  'Fashion':'👗',
+  'Beauté': '💄',
+  'Voyage': '✈️',
+  'Sport':  '🏃',
+  // retained for any legacy data still in the DB
+  'Food':   '🍔',
   'Electronics': '📱',
-  'Beauty': '💄',
-  'Vols': '✈️',
-  'Other': '📦',
+  'Other':  '📦',
 };
 
 export function Home() {
@@ -36,35 +38,44 @@ export function Home() {
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchOffers = useCallback(async (reset = false) => {
-    try {
-      if (reset) {
-        setLoading(true);
-        setPage(1);
-      }
+  // Generation counter: any in-flight fetch whose gen !== current is stale and discarded.
+  const fetchGenRef = useRef(0);
 
-      const currentPage = reset ? 1 : page;
+  const fetchOffers = useCallback(async (reset: boolean, pageNum: number) => {
+    const gen = ++fetchGenRef.current;
+
+    if (reset) {
+      // Clear offers synchronously so no stale items flash under the new category.
+      setOffers([]);
+      setLoading(true);
+    }
+
+    try {
       const result = await offersService.searchOffers({
         category: selectedCategory === 'All' ? undefined : selectedCategory,
-        page: currentPage,
+        page: pageNum,
         limit: 10
       });
+
+      // Discard result if a newer fetch has already started (race-condition guard).
+      if (gen !== fetchGenRef.current) return;
 
       if (result.success) {
         if (reset) {
           setOffers(result.data);
         } else {
-          // Deduplicate by ID when appending
+          // Deduplicate by ID when appending pages.
           setOffers(prev => {
             const map = new Map([...prev, ...result.data].map(o => [o.id, o]));
             return Array.from(map.values());
           });
         }
         setHasMore(result.pagination.hasNext);
-        
-        // Set hot deals (discounts >= 30%)
-        if (reset || currentPage === 1) {
+
+        // Refresh hot deals only on a fresh load (not on "load more").
+        if (reset || pageNum === 1) {
           const allOffers = await offersService.getOffers(1, 50);
+          if (gen !== fetchGenRef.current) return;
           const deals = allOffers.data.filter(offer => {
             const discountValue = parseInt(offer.discount.replace(/[^0-9]/g, ''));
             return discountValue >= 30;
@@ -73,14 +84,18 @@ export function Home() {
         }
       }
     } catch (error) {
+      if (gen !== fetchGenRef.current) return;
       console.error('Error fetching offers:', error);
       toast.error('Erreur lors du chargement des offres');
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
-      setRefreshing(false);
+      if (gen === fetchGenRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+        setRefreshing(false);
+      }
     }
-  }, [selectedCategory, page]);
+  // fetchOffers only changes when selectedCategory changes; page is now an explicit parameter.
+  }, [selectedCategory]);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -104,26 +119,26 @@ export function Home() {
     fetchCategories();
   }, [fetchCategories]);
 
+  // Reset page and fetch fresh results whenever the selected category changes.
+  // `fetchOffers` is stable while category stays the same, so no extra fetches occur.
   useEffect(() => {
-    fetchOffers(true);
-  }, [selectedCategory]);
+    setPage(1);
+    fetchOffers(true, 1);
+  }, [selectedCategory, fetchOffers]);
 
   const handleLoadMore = () => {
     if (!loadingMore && hasMore) {
       setLoadingMore(true);
-      setPage(prev => prev + 1);
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchOffers(false, nextPage);
     }
   };
 
-  useEffect(() => {
-    if (page > 1) {
-      fetchOffers(false);
-    }
-  }, [page]);
-
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchOffers(true);
+    setPage(1);
+    await fetchOffers(true, 1);
   };
 
   const handleLogout = () => {

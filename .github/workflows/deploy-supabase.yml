@@ -27,5 +27,5 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           supabase functions deploy delete-account \
-            --project-ref zkexqsaogphjbwkjtopq \
+            --project-ref rylxeslhdpyewtfexzll \
             --no-verify-jwt

@@ -134,6 +134,37 @@ CREATE POLICY "Allow deletes from offers bucket"
   USING (bucket_id = 'offers');
 
 -- ============================================
+-- Chat message type columns
+-- Run this addendum if the messages table was already created.
+-- Adds message_type, review_rating, review_comment, and the 'chat' storage bucket.
+-- ============================================
+
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS message_type TEXT DEFAULT 'text'
+  CHECK (message_type IN ('text', 'photo', 'review'));
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS review_rating INTEGER
+  CHECK (review_rating IS NULL OR (review_rating >= 1 AND review_rating <= 5));
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS review_comment TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(conversation_id, created_at);
+
+-- Storage bucket for chat images (separate from the offers bucket)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'chat',
+  'chat',
+  true,
+  5242880,
+  ARRAY['image/jpeg','image/png','image/webp','image/gif']
+) ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public read for chat bucket"
+  ON storage.objects FOR SELECT USING (bucket_id = 'chat');
+CREATE POLICY "Allow uploads to chat bucket"
+  ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'chat');
+CREATE POLICY "Allow deletes from chat bucket"
+  ON storage.objects FOR DELETE USING (bucket_id = 'chat');
+
+-- ============================================
 -- Supabase Auth Migration
 -- The app now uses Supabase Authentication.
 -- Users table `id` column will store Supabase Auth UUIDs.

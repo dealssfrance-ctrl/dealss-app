@@ -212,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Not authenticated');
     const response = await fetch(
-      'https://zkexqsaogphjbwkjtopq.supabase.co/functions/v1/delete-account',
+      'https://rylxeslhdpyewtfexzll.supabase.co/functions/v1/delete-account',
       {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${session.access_token}` },

@@ -35,3 +35,8 @@ package-lock.json
 .cache/
 .temp/
 tmp/
+
+# Android signing secrets
+.apk.env.configs
+android/app/*.keystore
+android/app/*.jks

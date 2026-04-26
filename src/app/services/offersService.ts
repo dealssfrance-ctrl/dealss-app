@@ -1,5 +1,58 @@
 import { supabase } from './supabaseClient';
 
+const CATEGORY_CANONICAL_LABELS: Record<string, string> = {
+  mode: 'Mode',
+  fashion: 'Fashion',
+  beauty: 'Beauté',
+  vols: 'Voyage',
+  sports: 'Sport',
+  // retained for backward-compatibility with any existing data
+  food: 'Food',
+  electronics: 'Electronics',
+  other: 'Other',
+};
+
+const CATEGORY_ALIASES: Record<string, string[]> = {
+  mode: ['mode'],
+  fashion: ['fashion'],
+  beauty: ['beauty', 'beaute', 'beauté'],
+  vols: ['vols', 'voyage', 'travel'],
+  sports: ['sports', 'sport'],
+  food: ['food', 'alimentation'],
+  electronics: ['electronics', 'electronic', 'tech'],
+  other: ['other', 'autre'],
+};
+
+// Primary categories first in the order the user defined them.
+const CATEGORY_ORDER = ['mode', 'fashion', 'beauty', 'vols', 'sports', 'food', 'electronics', 'other'];
+
+function normalizeCategoryKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[^\w\s-]|_/g, '')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function toCanonicalCategory(value: string): string {
+  const normalized = normalizeCategoryKey(value);
+  for (const [canonical, aliases] of Object.entries(CATEGORY_ALIASES)) {
+    if (aliases.includes(normalized)) return canonical;
+  }
+  return normalized;
+}
+
+/**
+ * Returns all raw alias strings for a category.
+ * Uppercase variants are intentionally omitted: ilike is already case-insensitive,
+ * so adding 'Fashion' when 'fashion' is present would be redundant noise.
+ */
+function getCategoryFilterVariants(category: string): string[] {
+  const canonical = toCanonicalCategory(category);
+  return CATEGORY_ALIASES[canonical] ?? [canonical];
+}
+
 export interface Offer {
   id: string;
   storeName: string;
@@ -162,10 +215,16 @@ class OffersService {
 
     let q = supabase.from('offers').select('*', { count: 'exact' }).eq('status', 'active');
     if (query) q = q.or(`store_name.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`);
-    if (category && category.toLowerCase() !== 'all') q = q.ilike('category', category);
+    if (category && category.toLowerCase() !== 'all') {
+      const variants = getCategoryFilterVariants(category);
+      const clauses = variants.map((v) => `category.ilike.${v}`).join(',');
+      q = q.or(clauses);
+    }
 
     const col = sortBy === 'storeName' ? 'store_name' : sortBy === 'discount' ? 'discount' : 'created_at';
-    q = q.order(col, { ascending: sortOrder === 'asc' });
+    // Secondary sort by id ensures deterministic ordering when primary values collide,
+    // preventing items from swapping positions between page loads.
+    q = q.order(col, { ascending: sortOrder === 'asc' }).order('id', { ascending: false });
     q = q.range((page - 1) * limit, page * limit - 1);
 
     const { data, count, error } = await q;
@@ -191,10 +250,36 @@ class OffersService {
   }
 
   async getCategories(): Promise<{ success: boolean; data: string[] }> {
-    const { data, error } = await supabase.from('offers').select('category').eq('status', 'active');
+    const { data, error } = await supabase
+      .from('offers')
+      .select('category, created_at')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
-    const cats = Array.from(new Set((data || []).map((r: any) => r.category as string))).sort();
-    return { success: true, data: ['All', ...cats] };
+
+    const seen = new Set<string>();
+    const rawCanonical: string[] = [];
+
+    for (const row of data || []) {
+      const raw = String((row as any).category || '').trim();
+      if (!raw) continue;
+      const canonical = toCanonicalCategory(raw);
+      if (canonical === 'all' || seen.has(canonical)) continue;
+      seen.add(canonical);
+      rawCanonical.push(canonical);
+    }
+
+    const sorted = rawCanonical.sort((a, b) => {
+      const ai = CATEGORY_ORDER.indexOf(a);
+      const bi = CATEGORY_ORDER.indexOf(b);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return a.localeCompare(b, 'fr', { sensitivity: 'base' });
+    });
+
+    const labels = sorted.map((c) => CATEGORY_CANONICAL_LABELS[c] || c.charAt(0).toUpperCase() + c.slice(1));
+    return { success: true, data: ['All', ...labels] };
   }
 
   async createOffer(offerData: CreateOfferData, userId: string): Promise<OfferResponse> {

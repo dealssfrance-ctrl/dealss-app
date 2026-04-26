@@ -34,7 +34,7 @@ jobs:
 
       - name: Build dashboard
         env:
-          VITE_SUPABASE_URL: https://zkexqsaogphjbwkjtopq.supabase.co
+          VITE_SUPABASE_URL: https://rylxeslhdpyewtfexzll.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_PL0uI6FN2xSN8Q5oi07Icw_5ks7abh_
         run: cd dashboard && npx vite build --base=/dealss-dashboard/
 
