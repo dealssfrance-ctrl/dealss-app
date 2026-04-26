@@ -24,16 +24,32 @@ export const CATEGORIES: CategoryConfig[] = [
 
 export const CATEGORY_KEYS = CATEGORIES.map(c => c.key);
 
+/** Normalize a key for tolerant matching (case + Unicode + accents). */
+function normKey(s: string): string {
+  return (s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function findCategory(key: string): CategoryConfig | undefined {
+  const exact = CATEGORIES.find(c => c.key === key);
+  if (exact) return exact;
+  const n = normKey(key);
+  return CATEGORIES.find(c => normKey(c.key) === n || normKey(c.label) === n);
+}
+
 /** Get display label with emoji for a category key */
 export function getCategoryLabel(key: string): string {
-  const cat = CATEGORIES.find(c => c.key === key);
+  const cat = findCategory(key);
   if (!cat) return key;
   return `${cat.emoji} ${cat.label}`;
 }
 
 /** Get just the label (no emoji) for a category key */
 export function getCategoryName(key: string): string {
-  const cat = CATEGORIES.find(c => c.key === key);
+  const cat = findCategory(key);
   return cat ? cat.label : key;
 }
 
