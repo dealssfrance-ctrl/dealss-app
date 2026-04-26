@@ -109,6 +109,36 @@ export interface SearchParams {
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
+function sanitizeImageUrl(value: unknown): string {
+  let raw = String(value ?? '').trim();
+  if (!raw) return '';
+
+  if (raw.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const first = parsed.find((item) => typeof item === 'string' && item.trim().length > 0);
+        raw = String(first ?? '').trim();
+      }
+    } catch {
+      // Keep fallback parsing below when malformed JSON is encountered.
+    }
+  }
+
+  raw = raw.replace(/^['"]+|['"]+$/g, '').trim();
+
+  if (raw.startsWith('%22http')) {
+    try {
+      raw = decodeURIComponent(raw).replace(/^['"]+|['"]+$/g, '').trim();
+    } catch {
+      return '';
+    }
+  }
+
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return '';
+}
+
 function toOffer(r: any): Offer {
   return {
     id: r.id,
@@ -116,7 +146,7 @@ function toOffer(r: any): Offer {
     discount: r.discount,
     description: r.description,
     category: r.category,
-    imageUrl: r.image_url || '',
+    imageUrl: sanitizeImageUrl(r.image_url),
     status: r.status,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -292,7 +322,7 @@ class OffersService {
       discount: offerData.discount,
       description: offerData.description,
       category: offerData.category,
-      image_url: offerData.imageUrl || '',
+      image_url: sanitizeImageUrl(offerData.imageUrl),
       status: 'active',
       user_id: userId,
       user_name: user.name,
@@ -310,7 +340,7 @@ class OffersService {
     if (updates.discount) dbUpdates.discount = updates.discount;
     if (updates.description) dbUpdates.description = updates.description;
     if (updates.category) dbUpdates.category = updates.category;
-    if (updates.imageUrl !== undefined) dbUpdates.image_url = updates.imageUrl;
+    if (updates.imageUrl !== undefined) dbUpdates.image_url = sanitizeImageUrl(updates.imageUrl);
 
     const { data, error } = await supabase.from('offers').update(dbUpdates).eq('id', id).select().single();
     if (error || !data) throw new Error(error?.message || 'Failed to update offer');

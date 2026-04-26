@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { Edit2, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import type { Offer } from '../services/offersService';
 
 interface UserOfferCardProps {
@@ -10,6 +11,8 @@ interface UserOfferCardProps {
 
 export function UserOfferCard({ offer, onDelete }: UserOfferCardProps) {
   const navigate = useNavigate();
+  const [imageError, setImageError] = useState(false);
+  const showImage = Boolean(offer.imageUrl) && !imageError;
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -34,11 +37,18 @@ export function UserOfferCard({ offer, onDelete }: UserOfferCardProps) {
       >
         <div className="flex gap-3 p-3">
           <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
-            <img
-              src={offer.imageUrl}
-              alt={offer.storeName}
-              className="w-full h-full object-cover"
-            />
+            {showImage ? (
+              <img
+                src={offer.imageUrl}
+                alt={offer.storeName}
+                className="w-full h-full object-cover"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 px-2 text-center">
+                No image
+              </div>
+            )}
           </div>
           <div className="flex-1 text-left min-w-0">
             <div className="flex items-start justify-between gap-2 mb-1">
