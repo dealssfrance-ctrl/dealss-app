@@ -70,11 +70,6 @@ export function WelcomeScreen() {
           className="text-center mb-8"
         >
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-5 tracking-tight">Hyvis</h1>
-          <p className="text-xl md:text-2xl text-white font-semibold leading-snug max-w-md mx-auto">
-            Troque ta réduction employeur
-            <br />
-            contre une autre, près de chez toi
-          </p>
         </motion.div>
 
         {/* Features */}
