@@ -73,9 +73,13 @@ export function Home() {
 
         // Refresh hot deals only on a fresh load (not on "load more").
         if (reset || pageNum === 1) {
-          const allOffers = await offersService.getOffers(1, 50);
+          const hotDealsResult = await offersService.searchOffers({
+            category: selectedCategory === 'All' ? undefined : selectedCategory,
+            page: 1,
+            limit: 50
+          });
           if (gen !== fetchGenRef.current) return;
-          const deals = allOffers.data.filter(offer => {
+          const deals = hotDealsResult.data.filter(offer => {
             const discountValue = parseInt(offer.discount.replace(/[^0-9]/g, ''));
             return discountValue >= 30;
           });
