@@ -6,10 +6,7 @@ node_modules/
 dist/
 build/
 
-# Environment files (contain secrets)
-.env
-.env.local
-.env.production
+
 
 # IDE
 .vscode/
