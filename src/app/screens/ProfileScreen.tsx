@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
 import { supabase } from '../services/supabaseClient';
 
-const DEFAULT_COMPANY = 'Free Lanceur';
+const DEFAULT_COMPANY = 'Freelance';
 
 const REQUEST_TIMEOUT_MS = 12000;
 
