@@ -192,6 +192,17 @@ export function Home() {
     fetchOffers(true, 1);
   }, [selectedCategory, fetchOffers]);
 
+  // When the tab/app resumes after being backgrounded, the previous query may
+  // have been frozen → skeleton stays forever. Re-trigger a fresh fetch.
+  useEffect(() => {
+    const onResume = () => {
+      setPage(1);
+      fetchOffers(true, 1);
+    };
+    window.addEventListener('app:resume', onResume);
+    return () => window.removeEventListener('app:resume', onResume);
+  }, [fetchOffers]);
+
   const handleLoadMore = useCallback(() => {
     if (!loadingMore && hasMore && !loading) {
       setLoadingMore(true);
