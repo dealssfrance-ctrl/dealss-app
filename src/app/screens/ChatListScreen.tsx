@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Layout } from '../components/Layout';
 import { HyvisHeader } from '../components/HyvisHeader';
 import { useNavigate } from 'react-router';
-import { motion } from 'motion/react';
-import { MessageSquare, Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { MessageSquare, Search, MoreVertical, Pin, Archive, Trash2, ArchiveRestore } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { chatService, ConversationSummary } from '../services/chatService';
 import { ChatListSkeleton } from '../components/Skeleton';
 import { toast } from 'sonner';
+import { chatPrefs } from '../utils/chatPrefs';
 
 const POLL_INTERVAL = 30000; // 30 seconds
 const REQUEST_TIMEOUT_MS = 12000;
@@ -45,6 +46,28 @@ export function ChatListScreen() {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [tab, setTab] = useState<'all' | 'archived'>('all');
+  const [pinned, setPinned] = useState<Set<string>>(new Set());
+  const [archived, setArchived] = useState<Set<string>>(new Set());
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Hydrate prefs from localStorage and stay in sync with cross-tab updates.
+  useEffect(() => {
+    if (!user) return;
+    const sync = () => {
+      setPinned(chatPrefs.getPinned(user.id));
+      setArchived(chatPrefs.getArchived(user.id));
+    };
+    sync();
+    window.addEventListener('chat:prefs-changed', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('chat:prefs-changed', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, [user]);
 
   const fetchConversations = useCallback(async () => {
     if (!user) {
@@ -68,16 +91,46 @@ export function ChatListScreen() {
     return () => clearInterval(interval);
   }, [fetchConversations]);
 
+  // A conversation is "archived" iff ALL its sibling IDs are archived.
+  // A conversation is "pinned" iff its representative ID is pinned.
+  const isArchived = useCallback(
+    (c: ConversationSummary) => {
+      const ids = c.siblingConversationIds?.length ? c.siblingConversationIds : [c.id];
+      return ids.every((id) => archived.has(id));
+    },
+    [archived],
+  );
+  const isPinned = useCallback((c: ConversationSummary) => pinned.has(c.id), [pinned]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return conversations;
-    return conversations.filter(
-      (c) =>
-        (c.otherUserName || '').toLowerCase().includes(q) ||
-        (c.storeName || '').toLowerCase().includes(q) ||
-        (c.lastMessage || '').toLowerCase().includes(q),
-    );
-  }, [conversations, query]);
+    let list = conversations;
+    list = list.filter((c) => (tab === 'archived' ? isArchived(c) : !isArchived(c)));
+    if (q) {
+      list = list.filter(
+        (c) =>
+          (c.otherUserName || '').toLowerCase().includes(q) ||
+          (c.storeName || '').toLowerCase().includes(q) ||
+          (c.lastMessage || '').toLowerCase().includes(q),
+      );
+    }
+    // Sort: pinned first (only in 'all' tab), then by most-recent message.
+    return [...list].sort((a, b) => {
+      if (tab === 'all') {
+        const pa = isPinned(a) ? 1 : 0;
+        const pb = isPinned(b) ? 1 : 0;
+        if (pa !== pb) return pb - pa;
+      }
+      return (
+        new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
+      );
+    });
+  }, [conversations, query, tab, isArchived, isPinned]);
+
+  const archivedCount = useMemo(
+    () => conversations.filter((c) => isArchived(c)).length,
+    [conversations, isArchived],
+  );
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -91,6 +144,56 @@ export function ChatListScreen() {
     if (hours < 24) return `${hours}h`;
     if (days < 7) return `${days}j`;
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  };
+
+  // ── Context-menu actions ───────────────────────────────────────────────
+  const handlePin = (c: ConversationSummary) => {
+    if (!user) return;
+    const next = chatPrefs.togglePin(user.id, c.id);
+    setMenuOpenId(null);
+    toast.success(next ? 'Conversation épinglée' : 'Conversation désépinglée');
+  };
+
+  const handleArchive = (c: ConversationSummary) => {
+    if (!user) return;
+    const ids = c.siblingConversationIds?.length ? c.siblingConversationIds : [c.id];
+    const willArchive = !isArchived(c);
+    for (const id of ids) {
+      // Toggle to the desired final state for every sibling.
+      const currentlyArchived = chatPrefs.isArchived(user.id, id);
+      if (currentlyArchived !== willArchive) chatPrefs.toggleArchive(user.id, id);
+    }
+    setMenuOpenId(null);
+    toast.success(willArchive ? 'Conversation archivée' : 'Conversation désarchivée');
+  };
+
+  const handleDelete = async (c: ConversationSummary) => {
+    if (!user) return;
+    setMenuOpenId(null);
+    const ids = c.siblingConversationIds?.length ? c.siblingConversationIds : [c.id];
+    try {
+      await chatService.deleteConversations(ids);
+      chatPrefs.remove(user.id, ids);
+      setConversations((prev) => prev.filter((x) => !ids.includes(x.id)));
+      toast.success('Conversation supprimée');
+    } catch (err) {
+      console.error('delete conversation failed', err);
+      toast.error('Suppression impossible');
+    } finally {
+      setConfirmDeleteId(null);
+    }
+  };
+
+  // Long-press on touch devices opens the context menu (≈500ms).
+  const startLongPress = (id: string) => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    longPressTimer.current = setTimeout(() => setMenuOpenId(id), 500);
+  };
+  const cancelLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
   };
 
   if (!isAuthenticated) {
@@ -161,6 +264,29 @@ export function ChatListScreen() {
                 className="w-full bg-white/95 text-gray-900 placeholder-gray-400 pl-11 pr-4 py-3 rounded-full text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-white/60"
               />
             </div>
+
+            {/* Tabs */}
+            <div className="mt-4 flex gap-2">
+              {([
+                { key: 'all', label: 'Toutes', count: conversations.length - archivedCount },
+                { key: 'archived', label: 'Archivées', count: archivedCount },
+              ] as const).map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => { setTab(t.key); setMenuOpenId(null); }}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    tab === t.key
+                      ? 'bg-white text-[#1FA774] shadow-sm'
+                      : 'bg-white/15 text-white hover:bg-white/25'
+                  }`}
+                >
+                  {t.label}
+                  <span className={`ml-1.5 text-[11px] ${tab === t.key ? 'text-[#1FA774]/70' : 'text-white/70'}`}>
+                    {t.count}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -190,49 +316,169 @@ export function ChatListScreen() {
                 const name = conversation.otherUserName || 'Utilisateur';
                 const initial = name.charAt(0).toUpperCase();
                 const gradient = avatarGradient(name);
+                const pinnedRow = isPinned(conversation);
+                const archivedRow = isArchived(conversation);
+                const open = menuOpenId === conversation.id;
                 return (
-                  <motion.button
+                  <motion.div
                     key={conversation.id}
                     initial={{ opacity: 0, x: -16 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: Math.min(index * 0.04, 0.2) }}
-                    onClick={() => navigate(`/chat/${conversation.id}`)}
-                    className="w-full bg-white px-5 md:px-6 py-4 flex items-center gap-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                    className="relative bg-white"
                   >
-                    {/* Gradient avatar */}
                     <div
-                      className={`w-12 h-12 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-sm`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate(`/chat/${conversation.id}`)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/chat/${conversation.id}`); }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setMenuOpenId(open ? null : conversation.id);
+                      }}
+                      onTouchStart={() => startLongPress(conversation.id)}
+                      onTouchEnd={cancelLongPress}
+                      onTouchCancel={cancelLongPress}
+                      onTouchMove={cancelLongPress}
+                      className="w-full px-5 md:px-6 py-4 flex items-center gap-4 hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer"
                     >
-                      <span className="text-white font-bold text-base">{initial}</span>
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 text-left min-w-0">
-                      <div className="flex items-baseline justify-between gap-2 mb-0.5">
-                        <h3 className="font-semibold text-gray-900 truncate text-[15px]">
-                          {name}
-                        </h3>
-                        <span className="text-xs text-gray-400 flex-shrink-0">
-                          {formatTime(conversation.lastMessageTime)}
-                        </span>
+                      {/* Gradient avatar */}
+                      <div
+                        className={`relative w-12 h-12 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-sm`}
+                      >
+                        <span className="text-white font-bold text-base">{initial}</span>
+                        {pinnedRow && (
+                          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 ring-2 ring-white flex items-center justify-center">
+                            <Pin size={10} className="text-white" strokeWidth={3} />
+                          </span>
+                        )}
                       </div>
-                      {conversation.storeName && (
-                        <p className="text-xs text-[#1FA774] font-medium truncate mb-0.5">
-                          · {conversation.storeName}
-                          {conversation.offerCount > 1 && (
-                            <span className="text-gray-400 font-normal ml-1">
-                              +{conversation.offerCount - 1} autre{conversation.offerCount > 2 ? 's' : ''}
-                            </span>
+
+                      {/* Content */}
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                          <h3 className="font-semibold text-gray-900 truncate text-[15px]">
+                            {name}
+                          </h3>
+                          <span className="text-xs text-gray-400 flex-shrink-0">
+                            {formatTime(conversation.lastMessageTime)}
+                          </span>
+                        </div>
+                        {conversation.storeName && (
+                          <p className="text-xs text-[#1FA774] font-medium truncate mb-0.5">
+                            · {conversation.storeName}
+                            {conversation.offerCount > 1 && (
+                              <span className="text-gray-400 font-normal ml-1">
+                                +{conversation.offerCount - 1} autre{conversation.offerCount > 2 ? 's' : ''}
+                              </span>
+                            )}
+                          </p>
+                        )}
+                        <p className="text-sm text-gray-500 truncate">
+                          {conversation.lastMessage || (
+                            <span className="italic text-gray-400">Aucun message</span>
                           )}
                         </p>
-                      )}
-                      <p className="text-sm text-gray-500 truncate">
-                        {conversation.lastMessage || (
-                          <span className="italic text-gray-400">Aucun message</span>
-                        )}
-                      </p>
+                      </div>
+
+                      {/* 3-dot menu trigger */}
+                      <button
+                        type="button"
+                        aria-label="Actions de conversation"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMenuOpenId(open ? null : conversation.id);
+                        }}
+                        className="p-2 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700 flex-shrink-0"
+                      >
+                        <MoreVertical size={18} />
+                      </button>
                     </div>
-                  </motion.button>
+
+                    {/* Context menu */}
+                    <AnimatePresence>
+                      {open && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-30"
+                            onClick={() => setMenuOpenId(null)}
+                          />
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                            transition={{ duration: 0.12 }}
+                            className="absolute right-3 top-12 z-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden min-w-[180px]"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handlePin(conversation)}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left"
+                            >
+                              <Pin size={16} className="text-amber-500" />
+                              {pinnedRow ? 'Désépingler' : 'Épingler'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleArchive(conversation)}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left"
+                            >
+                              {archivedRow ? (
+                                <ArchiveRestore size={16} className="text-sky-500" />
+                              ) : (
+                                <Archive size={16} className="text-sky-500" />
+                              )}
+                              {archivedRow ? 'Désarchiver' : 'Archiver'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(conversation.id)}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 text-left border-t border-gray-100"
+                            >
+                              <Trash2 size={16} />
+                              Supprimer
+                            </button>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Delete confirmation */}
+                    {confirmDeleteId === conversation.id && (
+                      <div
+                        className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-5"
+                        onClick={() => setConfirmDeleteId(null)}
+                      >
+                        <div
+                          className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <h3 className="text-lg font-bold text-gray-900 mb-2">
+                            Supprimer la conversation ?
+                          </h3>
+                          <p className="text-sm text-gray-600 mb-5">
+                            Tous les messages échangés avec <strong>{name}</strong> seront définitivement supprimés. Cette action est irréversible.
+                          </p>
+                          <div className="flex gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="flex-1 py-2.5 rounded-full border border-gray-200 text-gray-700 font-medium hover:bg-gray-50"
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(conversation)}
+                              className="flex-1 py-2.5 rounded-full bg-red-600 text-white font-semibold hover:bg-red-700"
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
                 );
               })}
             </div>

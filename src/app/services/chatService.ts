@@ -471,6 +471,25 @@ class ChatService {
     return { success: true, data: { id: data.id }, existing: false };
   }
 
+  /**
+   * Delete one or more conversations and all their messages.
+   * Caller must be a participant; we still scope by ids passed in.
+   */
+  async deleteConversations(conversationIds: string[]): Promise<void> {
+    if (!conversationIds.length) return;
+    // Delete messages first to avoid FK violations.
+    const { error: mErr } = await supabase
+      .from('messages')
+      .delete()
+      .in('conversation_id', conversationIds);
+    if (mErr) throw new Error(mErr.message);
+    const { error: cErr } = await supabase
+      .from('conversations')
+      .delete()
+      .in('id', conversationIds);
+    if (cErr) throw new Error(cErr.message);
+  }
+
   async sendMessage(
     conversationId: string,
     senderId: string,
