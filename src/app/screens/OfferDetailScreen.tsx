@@ -14,6 +14,17 @@ import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import { OfferDetailSkeleton } from '../components/Skeleton';
 
+const REQUEST_TIMEOUT_MS = 12000;
+
+function withTimeout<T>(promise: Promise<T>, ms = REQUEST_TIMEOUT_MS): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error('timeout')), ms);
+    }),
+  ]);
+}
+
 export function OfferDetailScreen() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -29,7 +40,7 @@ export function OfferDetailScreen() {
 
   const fetchReviews = async (offerId: string) => {
     try {
-      const res = await reviewsService.getOfferReviews(offerId);
+      const res = await withTimeout(reviewsService.getOfferReviews(offerId));
       if (res.success) {
         setReviews(res.data);
         setOfferRating(res.rating);
@@ -44,14 +55,14 @@ export function OfferDetailScreen() {
       if (!id) return;
       try {
         setLoading(true);
-        const response = await offersService.getOfferById(id);
+        const response = await withTimeout(offersService.getOfferById(id));
         if (response.success) {
           setOffer(response.data);
           await fetchReviews(id);
         }
       } catch (error) {
         console.error('Error fetching offer:', error);
-        toast.error('Erreur lors du chargement de l\'offre');
+        toast.error('Chargement trop long. Réessayez.');
       } finally {
         setLoading(false);
       }

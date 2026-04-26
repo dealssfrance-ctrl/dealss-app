@@ -7,8 +7,19 @@ import { MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { chatService, ConversationSummary } from '../services/chatService';
 import { ChatListSkeleton } from '../components/Skeleton';
+import { toast } from 'sonner';
 
 const POLL_INTERVAL = 30000; // 30 seconds
+const REQUEST_TIMEOUT_MS = 12000;
+
+function withTimeout<T>(promise: Promise<T>, ms = REQUEST_TIMEOUT_MS): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error('timeout')), ms);
+    }),
+  ]);
+}
 
 export function ChatListScreen() {
   const navigate = useNavigate();
@@ -17,12 +28,16 @@ export function ChatListScreen() {
   const [loading, setLoading] = useState(true);
 
   const fetchConversations = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     try {
-      const response = await chatService.getConversations(user.id);
+      const response = await withTimeout(chatService.getConversations(user.id));
       setConversations(response.data);
     } catch (error) {
       console.error('Error fetching conversations:', error);
+      toast.error('Chargement trop long. Réessayez.');
     } finally {
       setLoading(false);
     }

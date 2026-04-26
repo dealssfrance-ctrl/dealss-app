@@ -10,6 +10,17 @@ import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
 
+const REQUEST_TIMEOUT_MS = 12000;
+
+function withTimeout<T>(promise: Promise<T>, ms = REQUEST_TIMEOUT_MS): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error('timeout')), ms);
+    }),
+  ]);
+}
+
 export function ProfileScreen() {
   const { user, logout, deleteAccount } = useAuth();
   const navigate = useNavigate();
@@ -32,10 +43,10 @@ export function ProfileScreen() {
     if (!user) return;
     try {
       setLoading(true);
-      const response = await offersService.getMyOffers(user.id);
+      const response = await withTimeout(offersService.getMyOffers(user.id));
       setOffers(response.data);
     } catch (error) {
-      toast.error('Failed to load your offers');
+      toast.error('Chargement trop long. Réessayez.');
     } finally {
       setLoading(false);
     }
