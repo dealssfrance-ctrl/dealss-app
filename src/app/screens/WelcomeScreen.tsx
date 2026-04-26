@@ -50,6 +50,17 @@ export function WelcomeScreen() {
         }}
       />
 
+      {/* Skip (top right) */}
+      <button
+        onClick={() => {
+          markWelcomeSeen();
+          navigate('/');
+        }}
+        className="absolute top-4 right-4 md:top-6 md:right-6 z-10 px-4 py-2 rounded-full text-sm font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-colors"
+      >
+        Passer
+      </button>
+
       {/* Content */}
       <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-10">
         <motion.div
@@ -105,35 +116,37 @@ export function WelcomeScreen() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
-        className="relative px-6 pb-8 space-y-3"
+        className="relative px-6 pb-8"
       >
-        <Button
-          onClick={() => {
-            markWelcomeSeen();
-            navigate('/signup');
-          }}
-          className="bg-white !text-[#1FA774] hover:bg-gray-100"
-        >
-          Créer un compte
-        </Button>
-        <button
-          onClick={() => {
-            markWelcomeSeen();
-            navigate('/signin');
-          }}
-          className="w-full py-4 rounded-full font-semibold text-white border-2 border-white/30 hover:bg-white/10 transition-colors"
-        >
-          Se connecter
-        </button>
-        <button
-          onClick={() => {
-            markWelcomeSeen();
-            navigate('/');
-          }}
-          className="w-full py-4 rounded-full font-semibold text-white/70 hover:text-white hover:bg-white/5 transition-colors text-sm"
-        >
-          Continuer en invité
-        </button>
+        <div className="w-full max-w-md mx-auto space-y-3">
+          <Button
+            onClick={() => {
+              markWelcomeSeen();
+              navigate('/signup');
+            }}
+            className="bg-white !text-[#1FA774] hover:bg-gray-100"
+          >
+            Créer un compte
+          </Button>
+          <button
+            onClick={() => {
+              markWelcomeSeen();
+              navigate('/signin');
+            }}
+            className="w-full py-4 rounded-full font-semibold text-white border-2 border-white/30 hover:bg-white/10 transition-colors"
+          >
+            Se connecter
+          </button>
+          <button
+            onClick={() => {
+              markWelcomeSeen();
+              navigate('/');
+            }}
+            className="w-full py-3 rounded-full font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-colors text-sm flex items-center justify-center gap-2"
+          >
+            Continuer en invité
+          </button>
+        </div>
       </motion.div>
     </div>
   );
