@@ -311,7 +311,7 @@ export function ChatListScreen() {
               </p>
             </div>
           ) : (
-            <div className="md:bg-white md:rounded-2xl md:shadow-sm md:overflow-hidden divide-y divide-gray-100">
+            <div className="md:bg-white md:rounded-2xl md:shadow-sm divide-y divide-gray-100">
               {filtered.map((conversation, index) => {
                 const name = conversation.otherUserName || 'Utilisateur';
                 const initial = name.charAt(0).toUpperCase();
