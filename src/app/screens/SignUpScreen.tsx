@@ -2,18 +2,21 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { Button } from '../components/Button';
-import { ArrowLeft, Eye, EyeOff, User, Mail, Lock, AlertCircle } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { ArrowLeft, Eye, EyeOff, User, Mail, Lock, AlertCircle, Store, MapPin } from 'lucide-react';
+import { useAuth, AccountType } from '../context/AuthContext';
 import { toast } from 'sonner';
 
 export function SignUpScreen() {
   const navigate = useNavigate();
   const { signup, pendingVerification, isAuthenticated } = useAuth();
+  const [accountType, setAccountType] = useState<AccountType>('individual');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    storeName: '',
+    storeLocation: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -30,7 +33,12 @@ export function SignUpScreen() {
     setError('');
 
     if (!formData.name.trim()) {
-      toast.error('Le nom est requis');
+      toast.error(accountType === 'merchant' ? 'Le nom du gérant est requis' : 'Le nom est requis');
+      return;
+    }
+
+    if (accountType === 'merchant' && !formData.storeName.trim()) {
+      toast.error('Le nom du magasin est requis');
       return;
     }
 
@@ -46,10 +54,19 @@ export function SignUpScreen() {
 
     try {
       setLoading(true);
-      await signup(formData.email, formData.password, formData.confirmPassword, formData.name);
-      // If email verification is required, navigate to verification screen
-      // If auto-confirmed (session created), navigate home
-      // The pendingVerification state is updated by AuthContext
+      await signup(
+        formData.email,
+        formData.password,
+        formData.confirmPassword,
+        formData.name,
+        accountType,
+        accountType === 'merchant'
+          ? {
+              storeName: formData.storeName,
+              storeLocation: formData.storeLocation,
+            }
+          : undefined,
+      );
     } catch (err: any) {
       toast.error(err.message || 'Échec de la création du compte');
       setLoading(false);
@@ -105,10 +122,50 @@ export function SignUpScreen() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Account type toggle */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Type de compte
+              </label>
+              <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-2xl">
+                <button
+                  type="button"
+                  onClick={() => setAccountType('individual')}
+                  disabled={loading}
+                  className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                    accountType === 'individual'
+                      ? 'bg-white text-[#1FA774] shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <User size={16} />
+                  Particulier
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAccountType('merchant')}
+                  disabled={loading}
+                  className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                    accountType === 'merchant'
+                      ? 'bg-white text-[#1FA774] shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Store size={16} />
+                  Magasin
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">
+                {accountType === 'merchant'
+                  ? 'Créez une vitrine pour votre boutique et publiez vos offres.'
+                  : 'Compte personnel pour profiter et partager des deals.'}
+              </p>
+            </div>
+
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
+                {accountType === 'merchant' ? 'Nom du gérant' : 'Full Name'}
               </label>
               <div className="relative">
                 <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -123,6 +180,47 @@ export function SignUpScreen() {
                 />
               </div>
             </div>
+
+            {/* Merchant-only fields */}
+            {accountType === 'merchant' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nom du magasin
+                  </label>
+                  <div className="relative">
+                    <Store size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={formData.storeName}
+                      onChange={(e) => handleChange('storeName', e.target.value)}
+                      placeholder="Zara Bruxelles"
+                      className="w-full bg-white border border-gray-200 rounded-2xl pl-12 pr-5 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent disabled:bg-gray-100"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Localisation
+                  </label>
+                  <div className="relative">
+                    <MapPin size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={formData.storeLocation}
+                      onChange={(e) => handleChange('storeLocation', e.target.value)}
+                      placeholder="Centre-ville, Bruxelles"
+                      className="w-full bg-white border border-gray-200 rounded-2xl pl-12 pr-5 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent disabled:bg-gray-100"
+                      disabled={loading}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Optionnel — modifiable plus tard</p>
+                </div>
+              </>
+            )}
 
             {/* Email */}
             <div>

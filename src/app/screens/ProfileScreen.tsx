@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { offersService, Offer } from '../services/offersService';
 import { reviewsService } from '../services/reviewsService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Edit2, LogOut, Trash2, AlertTriangle, Plus, Briefcase } from 'lucide-react';
+import { Edit2, LogOut, Trash2, AlertTriangle, Plus, Briefcase, Store, MapPin, BadgeCheck, Star } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
@@ -34,6 +34,11 @@ export function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [userName, setUserName] = useState(user?.name || '');
   const [company, setCompany] = useState<string>(DEFAULT_COMPANY);
+  // Merchant-specific profile fields
+  const isMerchant = user?.accountType === 'merchant';
+  const [storeName, setStoreName] = useState<string>('');
+  const [storeLocation, setStoreLocation] = useState<string>('');
+  const [isVerified, setIsVerified] = useState<boolean>(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -54,11 +59,14 @@ export function ProfileScreen() {
     try {
       const { data } = await supabase
         .from('users')
-        .select('company')
+        .select('company, store_name, store_location, is_verified')
         .eq('id', user.id)
         .maybeSingle();
       const c = ((data as any)?.company || '').trim();
       setCompany(c || DEFAULT_COMPANY);
+      setStoreName(((data as any)?.store_name || user.storeName || '').trim());
+      setStoreLocation(((data as any)?.store_location || user.storeLocation || '').trim());
+      setIsVerified(Boolean((data as any)?.is_verified));
     } catch (err) {
       console.error('Error loading profile extras:', err);
       setCompany(DEFAULT_COMPANY);
@@ -92,24 +100,45 @@ export function ProfileScreen() {
     if (!user) return;
     const trimmedName = userName.trim();
     const trimmedCompany = company.trim() || DEFAULT_COMPANY;
+    const trimmedStoreName = storeName.trim();
+    const trimmedStoreLocation = storeLocation.trim();
     if (!trimmedName) {
       toast.error('Le nom ne peut pas être vide');
       return;
     }
+    if (isMerchant && !trimmedStoreName) {
+      toast.error('Le nom du magasin ne peut pas être vide');
+      return;
+    }
     setSavingProfile(true);
     try {
+      const patch: Record<string, unknown> = {
+        name: trimmedName,
+        updated_at: new Date().toISOString(),
+      };
+      if (isMerchant) {
+        patch.store_name = trimmedStoreName;
+        patch.store_location = trimmedStoreLocation;
+      } else {
+        patch.company = trimmedCompany;
+      }
       const { error } = await supabase
         .from('users')
-        .update({
-          name: trimmedName,
-          company: trimmedCompany,
-          updated_at: new Date().toISOString(),
-        })
+        .update(patch)
         .eq('id', user.id);
       if (error) throw error;
-      // Best-effort sync of auth metadata so the name is reflected on next session.
-      await supabase.auth.updateUser({ data: { name: trimmedName } }).catch(() => undefined);
-      setCompany(trimmedCompany);
+      // Best-effort sync of auth metadata so info is reflected on next session.
+      const meta: Record<string, unknown> = { name: trimmedName };
+      if (isMerchant) {
+        meta.store_name = trimmedStoreName;
+        meta.store_location = trimmedStoreLocation;
+      }
+      await supabase.auth.updateUser({ data: meta }).catch(() => undefined);
+      if (!isMerchant) setCompany(trimmedCompany);
+      else {
+        setStoreName(trimmedStoreName);
+        setStoreLocation(trimmedStoreLocation);
+      }
       setIsEditing(false);
       toast.success('Profil mis à jour');
     } catch (err) {
@@ -220,8 +249,12 @@ export function ProfileScreen() {
             <div className="space-y-5">
               {/* Avatar */}
               <div className="flex flex-col items-center gap-3">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#1FA774] to-[#16865c] flex items-center justify-center shadow-md">
-                  <span className="text-white text-3xl font-bold">{userInitial}</span>
+                <div className={`w-24 h-24 ${isMerchant ? 'rounded-2xl' : 'rounded-full'} bg-gradient-to-br from-[#1FA774] to-[#16865c] flex items-center justify-center shadow-md`}>
+                  {isMerchant ? (
+                    <Store className="text-white" size={36} strokeWidth={1.8} />
+                  ) : (
+                    <span className="text-white text-3xl font-bold">{userInitial}</span>
+                  )}
                 </div>
               </div>
 
@@ -238,22 +271,57 @@ export function ProfileScreen() {
                 />
               </div>
 
-              {/* Company Edit */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Entreprise
-                </label>
-                <input
-                  type="text"
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  placeholder={DEFAULT_COMPANY}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent"
-                />
-                <p className="text-xs text-gray-400 mt-1.5">
-                  Par défaut : {DEFAULT_COMPANY}
-                </p>
-              </div>
+              {/* Company / Store Edit */}
+              {isMerchant ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nom du magasin
+                    </label>
+                    <div className="relative">
+                      <Store size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={storeName}
+                        onChange={(e) => setStoreName(e.target.value)}
+                        placeholder="Zara Bruxelles"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-11 pr-5 py-3.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Localisation
+                    </label>
+                    <div className="relative">
+                      <MapPin size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={storeLocation}
+                        onChange={(e) => setStoreLocation(e.target.value)}
+                        placeholder="Centre-ville, Bruxelles"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-11 pr-5 py-3.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Entreprise
+                  </label>
+                  <input
+                    type="text"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    placeholder={DEFAULT_COMPANY}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-3.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-400 mt-1.5">
+                    Par défaut : {DEFAULT_COMPANY}
+                  </p>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
@@ -277,31 +345,71 @@ export function ProfileScreen() {
             <div>
               {/* Floating avatar (overlaps top of card) */}
               <div className="absolute left-1/2 -translate-x-1/2 -top-12 md:-top-14">
-                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-[#1FA774] to-[#16865c] flex items-center justify-center shadow-xl ring-4 ring-white">
-                  <span className="text-white text-3xl md:text-4xl font-bold">{userInitial}</span>
+                <div className={`w-24 h-24 md:w-28 md:h-28 ${isMerchant ? 'rounded-2xl' : 'rounded-full'} bg-gradient-to-br from-[#1FA774] to-[#16865c] flex items-center justify-center shadow-xl ring-4 ring-white overflow-hidden`}>
+                  {isMerchant ? (
+                    <Store className="text-white" size={44} strokeWidth={1.8} />
+                  ) : (
+                    <span className="text-white text-3xl md:text-4xl font-bold">{userInitial}</span>
+                  )}
                 </div>
               </div>
 
               <div className="text-center">
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1 truncate">
-                  {user.name}
-                </h2>
+                <div className="inline-flex items-center justify-center gap-1.5">
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 truncate">
+                    {isMerchant ? (storeName || user.name) : user.name}
+                  </h2>
+                  {isMerchant && isVerified && (
+                    <span title="Compte vérifié" className="inline-flex items-center text-[#1FA774]">
+                      <BadgeCheck size={20} />
+                    </span>
+                  )}
+                </div>
                 <p className="text-gray-500 text-sm mb-1 truncate">{user.email}</p>
-                <p className="text-gray-600 text-sm mb-3 inline-flex items-center justify-center gap-1.5">
-                  <Briefcase size={13} className="text-gray-400" />
-                  <span className="truncate">{company || DEFAULT_COMPANY}</span>
-                </p>
+                {isMerchant ? (
+                  storeLocation && (
+                    <p className="text-gray-600 text-sm mb-3 inline-flex items-center justify-center gap-1.5">
+                      <MapPin size={13} className="text-gray-400" />
+                      <span className="truncate">{storeLocation}</span>
+                    </p>
+                  )
+                ) : (
+                  <p className="text-gray-600 text-sm mb-3 inline-flex items-center justify-center gap-1.5">
+                    <Briefcase size={13} className="text-gray-400" />
+                    <span className="truncate">{company || DEFAULT_COMPANY}</span>
+                  </p>
+                )}
 
-                {/* Seller Rating */}
-                {sellerRating.reviewCount > 0 && (
-                  <div className="flex justify-center">
-                    <RatingSummary
-                      averageRating={sellerRating.averageRating}
-                      reviewCount={sellerRating.reviewCount}
-                      size="md"
-                      showLabel={true}
-                    />
+                {/* Reputation: rating + review count + verified pill */}
+                {isMerchant ? (
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-50 text-yellow-700 text-sm font-semibold">
+                      <Star size={14} className="fill-yellow-500 text-yellow-500" />
+                      {sellerRating.reviewCount > 0
+                        ? sellerRating.averageRating.toFixed(1)
+                        : '—'}
+                    </span>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-sm">
+                      {sellerRating.reviewCount} avis
+                    </span>
+                    {isVerified && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#e6f6ef] text-[#1FA774] text-sm font-semibold">
+                        <BadgeCheck size={14} />
+                        Vérifié
+                      </span>
+                    )}
                   </div>
+                ) : (
+                  sellerRating.reviewCount > 0 && (
+                    <div className="flex justify-center">
+                      <RatingSummary
+                        averageRating={sellerRating.averageRating}
+                        reviewCount={sellerRating.reviewCount}
+                        size="md"
+                        showLabel={true}
+                      />
+                    </div>
+                  )
                 )}
               </div>
 

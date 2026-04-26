@@ -2,12 +2,25 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '../services/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 
+export type AccountType = 'individual' | 'merchant';
+
+export interface MerchantSignupFields {
+  storeName?: string;
+  storeLocation?: string;
+  storeLogoUrl?: string;
+}
+
 export interface User {
   id: string;
   email: string;
   name: string;
   createdAt: string;
   updatedAt: string;
+  accountType?: AccountType;
+  storeName?: string;
+  storeLogoUrl?: string;
+  storeLocation?: string;
+  isVerified?: boolean;
 }
 
 export interface AuthContextType {
@@ -17,7 +30,14 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   hasSeenWelcome: boolean;
   pendingVerification: boolean;
-  signup: (email: string, password: string, confirmPassword: string, name: string) => Promise<void>;
+  signup: (
+    email: string,
+    password: string,
+    confirmPassword: string,
+    name: string,
+    accountType?: AccountType,
+    merchant?: MerchantSignupFields,
+  ) => Promise<void>;
   signin: (email: string, password: string) => Promise<void>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<void>;
@@ -32,12 +52,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 function sessionToUser(session: Session): User {
   const u = session.user;
   const meta = u.user_metadata || {};
+  const accountType: AccountType =
+    meta.account_type === 'merchant' ? 'merchant' : 'individual';
   return {
     id: u.id,
     email: u.email || '',
     name: meta.name || meta.full_name || '',
     createdAt: u.created_at || '',
     updatedAt: u.updated_at || '',
+    accountType,
+    storeName: meta.store_name || undefined,
+    storeLogoUrl: meta.store_logo_url || undefined,
+    storeLocation: meta.store_location || undefined,
   };
 }
 
@@ -78,17 +104,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (event === 'SIGNED_IN') {
             try {
               const meta = session.user.user_metadata || {};
-              const { data: existing } = await supabase.from('users').select('id').eq('id', session.user.id).single();
+              // Recover any pending merchant profile saved at signup time
+              // (in case email verification was required).
+              let pendingProfile:
+                | { accountType?: AccountType; merchant?: MerchantSignupFields | null }
+                | null = null;
+              try {
+                const raw = localStorage.getItem('pending_signup_profile');
+                if (raw) pendingProfile = JSON.parse(raw);
+              } catch {}
+
+              const accountType: AccountType =
+                pendingProfile?.accountType ||
+                (meta.account_type === 'merchant' ? 'merchant' : 'individual');
+              const m = pendingProfile?.merchant || undefined;
+
+              const { data: existing } = await supabase
+                .from('users')
+                .select('id, account_type')
+                .eq('id', session.user.id)
+                .single();
+
               if (!existing) {
-                await supabase.from('users').insert({
+                const row: Record<string, unknown> = {
                   id: session.user.id,
                   email: session.user.email || '',
                   password: '',
                   name: meta.name || meta.full_name || '',
+                  account_type: accountType,
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
-                });
+                };
+                if (accountType === 'merchant') {
+                  if (m?.storeName || meta.store_name) row.store_name = (m?.storeName || meta.store_name || '').toString().trim();
+                  if (m?.storeLocation || meta.store_location) row.store_location = (m?.storeLocation || meta.store_location || '').toString().trim();
+                  if (m?.storeLogoUrl || meta.store_logo_url) row.store_logo_url = (m?.storeLogoUrl || meta.store_logo_url || '').toString().trim();
+                }
+                await supabase.from('users').insert(row);
+              } else if (pendingProfile && accountType === 'merchant') {
+                // Existing row but we just collected merchant data — patch it.
+                const patch: Record<string, unknown> = {
+                  account_type: 'merchant',
+                  updated_at: new Date().toISOString(),
+                };
+                if (m?.storeName) patch.store_name = m.storeName.trim();
+                if (m?.storeLocation) patch.store_location = m.storeLocation.trim();
+                if (m?.storeLogoUrl) patch.store_logo_url = m.storeLogoUrl.trim();
+                await supabase.from('users').update(patch).eq('id', session.user.id);
               }
+
+              // Clear the one-shot pending profile.
+              if (pendingProfile) localStorage.removeItem('pending_signup_profile');
             } catch (err) {
               console.error('Auto sync-profile error:', err);
             }
@@ -103,19 +169,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signup = async (email: string, password: string, confirmPassword: string, name: string) => {
+  const signup = async (
+    email: string,
+    password: string,
+    confirmPassword: string,
+    name: string,
+    accountType: AccountType = 'individual',
+    merchant?: MerchantSignupFields,
+  ) => {
     if (password !== confirmPassword) {
       throw new Error('Les mots de passe ne correspondent pas');
     }
     if (password.length < 6) {
       throw new Error('Le mot de passe doit contenir au moins 6 caractères');
     }
+    if (accountType === 'merchant') {
+      if (!merchant?.storeName?.trim()) {
+        throw new Error('Le nom du magasin est requis');
+      }
+    }
+
+    const metadata: Record<string, unknown> = {
+      name,
+      account_type: accountType,
+    };
+    if (accountType === 'merchant' && merchant) {
+      if (merchant.storeName) metadata.store_name = merchant.storeName.trim();
+      if (merchant.storeLocation) metadata.store_location = merchant.storeLocation.trim();
+      if (merchant.storeLogoUrl) metadata.store_logo_url = merchant.storeLogoUrl.trim();
+    }
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name },
+        data: metadata,
         emailRedirectTo: `${window.location.origin}/`,
       },
     });
@@ -129,8 +217,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (!data.session) {
-      // Email confirmation required — save pending state
+      // Email confirmation required — save pending state.
+      // Persist intended profile so we can write it to the users table after
+      // the user confirms their email and signs in for the first time.
       localStorage.setItem('pending_verification_email', email);
+      try {
+        localStorage.setItem(
+          'pending_signup_profile',
+          JSON.stringify({ accountType, merchant: merchant || null }),
+        );
+      } catch {}
       setPendingVerification(true);
       return;
     }
@@ -138,15 +234,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Ensure user row exists in users table
     try {
       const { data: existing } = await supabase.from('users').select('id').eq('id', data.session.user.id).single();
+      const baseRow: Record<string, unknown> = {
+        id: data.session.user.id,
+        email: data.session.user.email || '',
+        password: '',
+        name,
+        account_type: accountType,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      if (accountType === 'merchant' && merchant) {
+        if (merchant.storeName) baseRow.store_name = merchant.storeName.trim();
+        if (merchant.storeLocation) baseRow.store_location = merchant.storeLocation.trim();
+        if (merchant.storeLogoUrl) baseRow.store_logo_url = merchant.storeLogoUrl.trim();
+      }
       if (!existing) {
-        await supabase.from('users').insert({
-          id: data.session.user.id,
-          email: data.session.user.email || '',
-          password: '',
-          name,
-          created_at: new Date().toISOString(),
+        await supabase.from('users').insert(baseRow);
+      } else {
+        // Row already there (race) — patch the type-related fields.
+        const patch: Record<string, unknown> = {
+          account_type: accountType,
           updated_at: new Date().toISOString(),
-        });
+        };
+        if (accountType === 'merchant' && merchant) {
+          if (merchant.storeName) patch.store_name = merchant.storeName.trim();
+          if (merchant.storeLocation) patch.store_location = merchant.storeLocation.trim();
+          if (merchant.storeLogoUrl) patch.store_logo_url = merchant.storeLogoUrl.trim();
+        }
+        await supabase.from('users').update(patch).eq('id', data.session.user.id);
       }
     } catch (err) {
       console.error('Profile sync error:', err);

@@ -6,7 +6,7 @@ import { offersService, Offer } from '../services/offersService';
 import { reviewsService } from '../services/reviewsService';
 import { supabase } from '../services/supabaseClient';
 import { motion } from 'motion/react';
-import { ArrowLeft, Package, Briefcase, EyeOff, Star } from 'lucide-react';
+import { ArrowLeft, Package, Briefcase, EyeOff, Star, Store, MapPin, BadgeCheck } from 'lucide-react';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
 
 interface PublicUser {
@@ -17,6 +17,11 @@ interface PublicUser {
   isProfilePublic: boolean;
   showWorkInfo: boolean;
   createdAt: string;
+  accountType: 'individual' | 'merchant';
+  storeName: string;
+  storeLocation: string;
+  storeLogoUrl: string;
+  isVerified: boolean;
 }
 
 export function PublicProfileScreen() {
@@ -38,7 +43,7 @@ export function PublicProfileScreen() {
       // Fetch user info
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, name, company, job_title, is_profile_public, show_work_info, created_at')
+        .select('id, name, company, job_title, is_profile_public, show_work_info, created_at, account_type, store_name, store_location, store_logo_url, is_verified')
         .eq('id', userId)
         .single();
 
@@ -61,6 +66,11 @@ export function PublicProfileScreen() {
         isProfilePublic: userData.is_profile_public ?? true,
         showWorkInfo: userData.show_work_info ?? true,
         createdAt: userData.created_at,
+        accountType: (userData as any).account_type === 'merchant' ? 'merchant' : 'individual',
+        storeName: (userData as any).store_name || '',
+        storeLocation: (userData as any).store_location || '',
+        storeLogoUrl: (userData as any).store_logo_url || '',
+        isVerified: Boolean((userData as any).is_verified),
       });
 
       // Fetch user's active offers + aggregated seller rating
@@ -127,17 +137,51 @@ export function PublicProfileScreen() {
             className="bg-white rounded-2xl p-6 md:p-8 shadow-sm mb-6"
           >
             <div className="flex items-center gap-4 md:gap-6">
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#1FA774] flex items-center justify-center">
-                <span className="text-white text-2xl md:text-3xl font-bold">{userInitial}</span>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">{user.name}</h2>
-                {user.showWorkInfo && (user.jobTitle || user.company) && (
-                  <p className="text-gray-600 text-sm mb-1 flex items-center gap-1">
-                    <Briefcase size={14} />
-                    {user.jobTitle}{user.jobTitle && user.company ? ' à ' : ''}{user.company}
-                  </p>
+              {user.accountType === 'merchant' ? (
+                user.storeLogoUrl ? (
+                  <img
+                    src={user.storeLogoUrl}
+                    alt=""
+                    className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover bg-gray-100"
+                  />
+                ) : (
+                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-[#1FA774] to-[#16865c] flex items-center justify-center">
+                    <Store size={36} className="text-white" strokeWidth={1.8} />
+                  </div>
+                )
+              ) : (
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#1FA774] flex items-center justify-center">
+                  <span className="text-white text-2xl md:text-3xl font-bold">{userInitial}</span>
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 truncate">
+                    {user.accountType === 'merchant' ? (user.storeName || user.name) : user.name}
+                  </h2>
+                  {user.accountType === 'merchant' && user.isVerified && (
+                    <span title="Compte vérifié" className="inline-flex items-center text-[#1FA774]">
+                      <BadgeCheck size={20} />
+                    </span>
+                  )}
+                </div>
+
+                {user.accountType === 'merchant' ? (
+                  user.storeLocation && (
+                    <p className="text-gray-600 text-sm mb-1 flex items-center gap-1">
+                      <MapPin size={14} />
+                      {user.storeLocation}
+                    </p>
+                  )
+                ) : (
+                  user.showWorkInfo && (user.jobTitle || user.company) && (
+                    <p className="text-gray-600 text-sm mb-1 flex items-center gap-1">
+                      <Briefcase size={14} />
+                      {user.jobTitle}{user.jobTitle && user.company ? ' à ' : ''}{user.company}
+                    </p>
+                  )
                 )}
+
                 <p className="text-gray-400 text-sm">Membre depuis {joinDate}</p>
                 <p className="text-gray-500 text-sm mt-1 flex items-center gap-1">
                   <Package size={14} />
