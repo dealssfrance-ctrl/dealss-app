@@ -380,33 +380,35 @@ export function ChatScreen() {
     if (!user || !conversation || sending) return;
     setActionsOpen(false);
 
-    // Guard: requester must own at least one offer to be allowed to ask for a review.
+    // The requester asks the other party to review one of THEIR OWN offers.
+    // Pick the requester's most recent offer.
+    let myOffer: Awaited<ReturnType<typeof offersService.getMyOffers>>['data'][number] | undefined;
     try {
       const myOffersResp = await offersService.getMyOffers(user.id);
-      if (!myOffersResp.data || myOffersResp.data.length === 0) {
+      const list = myOffersResp.data || [];
+      if (list.length === 0) {
         toast.error("Impossible de demander un avis si tu n'as pas d'offre");
         return;
       }
+      myOffer = list[0];
     } catch (err) {
       console.error('Error checking user offers:', err);
       toast.error("Impossible de vérifier vos offres pour le moment");
       return;
     }
 
+    if (!myOffer) {
+      toast.error("Aucune offre disponible pour la demande d'avis");
+      return;
+    }
+
     setSending(true);
     try {
-      // Use the offer attached to the conversation as target.
-      const offerResp = await offersService.getOfferById(conversation.offerId);
-      if (!offerResp.success || !offerResp.data) {
-        toast.error("Offre introuvable pour cette conversation");
-        return;
-      }
-      const offer = offerResp.data;
       const payload: ReviewRequestPayload = {
-        offerId: offer.id,
-        offerTitle: offer.storeName,
-        offerImageUrl: offer.imageUrl,
-        discount: offer.discount,
+        offerId: myOffer.id,
+        offerTitle: myOffer.storeName,
+        offerImageUrl: myOffer.imageUrl,
+        discount: myOffer.discount,
       };
       // Materialize the conversation on first interaction (draft → persisted).
       const convId = await ensureConversation();
