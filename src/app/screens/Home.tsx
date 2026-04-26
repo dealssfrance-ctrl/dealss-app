@@ -341,17 +341,17 @@ export function Home() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mx-5 md:mx-8 lg:mx-10 mb-6 bg-gradient-to-br from-[#1FA774] to-[#0f5f42] rounded-3xl p-6 md:p-8 lg:p-10 text-white overflow-hidden relative"
+          className="mx-5 md:mx-8 lg:mx-10 mb-6 bg-gradient-to-br from-[#1FA774] to-[#0f5f42] rounded-3xl px-5 py-5 md:px-8 md:py-6 lg:px-10 lg:py-7 text-white overflow-hidden relative"
         >
           {/* Decorative background shapes */}
-          <div className="absolute -right-10 -bottom-16 w-72 h-72 bg-white/5 rounded-full" />
-          <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/5 rounded-full" />
+          <div className="absolute -right-10 -bottom-16 w-64 h-64 bg-white/5 rounded-full" />
+          <div className="absolute -right-20 -top-20 w-56 h-56 bg-white/5 rounded-full" />
 
-          <div className="relative z-10 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 md:gap-8 items-center">
+          <div className="relative z-10 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 md:gap-6 items-center">
             {/* Left: Text content */}
             <div className="min-w-0">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 mb-4">
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1 mb-3">
                 <span className="flex items-center justify-center w-5 h-5 rounded bg-[#1FA774] text-white">
                   <Percent size={12} strokeWidth={3} />
                 </span>
@@ -359,37 +359,37 @@ export function Home() {
               </div>
 
               {/* Headline */}
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-1">
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight mb-0.5">
                 Les meilleurs deals
               </h2>
-              <h3 className="text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight text-[#7ee5b1] mb-4">
+              <h3 className="text-xl md:text-2xl lg:text-3xl font-extrabold leading-tight text-[#7ee5b1] mb-3">
                 entre employés, près de toi.
               </h3>
 
               {/* Subtitle */}
-              <p className="text-white/90 text-sm md:text-base mb-5 max-w-md">
+              <p className="text-white/90 text-sm mb-4 max-w-md">
                 Échange, découvre et profite de réductions{' '}
                 <span className="text-[#7ee5b1] font-semibold">jusqu'à -70%&nbsp;!</span>
               </p>
 
               {/* Features */}
-              <div className="flex flex-wrap gap-x-5 gap-y-3 mb-5">
-                <div className="flex items-start gap-2.5 min-w-[130px]">
-                  <Shield size={20} className="text-[#7ee5b1] mt-0.5 shrink-0" />
+              <div className="flex flex-wrap gap-x-5 gap-y-2.5">
+                <div className="flex items-start gap-2 min-w-[130px]">
+                  <Shield size={18} className="text-[#7ee5b1] mt-0.5 shrink-0" />
                   <div>
                     <div className="text-sm font-semibold leading-tight">Communauté<br />fiable</div>
                     <div className="text-xs text-white/70 mt-0.5">Profils vérifiés et notés</div>
                   </div>
                 </div>
-                <div className="flex items-start gap-2.5 min-w-[130px] md:border-l md:border-white/15 md:pl-5">
-                  <RefreshCw size={20} className="text-[#7ee5b1] mt-0.5 shrink-0" />
+                <div className="flex items-start gap-2 min-w-[130px] md:border-l md:border-white/15 md:pl-5">
+                  <RefreshCw size={18} className="text-[#7ee5b1] mt-0.5 shrink-0" />
                   <div>
                     <div className="text-sm font-semibold leading-tight">Échange<br />facile</div>
                     <div className="text-xs text-white/70 mt-0.5">Deals sécurisés et validés</div>
                   </div>
                 </div>
-                <div className="flex items-start gap-2.5 min-w-[130px] md:border-l md:border-white/15 md:pl-5">
-                  <MapPin size={20} className="text-[#7ee5b1] mt-0.5 shrink-0" />
+                <div className="flex items-start gap-2 min-w-[130px] md:border-l md:border-white/15 md:pl-5">
+                  <MapPin size={18} className="text-[#7ee5b1] mt-0.5 shrink-0" />
                   <div>
                     <div className="text-sm font-semibold leading-tight">Près de toi</div>
                     <div className="text-xs text-white/70 mt-0.5">Trouve des deals dans ton quartier</div>
@@ -398,41 +398,15 @@ export function Home() {
               </div>
             </div>
 
-            {/* Right: Decorative illustration */}
-            <div className="hidden md:flex relative w-56 lg:w-64 h-56 lg:h-64 items-center justify-center shrink-0">
-              {/* Soft glow */}
-              <div className="absolute inset-0 bg-white/5 rounded-full blur-2xl" />
-
-              {/* Sparkles */}
-              <span className="absolute top-2 left-4 text-2xl drop-shadow-lg select-none" aria-hidden="true">✨</span>
-              <span className="absolute top-8 right-2 text-xl drop-shadow-lg select-none" aria-hidden="true">✨</span>
-              <span className="absolute bottom-6 left-2 text-lg drop-shadow-lg select-none" aria-hidden="true">✨</span>
-
-              {/* Main shopping bag emoji */}
-              <span
-                className="relative text-[140px] lg:text-[170px] leading-none select-none drop-shadow-2xl"
+            {/* Right: Shopping bag illustration */}
+            <div className="hidden md:flex relative w-44 lg:w-52 items-center justify-center shrink-0">
+              <img
+                src="/hero-bag.png"
+                alt=""
                 aria-hidden="true"
-                style={{ filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.35))' }}
-              >
-                🛍️
-              </span>
-
-              {/* Gift box emoji bottom-left */}
-              <span
-                className="absolute bottom-2 left-4 text-5xl lg:text-6xl select-none"
-                aria-hidden="true"
-                style={{ filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.35))' }}
-              >
-                🎁
-              </span>
-
-              {/* Discount badges */}
-              <div className="absolute top-0 right-0 bg-[#0f3a28] text-white text-sm font-bold px-3.5 py-1.5 rounded-full shadow-xl border border-white/10">
-                -40%
-              </div>
-              <div className="absolute bottom-4 -right-1 bg-[#0f3a28] text-white text-sm font-bold px-3.5 py-1.5 rounded-full shadow-xl border border-white/10">
-                -70%
-              </div>
+                className="w-full h-auto select-none pointer-events-none drop-shadow-2xl"
+                draggable={false}
+              />
             </div>
           </div>
         </motion.div>
