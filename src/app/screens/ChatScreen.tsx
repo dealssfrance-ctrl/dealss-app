@@ -634,6 +634,39 @@ export function ChatScreen() {
         rating,
         comment,
       });
+      // Also post the review as a chat message so the requester sees it in
+      // the thread. Pick the sibling conversation that matches the offer
+      // being reviewed (falls back to the current conversationId).
+      try {
+        const targetConvId =
+          Object.entries(conversationsMeta).find(
+            ([, m]) => m.offerId === activeReviewPayload.offerId,
+          )?.[0] || conversationId;
+        if (targetConvId) {
+          const optimistic: ChatMessage = {
+            id: `temp-rv-${Date.now()}`,
+            conversationId: targetConvId,
+            senderId: user.id,
+            messageType: 'review',
+            reviewRating: rating,
+            reviewComment: comment || undefined,
+            createdAt: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, optimistic]);
+          scrollToBottom();
+          const resp = await chatService.sendReview(targetConvId, user.id, rating, comment);
+          setMessages((prev) => {
+            const filtered = prev.filter(
+              (m) => m.id !== optimistic.id && m.id !== resp.data.id,
+            );
+            return [...filtered, resp.data];
+          });
+          lastMessageTimeRef.current = resp.data.createdAt;
+        }
+      } catch (chatErr) {
+        // Non-blocking: review is saved even if chat broadcast fails.
+        console.error('Failed to post review chat message:', chatErr);
+      }
       setSubmittedOfferIds((prev) => {
         const next = new Set(prev);
         next.add(activeReviewPayload.offerId);
