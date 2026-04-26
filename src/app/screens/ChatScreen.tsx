@@ -156,7 +156,15 @@ export function ChatScreen() {
         });
       } else if (isInitial) {
         // Initial load — most recent N messages.
-        setMessages(response.data);
+        // Preserve any in-flight optimistic messages (temp-*) that may have
+        // been added between conversation materialization and this fetch
+        // (e.g. the very first message sent in a draft conversation).
+        setMessages((prev) => {
+          const optimistic = prev.filter((m) => m.id.startsWith('temp-'));
+          if (optimistic.length === 0) return response.data;
+          const seen = new Set(response.data.map((m) => m.id));
+          return [...response.data, ...optimistic.filter((m) => !seen.has(m.id))];
+        });
         setHasMoreOlder(Boolean(response.hasMore));
         setTimeout(scrollToBottom, 100);
       }
