@@ -60,6 +60,7 @@ export interface Offer {
   description: string;
   category: string;
   imageUrl: string;
+  imageUrls: string[];
   status: 'active' | 'inactive' | 'pending';
   createdAt: string;
   updatedAt: string;
@@ -151,6 +152,40 @@ function sanitizeImageUrl(value: unknown): string {
 
   if (/^https?:\/\//i.test(raw)) return raw;
   return '';
+}
+
+/**
+ * Parse a stored image_url field into an array of URLs.
+ * Accepts: JSON array string, comma-separated string, or single URL.
+ */
+function parseImageList(value: unknown): string[] {
+  const raw = String(value ?? '').trim();
+  if (!raw) return [];
+
+  // JSON array
+  if (raw.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item) => sanitizeImageUrl(item))
+          .filter((u) => u.length > 0 && !u.startsWith('['));
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  // Comma-separated
+  if (raw.includes(',') && !raw.startsWith('http')) {
+    return raw
+      .split(',')
+      .map((p) => sanitizeImageUrl(p))
+      .filter((u) => u.length > 0 && !u.startsWith('['));
+  }
+
+  const single = sanitizeImageUrl(raw);
+  return single ? [single] : [];
 }
 
 function toOffer(r: any): Offer {
