@@ -11,7 +11,6 @@ import { offersService, Offer } from '../services/offersService';
 import { OfferCardGridSkeleton, CategoryTabsSkeleton, LoadMoreSkeleton } from '../components/Skeleton';
 import { StarRating } from '../components/StarRating';
 import { getCategoryImage } from '../constants/categoryImages';
-import logoSac from '../../imports/logo-sac.png';
 
 /**
  * Returns the first usable image URL from an offer's `imageUrl` field, which
@@ -373,8 +372,8 @@ export function Home() {
                 <span className="text-[#7ee5b1] font-semibold">jusqu'à -70%&nbsp;!</span>
               </p>
 
-              {/* Features */}
-              <div className="flex flex-wrap gap-x-5 gap-y-2.5">
+              {/* Features (hidden on mobile to keep banner compact) */}
+              <div className="hidden md:flex flex-wrap gap-x-5 gap-y-2.5">
                 <div className="flex items-start gap-2 min-w-[130px]">
                   <Shield size={18} className="text-[#7ee5b1] mt-0.5 shrink-0" />
                   <div>
@@ -399,15 +398,41 @@ export function Home() {
               </div>
             </div>
 
-            {/* Right: Shopping bag illustration */}
-            <div className="hidden md:flex relative w-44 lg:w-52 items-center justify-center shrink-0">
-              <img
-                src={logoSac}
-                alt=""
+            {/* Right: Decorative illustration */}
+            <div className="hidden md:flex relative w-56 lg:w-64 h-56 lg:h-64 items-center justify-center shrink-0">
+              {/* Soft glow */}
+              <div className="absolute inset-0 bg-white/5 rounded-full blur-2xl" />
+
+              {/* Sparkles */}
+              <span className="absolute top-2 left-4 text-2xl drop-shadow-lg select-none" aria-hidden="true">✨</span>
+              <span className="absolute top-8 right-2 text-xl drop-shadow-lg select-none" aria-hidden="true">✨</span>
+              <span className="absolute bottom-6 left-2 text-lg drop-shadow-lg select-none" aria-hidden="true">✨</span>
+
+              {/* Main shopping bag emoji */}
+              <span
+                className="relative text-[140px] lg:text-[170px] leading-none select-none drop-shadow-2xl"
                 aria-hidden="true"
-                className="w-full h-auto select-none pointer-events-none drop-shadow-2xl"
-                draggable={false}
-              />
+                style={{ filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.35))' }}
+              >
+                🛍️
+              </span>
+
+              {/* Gift box emoji bottom-left */}
+              <span
+                className="absolute bottom-2 left-4 text-5xl lg:text-6xl select-none"
+                aria-hidden="true"
+                style={{ filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.35))' }}
+              >
+                🎁
+              </span>
+
+              {/* Discount badges */}
+              <div className="absolute top-0 right-0 bg-[#0f3a28] text-white text-sm font-bold px-3.5 py-1.5 rounded-full shadow-xl border border-white/10">
+                -40%
+              </div>
+              <div className="absolute bottom-4 -right-1 bg-[#0f3a28] text-white text-sm font-bold px-3.5 py-1.5 rounded-full shadow-xl border border-white/10">
+                -70%
+              </div>
             </div>
           </div>
         </motion.div>
