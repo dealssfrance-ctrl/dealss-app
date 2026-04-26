@@ -112,6 +112,15 @@ export function ChatScreen() {
               discount: res.data.discount,
               imageUrl: res.data.imageUrl,
             });
+            // If we still don't know the seller's display name, use the one
+            // attached to the offer record.
+            if (res.data.userName) {
+              setConversation((prev) =>
+                prev && !prev.otherUserName
+                  ? { ...prev, otherUserName: res.data.userName as string }
+                  : prev,
+              );
+            }
           }
         })
         .catch(() => { /* non-blocking */ });
@@ -440,8 +449,15 @@ export function ChatScreen() {
 
     try {
       const response = await chatService.sendMessage(convId, user.id, text);
-      // Replace optimistic message with real one
-      setMessages(prev => prev.map(m => m.id === optimisticMsg.id ? response.data : m));
+      // Replace optimistic message with real one. Use a dedupe-by-id pass so
+      // we don't end up with two rows when an in-flight initial fetch already
+      // pulled the persisted message.
+      setMessages((prev) => {
+        const filtered = prev.filter(
+          (m) => m.id !== optimisticMsg.id && m.id !== response.data.id,
+        );
+        return [...filtered, response.data];
+      });
       lastMessageTimeRef.current = response.data.createdAt;
     } catch (error) {
       // Remove optimistic message on failure
@@ -482,7 +498,12 @@ export function ChatScreen() {
       // Upload file to Supabase storage; store the public URL, not a base64 blob
       const imageUrl = await chatService.uploadChatImage(file);
       const response = await chatService.sendMessage(convId, user.id, undefined, imageUrl);
-      setMessages(prev => prev.map(m => m.id === optimistic.id ? response.data : m));
+      setMessages((prev) => {
+        const filtered = prev.filter(
+          (m) => m.id !== optimistic.id && m.id !== response.data.id,
+        );
+        return [...filtered, response.data];
+      });
       lastMessageTimeRef.current = response.data.createdAt;
     } catch (error) {
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
