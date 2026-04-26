@@ -95,7 +95,7 @@ export function OfferGallery({ imageUrl, storeName, onImageError }: OfferGallery
   };
   
   return (
-    <div className="flex gap-3 h-full">
+    <div className="flex gap-3 items-start">
       {/* Thumbnails - Left side (vertical on desktop, hidden on mobile) */}
       {validImages.length > 1 && (
         <div className="hidden md:flex flex-col gap-2">
@@ -122,7 +122,7 @@ export function OfferGallery({ imageUrl, storeName, onImageError }: OfferGallery
       )}
       
       {/* Main image area */}
-      <div className="flex-1 relative bg-gray-100 rounded-2xl overflow-hidden group">
+      <div className="flex-1 relative rounded-2xl overflow-hidden group">
         <motion.img
           key={safeIndex}
           src={currentImage}
@@ -131,7 +131,7 @@ export function OfferGallery({ imageUrl, storeName, onImageError }: OfferGallery
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="w-full h-full object-cover cursor-zoom-in group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-auto max-h-[80vh] object-contain block"
           onError={() => handleImageError(safeIndex)}
         />
         

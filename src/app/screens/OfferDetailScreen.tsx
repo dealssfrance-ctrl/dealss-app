@@ -268,7 +268,7 @@ export function OfferDetailScreen() {
           {/* Desktop: side-by-side layout */}
           <div className="md:flex md:gap-0">
             {/* Gallery */}
-            <div className="relative w-full md:w-1/2 h-80 md:h-auto md:min-h-[600px] bg-gray-100 overflow-hidden md:rounded-3xl md:m-8 md:mr-0 md:sticky md:top-20 md:self-start md:shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
+            <div className="relative w-full md:w-1/2 md:m-8 md:mr-0 md:sticky md:top-20 md:self-start">
               <OfferGallery imageUrl={offer.imageUrl} storeName={offer.storeName} />
 
               {/* Mobile share button overlay */}
