@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Edit2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { Offer } from '../services/offersService';
+import { RatingSummary } from './RatingSummary';
 
 interface UserOfferCardProps {
   offer: Offer;
@@ -12,7 +13,35 @@ interface UserOfferCardProps {
 export function UserOfferCard({ offer, onDelete }: UserOfferCardProps) {
   const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
-  const showImage = Boolean(offer.imageUrl) && !imageError;
+
+  // Parse first image from potentially multi-image URL
+  const getFirstImage = (imageUrl?: string): string | undefined => {
+    if (!imageUrl) return undefined;
+    
+    const trimmed = imageUrl.trim();
+    
+    // Try JSON array first
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'string') {
+          return parsed[0];
+        }
+      } catch {
+        // Fall through to single URL parsing
+      }
+    }
+    
+    // Return single URL if valid
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+    
+    return undefined;
+  };
+
+  const imageUrl = getFirstImage(offer.imageUrl);
+  const showImage = Boolean(imageUrl) && !imageError;
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -39,7 +68,7 @@ export function UserOfferCard({ offer, onDelete }: UserOfferCardProps) {
           <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
             {showImage ? (
               <img
-                src={offer.imageUrl}
+                src={imageUrl}
                 alt={offer.storeName}
                 className="w-full h-full object-cover"
                 onError={() => setImageError(true)}
@@ -59,6 +88,18 @@ export function UserOfferCard({ offer, onDelete }: UserOfferCardProps) {
             <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full mb-3">
               {offer.category}
             </span>
+
+            {/* Offer Rating */}
+            {offer.reviewCount !== undefined && offer.reviewCount > 0 && (
+              <div className="mb-3">
+                <RatingSummary
+                  averageRating={offer.averageRating || 0}
+                  reviewCount={offer.reviewCount}
+                  size="sm"
+                  showLabel={true}
+                />
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex gap-2">

@@ -16,6 +16,11 @@ export interface ReviewsResponse {
   rating: { average: number; count: number };
 }
 
+export interface SellerRating {
+  averageRating: number;
+  reviewCount: number;
+}
+
 function toReview(r: any): Review {
   return {
     id: r.id,
@@ -43,6 +48,67 @@ export const reviewsService = {
     return { success: true, data: reviews, rating: { average: avg, count: reviews.length } };
   },
 
+  // Get seller rating by aggregating all reviews for offers from a specific seller
+  async getSellerRating(sellerId: string): Promise<SellerRating> {
+    try {
+      // Get all offers from this seller
+      const { data: offers, error: offersError } = await supabase
+        .from('offers')
+        .select('id')
+        .eq('user_id', sellerId);
+      
+      if (offersError || !offers || offers.length === 0) {
+        return { averageRating: 0, reviewCount: 0 };
+      }
+
+      const offerIds = offers.map((o) => o.id);
+
+      // Get all reviews for these offers
+      const { data: reviews, error: reviewsError } = await supabase
+        .from('reviews')
+        .select('rating')
+        .in('offer_id', offerIds);
+
+      if (reviewsError || !reviews || reviews.length === 0) {
+        return { averageRating: 0, reviewCount: 0 };
+      }
+
+      const avg = Math.round(
+        (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length) * 10
+      ) / 10;
+
+      return { averageRating: avg, reviewCount: reviews.length };
+    } catch (error) {
+      console.error('Error getting seller rating:', error);
+      return { averageRating: 0, reviewCount: 0 };
+    }
+  },
+
+  // Check if user has already reviewed an offer
+  async hasUserReviewedOffer(
+    offerId: string,
+    userId: string
+  ): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('id')
+        .eq('offer_id', offerId)
+        .eq('user_id', userId)
+        .single();
+      
+      if (error?.code === 'PGRST116') {
+        // No rows found
+        return false;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('Error checking review:', error);
+      return false;
+    }
+  },
+
   async createReview(review: {
     offerId: string;
     userId: string;
@@ -50,6 +116,15 @@ export const reviewsService = {
     rating: number;
     comment?: string;
   }): Promise<{ success: boolean; data: Review }> {
+    // Check for duplicate review
+    const hasReviewed = await this.hasUserReviewedOffer(
+      review.offerId,
+      review.userId
+    );
+    if (hasReviewed) {
+      throw new Error('Vous avez déjà évalué cette offre');
+    }
+
     const row = {
       id: `rev_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`,
       offer_id: review.offerId,

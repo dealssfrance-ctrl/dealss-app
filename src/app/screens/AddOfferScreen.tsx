@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
-import { ArrowLeft, Camera, X, Loader2 } from 'lucide-react';
+import { MultiImageUploader } from '../components/MultiImageUploader';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { offersService } from '../services/offersService';
@@ -29,8 +30,7 @@ export function AddOfferScreen() {
     description: '',
     category: ''
   });
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -87,12 +87,14 @@ export function AddOfferScreen() {
       setLoading(true);
       setUploadProgress(0);
       
-      // Upload image to Supabase Storage if a file was selected
+      // Upload images to Supabase Storage if files were selected
       let imageUrl = '';
-      if (imageFile) {
-        imageUrl = await offersService.uploadImage(imageFile, (percent) => {
+      if (selectedFiles.length > 0) {
+        const imageUrls = await offersService.uploadMultipleImages(selectedFiles, (percent) => {
           setUploadProgress(percent);
         });
+        // Store as JSON array for multi-image support
+        imageUrl = JSON.stringify(imageUrls);
       }
       
       await offersService.createOffer({
@@ -122,27 +124,6 @@ export function AddOfferScreen() {
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('L\'image ne doit pas dépasser 5 Mo');
-        return;
-      }
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeImage = () => {
-    setImagePreview(null);
-    setImageFile(null);
-  };
-
   return (
     <Layout>
     <div className="min-h-screen bg-gray-50 pb-6 md:pb-6">
@@ -165,39 +146,16 @@ export function AddOfferScreen() {
         className="max-w-2xl mx-auto px-5 md:px-8 py-6"
       >
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Photo Upload */}
+          {/* Photo Upload - Multi-image */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Photo <span className="text-gray-400">(optionnel)</span>
+              Photos <span className="text-gray-400">(optionnel)</span>
             </label>
-            {imagePreview ? (
-              <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-gray-100">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="absolute top-3 right-3 bg-black/50 text-white p-2 rounded-full backdrop-blur-sm hover:bg-black/70 transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            ) : (
-              <label className="w-full h-48 flex flex-col items-center justify-center bg-white border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer hover:bg-gray-50 hover:border-[#1FA774] transition-colors">
-                <Camera size={40} className="text-gray-400 mb-2" />
-                <span className="text-sm font-medium text-gray-600">Ajouter une photo</span>
-                <span className="text-xs text-gray-400 mt-1">Appuyez pour télécharger</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-              </label>
-            )}
+            <MultiImageUploader
+              onImagesSelected={setSelectedFiles}
+              isLoading={loading}
+              uploadProgress={uploadProgress}
+            />
           </div>
 
           {/* Store Name */}
@@ -290,46 +248,25 @@ export function AddOfferScreen() {
             </p>
           </div>
 
-          {/* Upload Progress */}
-          {loading && imageFile && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="space-y-2"
-            >
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600 font-medium">
-                  {uploadProgress < 100 ? 'Téléchargement de l\'image...' : 'Création de l\'offre...'}
-                </span>
-                <span className="text-[#1FA774] font-semibold">{uploadProgress}%</span>
-              </div>
-              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-[#1FA774] rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${uploadProgress}%` }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
-                />
-              </div>
-            </motion.div>
-          )}
-
           {/* Submit Button */}
-          <div className="pt-4">
-            <Button type="submit" disabled={loading}>
+          <motion.div whileTap={{ scale: 0.98 }}>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#1FA774] text-white py-4 rounded-2xl font-semibold text-lg hover:bg-[#16A15C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
+                <>
                   <Loader2 size={20} className="animate-spin" />
-                  {imageFile && uploadProgress < 100 ? `Téléchargement ${uploadProgress}%` : 'Publication en cours...'}
-                </span>
+                  Publication...
+                </>
               ) : (
                 'Publier l\'offre'
               )}
-            </Button>
-          </div>
+            </button>
+          </motion.div>
         </form>
       </motion.div>
-
     </div>
     </Layout>
   );

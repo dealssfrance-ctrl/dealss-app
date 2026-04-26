@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, MessageCircle, Star } from 'lucide-react';
+import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { Button } from '../components/Button';
-import { StarRating } from '../components/StarRating';
+import { OfferGallery } from '../components/OfferGallery';
+import { RatingSummary } from '../components/RatingSummary';
 import { OfferReviewModal } from '../components/OfferReviewModal';
 import { ReviewsList } from '../components/ReviewsList';
 import { ReviewInput } from '../components/ReviewInput';
 import { useAuth } from '../context/AuthContext';
 import { offersService, Offer } from '../services/offersService';
 import { chatService } from '../services/chatService';
-import { reviewsService, Review } from '../services/reviewsService';
+import { reviewsService } from '../services/reviewsService';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import { OfferDetailSkeleton } from '../components/Skeleton';
@@ -31,10 +32,10 @@ export function OfferDetailScreen() {
   const { user } = useAuth();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
   const [isOfferReviewModalOpen, setIsOfferReviewModalOpen] = useState(false);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [offerRating, setOfferRating] = useState<{ average: number; count: number }>({ average: 0, count: 0 });
+  const [sellerRating, setSellerRating] = useState<{ averageRating: number; reviewCount: number }>({ averageRating: 0, reviewCount: 0 });
 
   const isOwnOffer = offer?.userId === user?.id;
 
@@ -50,6 +51,15 @@ export function OfferDetailScreen() {
     }
   };
 
+  const fetchSellerRating = async (sellerId: string) => {
+    try {
+      const rating = await reviewsService.getSellerRating(sellerId);
+      setSellerRating(rating);
+    } catch (error) {
+      console.error('Error fetching seller rating:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchOffer = async () => {
       if (!id) return;
@@ -59,6 +69,7 @@ export function OfferDetailScreen() {
         if (response.success) {
           setOffer(response.data);
           await fetchReviews(id);
+          await fetchSellerRating(response.data.userId);
         }
       } catch (error) {
         console.error('Error fetching offer:', error);
@@ -117,8 +128,10 @@ export function OfferDetailScreen() {
       });
       toast.success('Merci pour votre avis ! ⭐');
       await fetchReviews(offer.id);
+      await fetchSellerRating(offer.userId);
     } catch (error) {
-      toast.error('Erreur lors de l\'envoi de l\'avis');
+      const msg = error instanceof Error ? error.message : 'Erreur';
+      toast.error(msg);
     }
   };
 
@@ -141,20 +154,12 @@ export function OfferDetailScreen() {
       >
         {/* Desktop: side-by-side layout */}
         <div className="md:flex md:gap-0">
-        {/* Store Image */}
+        {/* Gallery */}
         <div className="w-full md:w-1/2 h-72 md:h-auto md:min-h-[500px] bg-gray-100 overflow-hidden md:rounded-2xl md:m-8 md:mr-0 md:sticky md:top-20 md:self-start">
-          {offer.imageUrl && !imageError ? (
-            <img
-              src={offer.imageUrl}
-              alt={offer.storeName}
-              className="w-full h-full object-cover"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
-              Image indisponible
-            </div>
-          )}
+          <OfferGallery 
+            imageUrl={offer.imageUrl} 
+            storeName={offer.storeName}
+          />
         </div>
 
         {/* Offer Details */}
@@ -169,14 +174,6 @@ export function OfferDetailScreen() {
               <span className="inline-block px-3 py-1.5 bg-gray-100 text-gray-600 text-sm font-medium rounded-full">
                 {offer.category}
               </span>
-              {!isOwnOffer && (
-                <StarRating
-                  rating={offerRating.average}
-                  reviewCount={offerRating.count}
-                  size={16}
-                  showNumber={offerRating.count > 0}
-                />
-              )}
             </div>
           </div>
 
@@ -186,26 +183,36 @@ export function OfferDetailScreen() {
             <p className="text-gray-600 leading-relaxed">{offer.description}</p>
           </div>
 
+          {/* Offer Rating */}
+          {!isOwnOffer && offerRating.count > 0 && (
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 md:p-5">
+              <h2 className="text-sm font-semibold text-gray-700 mb-3">Avis pour cette offre</h2>
+              <RatingSummary
+                averageRating={offerRating.average}
+                reviewCount={offerRating.count}
+                size="md"
+                showLabel={true}
+              />
+            </div>
+          )}
+
           {/* Seller Info */}
           {offer.userName && !isOwnOffer && (
             <div className="bg-white md:bg-gray-50 rounded-2xl p-4 md:p-5">
               <h2 className="text-sm font-semibold text-gray-700 mb-3">Vendeur</h2>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-[#1FA774]/10 flex items-center justify-center">
+              <div className="flex items-start gap-3">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-[#1FA774]/10 flex items-center justify-center flex-shrink-0">
                   <span className="text-[#1FA774] font-bold text-lg">
                     {offer.userName.charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900">{offer.userName}</h3>
-                  <p className="text-xs text-gray-500 mb-1">
-                    {(offer as any).userProfession || 'Particulier'}
-                  </p>
-                  <StarRating
-                    rating={offerRating.average}
-                    reviewCount={offerRating.count}
-                    size={14}
-                    showNumber={offerRating.count > 0}
+                  <RatingSummary
+                    averageRating={sellerRating.averageRating}
+                    reviewCount={sellerRating.reviewCount}
+                    size="sm"
+                    showLabel={true}
                   />
                 </div>
               </div>
@@ -242,7 +249,6 @@ export function OfferDetailScreen() {
                   }}
                   className="flex items-center gap-1 text-sm text-[#1FA774] font-medium hover:underline"
                 >
-                  <Star size={16} />
                   Donner un avis
                 </button>
               )}

@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
 import type { Offer } from '../services/offersService';
+import { RatingSummary } from './RatingSummary';
 
 export type { Offer };
 
@@ -12,7 +13,35 @@ interface OfferCardProps {
 export function OfferCard({ offer }: OfferCardProps) {
   const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
-  const showImage = Boolean(offer.imageUrl) && !imageError;
+
+  // Parse first image from potentially multi-image URL
+  const getFirstImage = (imageUrl?: string): string | undefined => {
+    if (!imageUrl) return undefined;
+    
+    const trimmed = imageUrl.trim();
+    
+    // Try JSON array first
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'string') {
+          return parsed[0];
+        }
+      } catch {
+        // Fall through to single URL parsing
+      }
+    }
+    
+    // Return single URL if valid
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+    
+    return undefined;
+  };
+
+  const imageUrl = getFirstImage(offer.imageUrl);
+  const showImage = Boolean(imageUrl) && !imageError;
 
   return (
     <motion.button
@@ -24,7 +53,7 @@ export function OfferCard({ offer }: OfferCardProps) {
         <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
           {showImage ? (
             <img
-              src={offer.imageUrl}
+              src={imageUrl}
               alt={offer.storeName}
               className="w-full h-full object-cover"
               onError={() => setImageError(true)}
@@ -41,9 +70,20 @@ export function OfferCard({ offer }: OfferCardProps) {
             <span className="text-[#1FA774] font-bold text-lg flex-shrink-0">{offer.discount}</span>
           </div>
           <p className="text-sm text-gray-600 line-clamp-2 mb-2">{offer.description}</p>
-          {offer.userName && (
-            <span className="text-xs text-gray-400">by {offer.userName}</span>
-          )}
+          <div className="flex items-center justify-between">
+            {offer.userName && (
+              <span className="text-xs text-gray-400">by {offer.userName}</span>
+            )}
+            {/* Seller Rating */}
+            {offer.reviewCount !== undefined && offer.reviewCount > 0 && (
+              <RatingSummary
+                averageRating={offer.averageRating || 0}
+                reviewCount={offer.reviewCount}
+                size="sm"
+                showLabel={true}
+              />
+            )}
+          </div>
         </div>
       </div>
     </motion.button>

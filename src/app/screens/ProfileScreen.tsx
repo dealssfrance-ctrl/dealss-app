@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
-import { HyvisHeader } from '../components/HyvisHeader';
+import { PersistentNavbar } from '../components/PersistentNavbar';
 import { UserOfferCard } from '../components/UserOfferCard';
+import { RatingSummary } from '../components/RatingSummary';
 import { useAuth } from '../context/AuthContext';
 import { offersService, Offer } from '../services/offersService';
+import { reviewsService } from '../services/reviewsService';
 import { motion, AnimatePresence } from 'motion/react';
 import { Edit2, LogOut, Trash2, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router';
@@ -31,10 +33,12 @@ export function ProfileScreen() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState('');
+  const [sellerRating, setSellerRating] = useState<{ averageRating: number; reviewCount: number }>({ averageRating: 0, reviewCount: 0 });
 
   useEffect(() => {
     if (user) {
       loadUserOffers();
+      loadSellerRating();
       setUserName(user.name);
     }
   }, [user]);
@@ -49,6 +53,16 @@ export function ProfileScreen() {
       toast.error('Chargement trop long. Réessayez.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSellerRating = async () => {
+    if (!user) return;
+    try {
+      const rating = await reviewsService.getSellerRating(user.id);
+      setSellerRating(rating);
+    } catch (error) {
+      console.error('Error fetching seller rating:', error);
     }
   };
 
@@ -105,7 +119,8 @@ export function ProfileScreen() {
   return (
     <Layout>
     <div className="min-h-screen bg-gray-50 pb-6 md:pb-6">
-      <HyvisHeader />
+      <PersistentNavbar />
+      
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-16 md:top-0 z-10">
         <div className="max-w-5xl mx-auto px-5 md:px-8 lg:px-10 py-6 flex items-center justify-between">
@@ -177,13 +192,26 @@ export function ProfileScreen() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-4 md:gap-6">
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#1FA774] flex items-center justify-center">
+            <div className="flex items-start gap-4 md:gap-6">
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#1FA774] flex items-center justify-center flex-shrink-0">
                 <span className="text-white text-2xl md:text-3xl font-bold">{userInitial}</span>
               </div>
-              <div className="flex-1">
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">{user.name}</h2>
-                <p className="text-gray-500 text-sm mb-1">{user.email}</p>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{user.name}</h2>
+                <p className="text-gray-500 text-sm mb-3">{user.email}</p>
+                
+                {/* Seller Rating */}
+                {sellerRating.reviewCount > 0 && (
+                  <div className="mb-3">
+                    <RatingSummary
+                      averageRating={sellerRating.averageRating}
+                      reviewCount={sellerRating.reviewCount}
+                      size="md"
+                      showLabel={true}
+                    />
+                  </div>
+                )}
+                
                 <p className="text-gray-400 text-sm">{offers.length} active offers</p>
               </div>
             </div>

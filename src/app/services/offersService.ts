@@ -113,10 +113,21 @@ function sanitizeImageUrl(value: unknown): string {
   let raw = String(value ?? '').trim();
   if (!raw) return '';
 
+  // If it's a JSON array, return it as-is (for multi-image support)
   if (raw.startsWith('[')) {
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
+        // Validate each URL in the array
+        const validUrls = parsed
+          .filter((item) => typeof item === 'string' && item.trim().length > 0)
+          .map((item) => item.trim())
+          .filter((item) => /^https?:\/\//i.test(item));
+        
+        if (validUrls.length > 0) {
+          return JSON.stringify(validUrls);
+        }
+        // If array was provided but no valid URLs, fall through to single-image parsing
         const first = parsed.find((item) => typeof item === 'string' && item.trim().length > 0);
         raw = String(first ?? '').trim();
       }
@@ -219,6 +230,44 @@ class OffersService {
     onProgress?.(100);
     const { data: pub } = supabase.storage.from('offers').getPublicUrl(data.path);
     return pub.publicUrl;
+  }
+
+  // Upload multiple images and return array of URLs
+  async uploadMultipleImages(
+    files: File[],
+    onProgress?: (percent: number) => void
+  ): Promise<string[]> {
+    if (files.length === 0) return [];
+
+    const urls: string[] = [];
+    const totalSteps = files.length * 2; // Compress + upload per file
+
+    for (let i = 0; i < files.length; i++) {
+      const progress = Math.round(((i * 2) / totalSteps) * 100);
+      onProgress?.(progress);
+
+      const compressed = await this.compressImage(files[i]);
+      const ext = compressed.name.includes('.') ? compressed.name.split('.').pop() : 'jpg';
+      const fileName = `${Date.now()}_${i}_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}.${ext}`;
+      const buffer = await compressed.arrayBuffer();
+
+      const uploadProgress = Math.round((((i * 2) + 1) / totalSteps) * 100);
+      onProgress?.(uploadProgress);
+
+      const { data, error } = await supabase.storage.from('offers').upload(fileName, buffer, {
+        contentType: compressed.type,
+        upsert: false,
+      });
+
+      if (error) throw new Error(`Upload failed for ${files[i].name}: ${error.message}`);
+
+      const { data: pub } = supabase.storage.from('offers').getPublicUrl(data.path);
+      urls.push(pub.publicUrl);
+
+      onProgress?.(Math.round((((i + 1) * 2) / totalSteps) * 100));
+    }
+
+    return urls;
   }
 
   async getOffers(page = 1, limit = 10): Promise<OffersResponse> {
