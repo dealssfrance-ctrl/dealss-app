@@ -733,13 +733,19 @@ export function ChatScreen() {
                 )}
               </div>
             )}
-            {messages.map((msg, idx) => {
+            {[...messages]
+              .sort(
+                (a, b) =>
+                  new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+              )
+              .map((msg, idx, sortedMsgs) => {
               const isMine = msg.senderId === currentUserId;
-              const prev = idx > 0 ? messages[idx - 1] : undefined;
+              const prev = idx > 0 ? sortedMsgs[idx - 1] : undefined;
               const meta = msg.conversationId ? conversationsMeta[msg.conversationId] : undefined;
-              // Show the offer-context pill at the start of the thread, and at
-              // every boundary where the message belongs to a different offer
-              // than the previous one.
+              // Show the offer-context divider at the very start of the thread
+              // and at every boundary where the offer truly changes from the
+              // previous message. Both sides order messages identically by
+              // created_at, so the divider positions are timeline-consistent.
               const showOfferSep = Boolean(
                 meta && (meta.storeName || meta.offerImageUrl) &&
                   (idx === 0 || msg.conversationId !== prev?.conversationId),
@@ -747,33 +753,28 @@ export function ChatScreen() {
               return (
                 <div key={msg.id}>
                   {showOfferSep && meta && (
-                    <div
-                      className={`mt-3 mb-1 flex ${isMine ? 'justify-end' : 'justify-start'}`}
-                      aria-label="Contexte d'offre"
+                    <button
+                      type="button"
+                      onClick={() => meta.offerId && navigate(`/offer/${meta.offerId}`)}
+                      className="group w-full my-3 flex items-center gap-2 select-none"
+                      aria-label={`Contexte: ${meta.storeName || 'offre'}`}
                     >
-                      <button
-                        type="button"
-                        onClick={() => meta.offerId && navigate(`/offer/${meta.offerId}`)}
-                        className="group flex items-center gap-2 bg-white border border-gray-200 rounded-full pl-1 pr-3 py-0.5 shadow-sm hover:shadow hover:border-[#1FA774]/40 transition-all"
-                        title={`À propos de ${meta.storeName || 'cette offre'}`}
-                      >
+                      <div className="flex-1 h-px bg-gray-200" />
+                      <span className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 group-hover:text-[#1FA774] transition-colors">
                         {meta.offerImageUrl ? (
                           <img
                             src={meta.offerImageUrl}
                             alt=""
-                            className="w-6 h-6 rounded-full object-cover ring-1 ring-gray-100"
+                            className="w-4 h-4 rounded-full object-cover ring-1 ring-gray-200"
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
-                        ) : (
-                          <span className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center text-emerald-700 text-[10px] font-bold">
-                            {(meta.storeName || '?').charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                        <span className="text-[11px] font-medium text-gray-600 truncate max-w-[160px] group-hover:text-[#1FA774] transition-colors">
+                        ) : null}
+                        <span className="truncate max-w-[200px]">
                           {meta.storeName || 'cette offre'}
                         </span>
-                      </button>
-                    </div>
+                      </span>
+                      <div className="flex-1 h-px bg-gray-200" />
+                    </button>
                   )}
                 <div
                   className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
