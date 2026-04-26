@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Layout } from '../components/Layout';
 import { HyvisHeader } from '../components/HyvisHeader';
 import { useNavigate } from 'react-router';
-import { Plus, Zap, Sparkles, LogOut, User, RefreshCw } from 'lucide-react';
+import { Plus, Sparkles, LogOut, User, RefreshCw, Shield, MapPin, Percent, ArrowRight, ShoppingBag } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFilters } from '../context/FilterContext';
 import { toast } from 'sonner';
@@ -341,18 +341,90 @@ export function Home() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mx-5 md:mx-8 lg:mx-10 mb-6 bg-gradient-to-br from-[#1FA774] to-[#16865c] rounded-3xl p-6 md:p-8 lg:p-10 text-white overflow-hidden relative"
+          className="mx-5 md:mx-8 lg:mx-10 mb-6 bg-gradient-to-br from-[#1FA774] to-[#0f5f42] rounded-3xl p-6 md:p-8 lg:p-10 text-white overflow-hidden relative"
         >
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2">
-              <Zap size={20} fill="white" />
-              <span className="text-sm font-semibold uppercase tracking-wide">Flash Deals</span>
+          {/* Decorative background shapes */}
+          <div className="absolute -right-10 -bottom-16 w-72 h-72 bg-white/5 rounded-full" />
+          <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/5 rounded-full" />
+
+          <div className="relative z-10 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 md:gap-8 items-center">
+            {/* Left: Text content */}
+            <div className="min-w-0">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 mb-4">
+                <span className="flex items-center justify-center w-5 h-5 rounded bg-[#1FA774] text-white">
+                  <Percent size={12} strokeWidth={3} />
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider">Réductions exclusives</span>
+              </div>
+
+              {/* Headline */}
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-1">
+                Les meilleurs deals
+              </h2>
+              <h3 className="text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight text-[#7ee5b1] mb-4">
+                entre employés, près de toi.
+              </h3>
+
+              {/* Subtitle */}
+              <p className="text-white/90 text-sm md:text-base mb-5 max-w-md">
+                Échange, découvre et profite de réductions{' '}
+                <span className="text-[#7ee5b1] font-semibold">jusqu'à -70%&nbsp;!</span>
+              </p>
+
+              {/* Features */}
+              <div className="flex flex-wrap gap-x-5 gap-y-3 mb-5">
+                <div className="flex items-start gap-2.5 min-w-[130px]">
+                  <Shield size={20} className="text-[#7ee5b1] mt-0.5 shrink-0" />
+                  <div>
+                    <div className="text-sm font-semibold leading-tight">Communauté<br />fiable</div>
+                    <div className="text-xs text-white/70 mt-0.5">Profils vérifiés et notés</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5 min-w-[130px] md:border-l md:border-white/15 md:pl-5">
+                  <RefreshCw size={20} className="text-[#7ee5b1] mt-0.5 shrink-0" />
+                  <div>
+                    <div className="text-sm font-semibold leading-tight">Échange<br />facile</div>
+                    <div className="text-xs text-white/70 mt-0.5">Deals sécurisés et validés</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5 min-w-[130px] md:border-l md:border-white/15 md:pl-5">
+                  <MapPin size={20} className="text-[#7ee5b1] mt-0.5 shrink-0" />
+                  <div>
+                    <div className="text-sm font-semibold leading-tight">Près de toi</div>
+                    <div className="text-xs text-white/70 mt-0.5">Trouve des deals dans ton quartier</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <button
+                onClick={() => {
+                  const el = document.getElementById('all-offers');
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+                className="inline-flex items-center gap-2 bg-white text-gray-900 hover:bg-gray-50 transition-colors rounded-full px-6 py-3 font-semibold shadow-lg"
+              >
+                Découvrir les offres
+                <ArrowRight size={18} className="text-[#1FA774]" />
+              </button>
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold mb-1">Jusqu'à 40% de réduction</h2>
-            <p className="text-white/90 text-sm">Réductions exclusives employés</p>
+
+            {/* Right: Decorative illustration */}
+            <div className="hidden md:flex relative w-48 lg:w-56 h-48 lg:h-56 items-center justify-center shrink-0">
+              <div className="absolute inset-0 bg-white/5 rounded-full blur-2xl" />
+              <div className="relative w-32 lg:w-40 h-36 lg:h-44 bg-gradient-to-br from-[#1FA774] to-[#16865c] rounded-2xl shadow-2xl flex items-center justify-center border-2 border-white/20">
+                <ShoppingBag size={56} className="text-white/90" strokeWidth={1.5} />
+                <Percent size={36} strokeWidth={3} className="absolute text-white" />
+              </div>
+              <div className="absolute -top-2 right-2 bg-[#0f5f42] text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg border border-white/10">
+                -40%
+              </div>
+              <div className="absolute bottom-2 -right-1 bg-[#0f5f42] text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg border border-white/10">
+                -70%
+              </div>
+            </div>
           </div>
-          <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full" />
-          <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/5 rounded-full" />
         </motion.div>
 
         {/* Category Tabs */}
@@ -379,7 +451,7 @@ export function Home() {
         </div>
 
         {/* All Offers Section */}
-        <div className="px-5 md:px-8 lg:px-10">
+        <div id="all-offers" className="px-5 md:px-8 lg:px-10 scroll-mt-24">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles size={20} className="text-gray-600" />
