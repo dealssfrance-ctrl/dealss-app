@@ -24,7 +24,7 @@ function App() {
               </div>
               <ul className="nav navbar-top-links navbar-right">
                 <li>
-                  <span className="m-r-sm text-muted welcome-message">Welcome to Dealss Admin</span>
+                  <span className="m-r-sm text-muted welcome-message">Welcome to Troqly Admin</span>
                 </li>
                 <li>
                   <a href="#">

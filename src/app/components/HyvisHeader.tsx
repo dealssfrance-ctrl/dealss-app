@@ -31,7 +31,7 @@ export function HyvisHeader({ right }: HyvisHeaderProps) {
         visible ? 'translate-y-0' : '-translate-y-full'
       }`}
     >
-      <h1 className="text-2xl font-bold text-gray-900">Hyvis</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Troqly</h1>
       {right && <div className="flex items-center gap-2">{right}</div>}
     </div>
   );

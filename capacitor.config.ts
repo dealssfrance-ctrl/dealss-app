@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.hyvis.fr',
-  appName: 'Dealss',
+  appName: 'Troqly',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

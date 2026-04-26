@@ -80,7 +80,7 @@ app.get('/health', (req, res) => {
 // Root
 app.get('/', (req, res) => {
   res.json({
-    message: 'Dealss API Server',
+    message: 'Troqly API Server',
     version: '1.0.0',
     endpoints: {
       auth: '/api/auth',

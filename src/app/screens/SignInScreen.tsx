@@ -73,7 +73,7 @@ export function SignInScreen() {
               🎁
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-            <p className="text-gray-500">Sign in to continue to Hyvis</p>
+            <p className="text-gray-500">Sign in to continue to Troqly</p>
           </div>
 
           {error && (

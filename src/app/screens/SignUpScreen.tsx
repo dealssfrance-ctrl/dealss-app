@@ -106,7 +106,7 @@ export function SignUpScreen() {
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Hyvis</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Troqly</h2>
             <p className="text-gray-500">Create your account to get started</p>
           </div>
 

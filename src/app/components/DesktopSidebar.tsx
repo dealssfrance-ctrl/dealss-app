@@ -23,7 +23,7 @@ export function DesktopSidebar() {
       {/* Logo */}
       <div className="px-6 py-6 border-b border-gray-100">
         <button onClick={() => navigate('/')} className="text-2xl font-bold text-gray-900 hover:text-[#1FA774] transition-colors">
-          Hyvis
+          Troqly
         </button>
       </div>
 

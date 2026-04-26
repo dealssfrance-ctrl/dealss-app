@@ -9,7 +9,7 @@ interface PersistentNavbarProps {
 }
 
 export function PersistentNavbar({
-  title = 'Dealss',
+  title = 'Troqly',
   showBackButton = false,
   onBackClick,
   rightContent,
@@ -18,7 +18,7 @@ export function PersistentNavbar({
   
   // Determine page title based on route
   const getTitle = (): string => {
-    if (title && title !== 'Dealss') return title;
+    if (title && title !== 'Troqly') return title;
     
     const path = location.pathname;
     if (path === '/') return 'Accueil';
@@ -27,7 +27,7 @@ export function PersistentNavbar({
     if (path.startsWith('/chat/')) return 'Chat';
     if (path.startsWith('/offer/')) return 'Détail';
     if (path === '/add-offer') return 'Nouvelle offre';
-    return 'Dealss';
+    return 'Troqly';
   };
 
   return (
@@ -48,7 +48,7 @@ export function PersistentNavbar({
               ← Retour
             </motion.button>
           ) : (
-            <h1 className="text-lg font-bold text-[#1FA774]">Dealss</h1>
+            <h1 className="text-lg font-bold text-[#1FA774]">Troqly</h1>
           )}
         </div>
 

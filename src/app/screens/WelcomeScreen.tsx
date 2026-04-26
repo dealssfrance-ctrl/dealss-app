@@ -58,7 +58,7 @@ export function WelcomeScreen() {
           transition={{ duration: 0.5 }}
           className="text-center mb-8"
         >
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-5 tracking-tight">Hyvis</h1>
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-5 tracking-tight">Troqly</h1>
         </motion.div>
 
         {/* Features */}
