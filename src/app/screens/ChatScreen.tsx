@@ -567,25 +567,39 @@ export function ChatScreen() {
               return (
                 <div key={msg.id}>
                   {showOfferSep && meta && (meta.storeName || meta.offerImageUrl) && (
-                    <button
-                      type="button"
-                      onClick={() => meta.offerId && navigate(`/offer/${meta.offerId}`)}
-                      className="mx-auto my-2 flex items-center gap-2 bg-white border border-gray-200 rounded-full pl-1 pr-3 py-1 shadow-sm hover:shadow transition-shadow"
-                    >
-                      {meta.offerImageUrl ? (
-                        <img
-                          src={meta.offerImageUrl}
-                          alt=""
-                          className="w-6 h-6 rounded-full object-cover"
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                        />
-                      ) : (
-                        <span className="w-6 h-6 rounded-full bg-gray-100" />
-                      )}
-                      <span className="text-[11px] font-medium text-gray-700 truncate max-w-[180px]">
-                        À propos de {meta.storeName || 'cette offre'}
-                      </span>
-                    </button>
+                    <div className="my-4 flex items-center gap-3" aria-label="Séparateur d'offre">
+                      <div className="flex-1 h-px bg-gradient-to-r from-transparent to-gray-200" />
+                      <button
+                        type="button"
+                        onClick={() => meta.offerId && navigate(`/offer/${meta.offerId}`)}
+                        className="group flex items-center gap-3 bg-white border border-gray-200 rounded-2xl pl-2 pr-4 py-2 shadow-sm hover:shadow-md hover:border-[#1FA774]/40 transition-all"
+                      >
+                        {meta.offerImageUrl ? (
+                          <img
+                            src={meta.offerImageUrl}
+                            alt=""
+                            className="w-11 h-11 rounded-xl object-cover ring-1 ring-gray-100"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center text-emerald-700 font-bold">
+                            {(meta.storeName || '?').charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                        <div className="flex flex-col items-start min-w-0">
+                          <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
+                            À propos de
+                          </span>
+                          <span className="text-sm font-semibold text-gray-900 truncate max-w-[200px] group-hover:text-[#1FA774] transition-colors">
+                            {meta.storeName || 'cette offre'}
+                          </span>
+                        </div>
+                        <span className="text-[#1FA774] text-xs font-medium ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          Voir →
+                        </span>
+                      </button>
+                      <div className="flex-1 h-px bg-gradient-to-l from-transparent to-gray-200" />
+                    </div>
                   )}
                 <div
                   className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
