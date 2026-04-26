@@ -1,17 +1,17 @@
 // Category images - one per category for consistent branding
 export const CATEGORY_IMAGES: Record<string, string> = {
-  'Fashion': 'https://images.unsplash.com/photo-1595705686969-51ce3ee3f0ca?w=500&h=500&fit=crop',
-  'Beauty': 'https://images.unsplash.com/photo-1596462502278-af242a95ab2d?w=500&h=500&fit=crop',
+  'Fashion': 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=1000&q=80',
+  'Beauty': 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1000&q=80',
   'Electronics': 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop',
   'Food': 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500&h=500&fit=crop',
   'Sports': 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=500&h=500&fit=crop',
   'Vols': 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&h=500&fit=crop',
   'Other': 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&h=500&fit=crop',
   // Legacy variants
-  'Mode': 'https://images.unsplash.com/photo-1595705686969-51ce3ee3f0ca?w=500&h=500&fit=crop',
-  'Beaute': 'https://images.unsplash.com/photo-1596462502278-af242a95ab2d?w=500&h=500&fit=crop',
+  'Mode': 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=1000&q=80',
+  'Beaute': 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1000&q=80',
   'High-tech': 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop',
-  'Beauté': 'https://images.unsplash.com/photo-1596462502278-af242a95ab2d?w=500&h=500&fit=crop',
+  'Beauté': 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1000&q=80',
   'Alimentation': 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500&h=500&fit=crop',
   'Sport': 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=500&h=500&fit=crop',
   'Voyage': 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&h=500&fit=crop',
@@ -20,5 +20,29 @@ export const CATEGORY_IMAGES: Record<string, string> = {
 
 export function getCategoryImage(category?: string): string {
   if (!category) return CATEGORY_IMAGES['Other'];
-  return CATEGORY_IMAGES[category] || CATEGORY_IMAGES['Other'];
+
+  const normalized = category
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const normalizedMap: Record<string, string> = {
+    fashion: CATEGORY_IMAGES['Fashion'],
+    mode: CATEGORY_IMAGES['Fashion'],
+    beauty: CATEGORY_IMAGES['Beauty'],
+    beaute: CATEGORY_IMAGES['Beauty'],
+    electronics: CATEGORY_IMAGES['Electronics'],
+    'high-tech': CATEGORY_IMAGES['Electronics'],
+    food: CATEGORY_IMAGES['Food'],
+    alimentation: CATEGORY_IMAGES['Food'],
+    sports: CATEGORY_IMAGES['Sports'],
+    sport: CATEGORY_IMAGES['Sports'],
+    vols: CATEGORY_IMAGES['Vols'],
+    voyage: CATEGORY_IMAGES['Vols'],
+    other: CATEGORY_IMAGES['Other'],
+    maison: CATEGORY_IMAGES['Other'],
+  };
+
+  return CATEGORY_IMAGES[category] || normalizedMap[normalized] || CATEGORY_IMAGES['Other'];
 }

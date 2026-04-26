@@ -361,19 +361,14 @@ export function Home() {
                     <div className="p-3">
                       <h4 className="font-semibold text-gray-900 mb-1 truncate">{offer.storeName}</h4>
                       <p className="text-xs text-gray-500 line-clamp-2 mb-2">{offer.description}</p>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Moyenne vendeur: {((offer.averageRating ?? 0)).toFixed(1)}⭐ ({offer.reviewCount ?? 0})
+                      </p>
                       <div className="flex items-center justify-between gap-1">
                         <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full shrink-0">
                           {offer.category}
                         </span>
-                        {offer.averageRating !== undefined && offer.averageRating > 0 ? (
-                          <StarRating rating={offer.averageRating} reviewCount={offer.reviewCount} size={12} />
-                        ) : (
-                          offer.userName && (
-                            <span className="text-xs text-gray-400 truncate max-w-[60px]">
-                              {offer.userName.split(' ')[0]}
-                            </span>
-                          )
-                        )}
+                        <StarRating rating={offer.averageRating ?? 0} reviewCount={offer.reviewCount ?? 0} size={12} />
                       </div>
                     </div>
                   </motion.button>
