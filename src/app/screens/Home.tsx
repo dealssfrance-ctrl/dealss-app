@@ -462,22 +462,15 @@ export function Home() {
                 ))}
               </div>
 
-              {/* Auto load-more sentinel + manual fallback button */}
+              {/* Auto load-more sentinel + skeleton */}
               {hasMore && (
                 <>
                   <div ref={loadMoreSentinelRef} className="h-1 w-full" aria-hidden />
-                  <div className="text-center pb-4 mt-6">
-                    {loadingMore ? (
+                  {loadingMore && (
+                    <div className="text-center pb-4 mt-6">
                       <LoadMoreSkeleton />
-                    ) : (
-                      <button
-                        onClick={handleLoadMore}
-                        className="px-6 py-2.5 bg-white text-[#1FA774] font-medium rounded-full shadow-sm hover:shadow-md transition-all"
-                      >
-                        Charger plus
-                      </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </>
               )}
             </>
