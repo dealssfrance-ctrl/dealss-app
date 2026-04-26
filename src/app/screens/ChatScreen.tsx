@@ -518,25 +518,56 @@ export function ChatScreen() {
     if (!user || !conversation || sending) return;
     setActionsOpen(false);
 
-    // The requester asks the other party to review one of THEIR OWN offers.
-    // Pick the requester's most recent offer.
-    let myOffer: Awaited<ReturnType<typeof offersService.getMyOffers>>['data'][number] | undefined;
+    // Determine which offer the request is about: the offer attached to the
+    // CURRENT thread (not the seller's most recent offer in general). Source
+    // priority:
+    //   1. draftOffer (when chat was opened from a specific offer page)
+    //   2. The offer linked to the most-recent message in the visible thread
+    //   3. conversation.offerId (the conversation's primary offer)
+    let targetOfferId =
+      draftOffer?.id ||
+      (() => {
+        for (let i = messages.length - 1; i >= 0; i--) {
+          const m = messages[i];
+          const meta = m.conversationId ? conversationsMeta[m.conversationId] : undefined;
+          if (meta?.offerId) return meta.offerId;
+        }
+        return '';
+      })() ||
+      conversation.offerId ||
+      '';
+
+    let myOffer:
+      | { id: string; storeName: string; imageUrl: string; discount: string; userId: string }
+      | undefined;
+
     try {
-      const myOffersResp = await offersService.getMyOffers(user.id);
-      const list = myOffersResp.data || [];
-      if (list.length === 0) {
-        toast.error("Impossible de demander un avis si tu n'as pas d'offre");
+      // Fetch the offer details by id and confirm the current user owns it —
+      // the requester must be the seller of the offer being reviewed.
+      if (targetOfferId) {
+        const res = await offersService.getOfferById(targetOfferId);
+        if (res?.data && res.data.userId === user.id) {
+          myOffer = {
+            id: res.data.id,
+            storeName: res.data.storeName,
+            imageUrl: res.data.imageUrl,
+            discount: res.data.discount,
+            userId: res.data.userId,
+          };
+        }
+      }
+      // Fallback: if the current thread's offer doesn't belong to this user,
+      // we genuinely can't request a review on it. Bail out clearly instead
+      // of silently sending a request for an unrelated offer.
+      if (!myOffer) {
+        toast.error(
+          "Vous ne pouvez demander un avis que sur l'offre de cette discussion (et uniquement si vous en êtes l'auteur).",
+        );
         return;
       }
-      myOffer = list[0];
     } catch (err) {
-      console.error('Error checking user offers:', err);
-      toast.error("Impossible de vérifier vos offres pour le moment");
-      return;
-    }
-
-    if (!myOffer) {
-      toast.error("Aucune offre disponible pour la demande d'avis");
+      console.error('Error resolving offer for review request:', err);
+      toast.error("Impossible de préparer la demande d'avis pour le moment");
       return;
     }
 
