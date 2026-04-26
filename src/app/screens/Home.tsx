@@ -11,6 +11,7 @@ import { offersService, Offer } from '../services/offersService';
 import { OfferCardGridSkeleton, CategoryTabsSkeleton, LoadMoreSkeleton } from '../components/Skeleton';
 import { StarRating } from '../components/StarRating';
 import { getCategoryImage } from '../constants/categoryImages';
+import logoSac from '../../imports/logo-sac.png';
 
 /**
  * Returns the first usable image URL from an offer's `imageUrl` field, which
@@ -401,7 +402,7 @@ export function Home() {
             {/* Right: Shopping bag illustration */}
             <div className="hidden md:flex relative w-44 lg:w-52 items-center justify-center shrink-0">
               <img
-                src="/hero-bag.png"
+                src={logoSac}
                 alt=""
                 aria-hidden="true"
                 className="w-full h-auto select-none pointer-events-none drop-shadow-2xl"
