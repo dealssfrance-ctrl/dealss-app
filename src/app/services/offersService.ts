@@ -154,13 +154,15 @@ function sanitizeImageUrl(value: unknown): string {
 }
 
 function toOffer(r: any): Offer {
+  const list = parseImageList(r.image_url);
   return {
     id: r.id,
     storeName: r.store_name,
     discount: r.discount,
     description: r.description,
     category: r.category,
-    imageUrl: sanitizeImageUrl(r.image_url),
+    imageUrl: list[0] || '',
+    imageUrls: list,
     status: r.status,
     createdAt: r.created_at,
     updatedAt: r.updated_at,

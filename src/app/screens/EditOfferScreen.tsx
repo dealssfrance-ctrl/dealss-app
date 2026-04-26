@@ -61,7 +61,7 @@ export function EditOfferScreen() {
             description: response.data.description,
             category: response.data.category
           });
-          setExistingUrls(parseImageUrls(response.data.imageUrl));
+          setExistingUrls(response.data.imageUrls || []);
         }
       } catch (error) {
         console.error('Error fetching offer:', error);

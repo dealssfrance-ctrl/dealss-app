@@ -28,6 +28,7 @@ export interface ConversationSummary {
   id: string;
   offerId: string;
   storeName: string;
+  offerImageUrl?: string;
   otherUserId: string;
   otherUserName: string;
   lastMessage: string;
@@ -35,6 +36,10 @@ export interface ConversationSummary {
   lastMessageSenderId?: string;
   updatedAt: string;
   createdAt: string;
+  /** All conversation IDs that share this same other user (used to merge per-person threads). */
+  siblingConversationIds: string[];
+  /** How many distinct offers this person has chatted about with the current user. */
+  offerCount: number;
 }
 
 export interface ConversationDetail {
@@ -42,10 +47,13 @@ export interface ConversationDetail {
   offerId: string;
   participants: string[];
   storeName: string;
+  offerImageUrl?: string;
   otherUserId: string;
   otherUserName: string;
   createdAt: string;
   updatedAt: string;
+  /** All conversation IDs that share this same other user. */
+  siblingConversationIds: string[];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -198,7 +206,8 @@ class ChatService {
       .order('updated_at', { ascending: false });
     if (error) throw new Error(error.message);
 
-    const summaries: ConversationSummary[] = await Promise.all(
+    type Raw = ConversationSummary;
+    const raws: Raw[] = await Promise.all(
       (convs || []).map(async (c: any) => {
         const otherUserId = (c.participants as string[]).find((p: string) => p !== userId) || '';
 
@@ -209,16 +218,24 @@ class ChatService {
             .eq('conversation_id', c.id)
             .order('created_at', { ascending: false })
             .limit(1),
-          supabase.from('offers').select('store_name').eq('id', c.offer_id).single(),
-          supabase.from('users').select('name').eq('id', otherUserId).single(),
+          supabase.from('offers').select('store_name, image_url').eq('id', c.offer_id).maybeSingle(),
+          supabase.from('users').select('name').eq('id', otherUserId).maybeSingle(),
         ]);
 
         const lastMsg = lastMsgs?.[0];
+        const rawImg = String((offer as any)?.image_url ?? '').trim();
+        let firstImg = rawImg;
+        if (rawImg.startsWith('[')) {
+          try {
+            const arr = JSON.parse(rawImg);
+            if (Array.isArray(arr)) firstImg = String(arr[0] ?? '').trim();
+          } catch { /* ignore */ }
+        }
         return {
           id: c.id,
           offerId: c.offer_id,
-          // `offer` and `otherUser` are already the data objects due to destructuring { data: offer }.
           storeName: (offer as any)?.store_name || '',
+          offerImageUrl: /^https?:\/\//i.test(firstImg) ? firstImg : undefined,
           otherUserId,
           otherUserName: (otherUser as any)?.name || '',
           lastMessage: lastMsg ? lastMessagePreview(lastMsg) : '',
@@ -226,22 +243,50 @@ class ChatService {
           lastMessageSenderId: lastMsg?.sender_id || undefined,
           updatedAt: c.updated_at,
           createdAt: c.created_at,
+          siblingConversationIds: [c.id],
+          offerCount: 1,
         };
       })
     );
 
-    // Safety dedup by conversation id, then sort by most-recent message time descending.
-    const seen = new Set<string>();
-    const deduped = summaries.filter(s => {
-      if (seen.has(s.id)) return false;
-      seen.add(s.id);
-      return true;
-    });
-    deduped.sort((a, b) =>
-      new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
-    );
+    // Deduplicate by other-user: keep the most-recently-active conversation as the
+    // representative, but attach all sibling conversation ids so the chat view can
+    // merge messages across all offers shared with that person.
+    const byUser = new Map<string, Raw>();
+    for (const r of raws) {
+      if (!r.otherUserId) continue;
+      const existing = byUser.get(r.otherUserId);
+      if (!existing) {
+        byUser.set(r.otherUserId, { ...r });
+        continue;
+      }
+      // Pick the more recent one as representative.
+      const existingTs = new Date(existing.lastMessageTime).getTime();
+      const candidateTs = new Date(r.lastMessageTime).getTime();
+      const winner = candidateTs > existingTs ? { ...r } : { ...existing };
+      const loser = candidateTs > existingTs ? existing : r;
+      // Merge siblings + offer count.
+      const siblings = new Set<string>([
+        ...winner.siblingConversationIds,
+        ...loser.siblingConversationIds,
+      ]);
+      winner.siblingConversationIds = Array.from(siblings);
+      // Distinct offers shared with this person.
+      const offerIds = new Set<string>();
+      for (const id of siblings) {
+        const src = raws.find((x) => x.id === id);
+        if (src?.offerId) offerIds.add(src.offerId);
+      }
+      winner.offerCount = offerIds.size || 1;
+      byUser.set(r.otherUserId, winner);
+    }
 
-    return { success: true, data: deduped };
+    const merged = Array.from(byUser.values());
+    merged.sort(
+      (a, b) =>
+        new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
+    );
+    return { success: true, data: merged };
   }
 
   async getConversation(id: string, userId: string): Promise<{ success: boolean; data: ConversationDetail }> {
@@ -249,10 +294,23 @@ class ChatService {
     if (error || !c) throw new Error('Conversation not found');
 
     const otherUserId = (c.participants as string[]).find((p: string) => p !== userId) || '';
-    const [{ data: offer }, { data: otherUser }] = await Promise.all([
-      supabase.from('offers').select('store_name').eq('id', c.offer_id).single(),
-      supabase.from('users').select('name').eq('id', otherUserId).single(),
+    const [{ data: offer }, { data: otherUser }, { data: siblings }] = await Promise.all([
+      supabase.from('offers').select('store_name, image_url').eq('id', c.offer_id).maybeSingle(),
+      supabase.from('users').select('name').eq('id', otherUserId).maybeSingle(),
+      supabase
+        .from('conversations')
+        .select('id')
+        .contains('participants', [userId, otherUserId]),
     ]);
+
+    const rawImg = String((offer as any)?.image_url ?? '').trim();
+    let firstImg = rawImg;
+    if (rawImg.startsWith('[')) {
+      try {
+        const arr = JSON.parse(rawImg);
+        if (Array.isArray(arr)) firstImg = String(arr[0] ?? '').trim();
+      } catch { /* ignore */ }
+    }
 
     return {
       success: true,
@@ -261,12 +319,56 @@ class ChatService {
         offerId: c.offer_id,
         participants: c.participants,
         storeName: (offer as any)?.store_name || '',
+        offerImageUrl: /^https?:\/\//i.test(firstImg) ? firstImg : undefined,
         otherUserId,
         otherUserName: (otherUser as any)?.name || '',
         createdAt: c.created_at,
         updatedAt: c.updated_at,
+        siblingConversationIds: (siblings || []).map((s: any) => s.id),
       },
     };
+  }
+
+  /**
+   * Fetch lightweight offer-context info for a list of conversation IDs.
+   * Used to render per-offer separators in a merged thread.
+   */
+  async getConversationsMeta(
+    conversationIds: string[]
+  ): Promise<Record<string, { offerId: string; storeName: string; offerImageUrl?: string }>> {
+    if (!conversationIds.length) return {};
+    const { data: convs } = await supabase
+      .from('conversations')
+      .select('id, offer_id')
+      .in('id', conversationIds);
+    const offerIds = Array.from(new Set((convs || []).map((c: any) => c.offer_id).filter(Boolean)));
+    const { data: offers } = offerIds.length
+      ? await supabase.from('offers').select('id, store_name, image_url').in('id', offerIds)
+      : { data: [] as any[] };
+    const offerMap = new Map<string, { storeName: string; offerImageUrl?: string }>();
+    for (const o of offers || []) {
+      let firstImg = String((o as any).image_url ?? '').trim();
+      if (firstImg.startsWith('[')) {
+        try {
+          const arr = JSON.parse(firstImg);
+          if (Array.isArray(arr)) firstImg = String(arr[0] ?? '').trim();
+        } catch { /* ignore */ }
+      }
+      offerMap.set((o as any).id, {
+        storeName: (o as any).store_name || '',
+        offerImageUrl: /^https?:\/\//i.test(firstImg) ? firstImg : undefined,
+      });
+    }
+    const out: Record<string, { offerId: string; storeName: string; offerImageUrl?: string }> = {};
+    for (const c of convs || []) {
+      const meta = offerMap.get((c as any).offer_id);
+      out[(c as any).id] = {
+        offerId: (c as any).offer_id,
+        storeName: meta?.storeName || '',
+        offerImageUrl: meta?.offerImageUrl,
+      };
+    }
+    return out;
   }
 
   // ── Messages ─────────────────────────────────────────────────────────────
@@ -278,17 +380,22 @@ class ChatService {
    * - `limit`  → caps result size (default 30 for paginated reads).
    */
   async getMessages(
-    conversationId: string,
+    conversationId: string | string[],
     opts: string | { after?: string; before?: string; limit?: number } = {},
   ): Promise<{ success: boolean; data: ChatMessage[]; hasMore?: boolean }> {
     // Back-compat: previous callers passed `after` as a string.
     const options = typeof opts === 'string' ? { after: opts } : opts;
     const { after, before, limit } = options;
 
+    const ids = Array.isArray(conversationId) ? conversationId : [conversationId];
     let q = supabase
       .from('messages')
-      .select('*')
-      .eq('conversation_id', conversationId);
+      .select('*');
+    if (ids.length === 1) {
+      q = q.eq('conversation_id', ids[0]);
+    } else {
+      q = q.in('conversation_id', ids);
+    }
 
     if (before) {
       // Newest-first window so `limit` returns the most recent N older messages.

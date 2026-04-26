@@ -11,6 +11,7 @@ import { AddOfferScreen } from './screens/AddOfferScreen';
 import { EditOfferScreen } from './screens/EditOfferScreen';
 import { OfferDetailScreen } from './screens/OfferDetailScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
+import { PublicProfileScreen } from './screens/PublicProfileScreen';
 import { ChatListScreen } from './screens/ChatListScreen';
 import { ChatScreen } from './screens/ChatScreen';
 import { AuthRoute, ProtectedRoute, VerificationGate } from './context/ProtectedRoute';
@@ -63,6 +64,10 @@ export const router = createBrowserRouter([
   {
     path: '/profile',
     Component: () => <ProtectedRoute requireAuth><ProfileScreen /></ProtectedRoute>,
+  },
+  {
+    path: '/user/:userId',
+    Component: PublicProfileScreen,
   },
   {
     path: '/messages',

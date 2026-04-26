@@ -57,6 +57,10 @@ export function ChatScreen() {
   // Effective conversation id used for DB calls. In draft mode this is empty until
   // the first message materializes the conversation.
   const [conversationId, setConversationId] = useState<string>(isDraft ? '' : routeId || '');
+  // All conversation IDs for the same other-user (merged thread).
+  const [siblingIds, setSiblingIds] = useState<string[]>(routeId && routeId !== 'new' ? [routeId] : []);
+  // Offer metadata per conversationId (for in-thread offer separators).
+  const [conversationsMeta, setConversationsMeta] = useState<Record<string, { offerId: string; storeName: string; offerImageUrl?: string }>>({});
 
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -97,6 +101,7 @@ export function ChatScreen() {
         otherUserName: draftOtherName,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        siblingConversationIds: [],
       });
       setLoading(false);
       return;
@@ -106,6 +111,13 @@ export function ChatScreen() {
       try {
         const response = await chatService.getConversation(conversationId, user.id);
         setConversation(response.data);
+        if (response.data.siblingConversationIds?.length) {
+          setSiblingIds(response.data.siblingConversationIds);
+          chatService
+            .getConversationsMeta(response.data.siblingConversationIds)
+            .then(setConversationsMeta)
+            .catch(() => { /* non-blocking */ });
+        }
       } catch (error) {
         console.error('Error fetching conversation:', error);
       }
@@ -121,8 +133,9 @@ export function ChatScreen() {
     }
     try {
       const isInitial = !lastMessageTimeRef.current;
+      const queryIds = siblingIds.length > 0 ? siblingIds : [conversationId];
       const response = await chatService.getMessages(
-        conversationId,
+        queryIds.length === 1 ? queryIds[0] : queryIds,
         isInitial ? { limit: 30 } : { after: lastMessageTimeRef.current || undefined },
       );
       if (!isInitial && response.data.length > 0) {
@@ -150,17 +163,16 @@ export function ChatScreen() {
       // Update last message time for next poll
       if (response.data.length > 0) {
         lastMessageTimeRef.current = response.data[response.data.length - 1].createdAt;
-        // Mark this conversation as read up to the latest fetched message.
-        if (conversationId) {
-          markConversationRead(conversationId, response.data[response.data.length - 1].createdAt);
-        }
+        // Mark all sibling conversations as read up to the latest fetched message.
+        const lastTs = response.data[response.data.length - 1].createdAt;
+        for (const id of queryIds) markConversationRead(id, lastTs);
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
       setLoading(false);
     }
-  }, [conversationId, scrollToBottom, currentUserId, markConversationRead]);
+  }, [conversationId, siblingIds, scrollToBottom, currentUserId, markConversationRead]);
 
   // Load older messages when user scrolls near the top of the message list.
   const loadOlderMessages = useCallback(async () => {
@@ -172,7 +184,8 @@ export function ChatScreen() {
     const prevScrollTop = container?.scrollTop ?? 0;
     setLoadingOlder(true);
     try {
-      const response = await chatService.getMessages(conversationId, {
+      const queryIds = siblingIds.length > 0 ? siblingIds : [conversationId];
+      const response = await chatService.getMessages(queryIds.length === 1 ? queryIds[0] : queryIds, {
         before: oldest.createdAt,
         limit: 30,
       });
@@ -196,7 +209,7 @@ export function ChatScreen() {
     } finally {
       setLoadingOlder(false);
     }
-  }, [conversationId, loadingOlder, hasMoreOlder, messages]);
+  }, [conversationId, siblingIds, loadingOlder, hasMoreOlder, messages]);
 
   // Auto-trigger when the user scrolls to the top of the messages container.
   useEffect(() => {
@@ -543,11 +556,38 @@ export function ChatScreen() {
                 )}
               </div>
             )}
-            {messages.map((msg) => {
+            {messages.map((msg, idx) => {
               const isMine = msg.senderId === currentUserId;
+              const prev = idx > 0 ? messages[idx - 1] : undefined;
+              const showOfferSep =
+                siblingIds.length > 1 &&
+                msg.conversationId &&
+                msg.conversationId !== prev?.conversationId;
+              const meta = showOfferSep ? conversationsMeta[msg.conversationId] : undefined;
               return (
+                <div key={msg.id}>
+                  {showOfferSep && meta && (meta.storeName || meta.offerImageUrl) && (
+                    <button
+                      type="button"
+                      onClick={() => meta.offerId && navigate(`/offer/${meta.offerId}`)}
+                      className="mx-auto my-2 flex items-center gap-2 bg-white border border-gray-200 rounded-full pl-1 pr-3 py-1 shadow-sm hover:shadow transition-shadow"
+                    >
+                      {meta.offerImageUrl ? (
+                        <img
+                          src={meta.offerImageUrl}
+                          alt=""
+                          className="w-6 h-6 rounded-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <span className="w-6 h-6 rounded-full bg-gray-100" />
+                      )}
+                      <span className="text-[11px] font-medium text-gray-700 truncate max-w-[180px]">
+                        À propos de {meta.storeName || 'cette offre'}
+                      </span>
+                    </button>
+                  )}
                 <div
-                  key={msg.id}
                   className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} max-w-[75%] md:max-w-[60%]`}>
@@ -599,6 +639,7 @@ export function ChatScreen() {
                     )}
                     <span className="text-xs text-gray-400 mt-1 px-1">{formatTime(msg.createdAt)}</span>
                   </div>
+                </div>
                 </div>
               );
             })}

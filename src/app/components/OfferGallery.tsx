@@ -3,7 +3,10 @@ import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface OfferGalleryProps {
-  imageUrl: string; // Can be single URL, JSON array, or comma-separated URLs
+  /** Pre-parsed list of image URLs. */
+  images?: string[];
+  /** Legacy: a single URL (or JSON array string for back-compat). */
+  imageUrl?: string;
   storeName: string;
   onImageError?: () => void;
 }
@@ -45,8 +48,11 @@ function parseImageUrls(imageUrl: string): string[] {
   return parsed;
 }
 
-export function OfferGallery({ imageUrl, storeName, onImageError }: OfferGalleryProps) {
-  const images = useMemo(() => parseImageUrls(imageUrl), [imageUrl]);
+export function OfferGallery({ images: imagesProp, imageUrl, storeName, onImageError }: OfferGalleryProps) {
+  const images = useMemo(() => {
+    if (imagesProp && imagesProp.length > 0) return imagesProp;
+    return parseImageUrls(imageUrl || '');
+  }, [imagesProp, imageUrl]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   

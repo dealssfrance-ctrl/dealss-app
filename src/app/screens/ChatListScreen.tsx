@@ -219,6 +219,11 @@ export function ChatListScreen() {
                       {conversation.storeName && (
                         <p className="text-xs text-[#1FA774] font-medium truncate mb-0.5">
                           · {conversation.storeName}
+                          {conversation.offerCount > 1 && (
+                            <span className="text-gray-400 font-normal ml-1">
+                              +{conversation.offerCount - 1} autre{conversation.offerCount > 2 ? 's' : ''}
+                            </span>
+                          )}
                         </p>
                       )}
                       <p className="text-sm text-gray-500 truncate">

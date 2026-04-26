@@ -95,10 +95,9 @@ export const reviewsService = {
         .select('id')
         .eq('offer_id', offerId)
         .eq('user_id', userId)
-        .single();
-      
-      if (error?.code === 'PGRST116') {
-        // No rows found
+        .maybeSingle();
+
+      if (error) {
         return false;
       }
 

@@ -56,15 +56,25 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   'Sports': '🏀',
   'Electronics': '📱',
   'Beauty': '💄',
+  'Beaute': '💄',
+  'Beauté': '💄',
   'Vols':   '✈️',
   'Other':  '📦',
   'High-tech': '💻',
   'Maison': '🏠',
   'Mode': '👔',
-  'Beaute': '💄',
   'Voyage': '✈️',
   'Sport': '🏃',
 };
+
+// Tolerant lookup: matches even when keys differ in accents/case (NFD vs NFC).
+function categoryEmoji(key: string): string {
+  if (CATEGORY_EMOJIS[key]) return CATEGORY_EMOJIS[key];
+  const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const target = norm(key);
+  const match = Object.keys(CATEGORY_EMOJIS).find((k) => norm(k) === target);
+  return match ? CATEGORY_EMOJIS[match] : '';
+}
 
 export function Home() {
   const navigate = useNavigate();
@@ -361,7 +371,7 @@ export function Home() {
                       : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50'
                   }`}
                 >
-                  {CATEGORY_EMOJIS[category] ? `${CATEGORY_EMOJIS[category]} ` : ''}{category}
+                  {(() => { const e = categoryEmoji(category); return e ? `${e} ` : ''; })()}{category}
                 </button>
               ))}
             </div>

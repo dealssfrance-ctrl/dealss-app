@@ -269,7 +269,7 @@ export function OfferDetailScreen() {
           <div className="md:flex md:gap-0">
             {/* Gallery */}
             <div className="relative w-full md:w-1/2 md:m-8 md:mr-0 md:sticky md:top-20 md:self-start">
-              <OfferGallery imageUrl={offer.imageUrl} storeName={offer.storeName} />
+              <OfferGallery images={offer.imageUrls} imageUrl={offer.imageUrl} storeName={offer.storeName} />
 
               {/* Mobile share button overlay */}
               <button
@@ -356,7 +356,13 @@ export function OfferDetailScreen() {
 
               {/* Seller card */}
               {!isOwnOffer && (
-                <div className="bg-white/95 rounded-3xl p-5 md:p-6 border border-white/80 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/user/${offer.userId}`)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/user/${offer.userId}`); }}
+                  className="bg-white/95 rounded-3xl p-5 md:p-6 border border-white/80 shadow-[0_8px_24px_rgba(15,23,42,0.05)] cursor-pointer hover:shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-shadow"
+                >
                   <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
                     <span className="w-1 h-4 bg-[#1FA774] rounded-full" />
                     À propos du vendeur

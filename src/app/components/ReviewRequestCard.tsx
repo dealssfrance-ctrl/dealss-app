@@ -15,13 +15,39 @@ interface ReviewRequestCardProps {
   hasSubmitted?: boolean;
 }
 
+// Extract a single usable image URL from a value that may be a single URL,
+// a JSON-stringified array, or a CSV (back-compat with legacy stored payloads).
+function firstUrl(value?: string): string {
+  if (!value) return '';
+  let raw = value.trim();
+  if (!raw) return '';
+  if (raw.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const first = parsed.find((v) => typeof v === 'string' && v.trim().length > 0);
+        raw = String(first ?? '').trim();
+      }
+    } catch { /* fall through */ }
+  }
+  raw = raw.replace(/^['"]+|['"]+$/g, '').trim();
+  if (raw.startsWith('%22http')) {
+    try { raw = decodeURIComponent(raw).replace(/^['"]+|['"]+$/g, '').trim(); } catch { return ''; }
+  }
+  if (raw.includes(',') && /^https?:\/\//i.test(raw.split(',')[0].trim())) {
+    raw = raw.split(',')[0].trim();
+  }
+  return /^(https?:\/\/|data:image\/)/i.test(raw) ? raw : '';
+}
+
 export function ReviewRequestCard({
   payload,
   onReviewClick,
   isReceiver,
   hasSubmitted = false,
 }: ReviewRequestCardProps) {
-  const showImage = Boolean(payload.offerImageUrl) && payload.offerImageUrl.trim().length > 0;
+  const safeImage = firstUrl(payload.offerImageUrl);
+  const showImage = safeImage.length > 0;
   const canReview = isReceiver && !hasSubmitted;
 
   return (
@@ -41,7 +67,7 @@ export function ReviewRequestCard({
         {showImage && (
           <div className="w-16 h-16 rounded-xl flex-shrink-0 bg-gray-100 overflow-hidden">
             <img
-              src={payload.offerImageUrl}
+              src={safeImage}
               alt={payload.offerTitle}
               className="w-full h-full object-cover"
               onError={(e) => {
