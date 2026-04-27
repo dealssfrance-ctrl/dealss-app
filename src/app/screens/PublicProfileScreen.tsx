@@ -4,11 +4,14 @@ import { Layout } from '../components/Layout';
 import { OfferCard } from '../components/OfferCard';
 import { offersService, Offer } from '../services/offersService';
 import { reviewsService } from '../services/reviewsService';
+import { chatService } from '../services/chatService';
+import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { motion } from 'motion/react';
-import { ArrowLeft, Package, Briefcase, EyeOff, Star, Store, MapPin, BadgeCheck } from 'lucide-react';
+import { ArrowLeft, Package, Briefcase, EyeOff, Star, Store, MapPin, BadgeCheck, MessageCircle } from 'lucide-react';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
 import { Logo } from '../components/Logo';
+import { toast } from 'sonner';
 
 interface PublicUser {
   id: string;
@@ -28,10 +31,12 @@ interface PublicUser {
 export function PublicProfileScreen() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [user, setUser] = useState<PublicUser | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [rating, setRating] = useState<{ averageRating: number; reviewCount: number }>({ averageRating: 0, reviewCount: 0 });
   const [loading, setLoading] = useState(true);
+  const [contacting, setContacting] = useState(false);
 
   useEffect(() => {
     if (userId) loadProfile();
@@ -109,6 +114,42 @@ export function PublicProfileScreen() {
   }
 
   if (!user) return null;
+
+  const isOwnProfile = currentUser?.id === user.id;
+
+  const handleContactClick = async () => {
+    if (!user) return;
+    if (!currentUser) {
+      toast.error('Connectez-vous pour envoyer un message');
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+      navigate(`/signin?redirect=${redirect}`);
+      return;
+    }
+    try {
+      setContacting(true);
+      const sibs = await chatService.findSiblingConversations(currentUser.id, user.id);
+      if (sibs.length > 0) {
+        navigate(`/chat/${sibs[0]}`);
+        return;
+      }
+      const firstOffer = offers[0];
+      if (!firstOffer) {
+        toast.info("Cet utilisateur n'a pas d'offre active pour démarrer une conversation");
+        return;
+      }
+      const params = new URLSearchParams({
+        offerId: firstOffer.id,
+        receiverId: user.id,
+        storeName: firstOffer.storeName || '',
+        otherName: user.accountType === 'merchant' ? (user.storeName || user.name) : user.name,
+      });
+      navigate(`/chat/new?${params.toString()}`);
+    } catch {
+      toast.error("Erreur lors de l'ouverture de la conversation");
+    } finally {
+      setContacting(false);
+    }
+  };
 
   const userInitial = user.name.charAt(0).toUpperCase();
   const joinDate = new Date(user.createdAt).toLocaleDateString('fr-FR', {
@@ -202,6 +243,20 @@ export function PublicProfileScreen() {
                 </p>
               </div>
             </div>
+
+            {!isOwnProfile && (
+              <div className="mt-5">
+                <button
+                  type="button"
+                  onClick={handleContactClick}
+                  disabled={contacting}
+                  className="w-full inline-flex items-center justify-center gap-2 bg-[#1FA774] hover:bg-[#16865c] disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-2xl transition-colors"
+                >
+                  <MessageCircle size={18} />
+                  Contacter
+                </button>
+              </div>
+            )}
           </motion.div>
 
           {/* Offers Section */}
@@ -227,6 +282,20 @@ export function PublicProfileScreen() {
             )}
           </div>
         </div>
+
+        {/* Mobile sticky CTA above bottom nav */}
+        {!isOwnProfile && (
+          <div className="md:hidden fixed bottom-16 left-0 right-0 z-20 bg-white/95 backdrop-blur border-t border-gray-200 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.06)]">
+            <button
+              onClick={handleContactClick}
+              disabled={contacting}
+              className="w-full flex items-center justify-center gap-2 bg-[#1FA774] text-white py-3.5 rounded-full font-bold text-[15px] shadow-md shadow-[#1FA774]/30 hover:bg-[#16865c] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            >
+              <MessageCircle size={20} />
+              Contacter {(user.accountType === 'merchant' ? (user.storeName || user.name) : user.name).split(' ')[0]}
+            </button>
+          </div>
+        )}
       </div>
     </Layout>
   );
