@@ -275,7 +275,7 @@ export function PublicProfileScreen() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <OfferCard offer={offer} />
+                    <OfferCard offer={offer} hideContact />
                   </motion.div>
                 ))}
               </div>
