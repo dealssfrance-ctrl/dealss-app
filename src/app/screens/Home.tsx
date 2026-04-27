@@ -360,16 +360,15 @@ export function Home() {
 
               {/* Headline */}
               <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight mb-0.5">
-                Les meilleurs deals
+                Économise jusqu’à
               </h2>
               <h3 className="text-xl md:text-2xl lg:text-3xl font-extrabold leading-tight text-[#7ee5b1] mb-3">
-                entre employés, près de toi.
+                -70% avec des deals autour de toi
               </h3>
 
               {/* Subtitle */}
               <p className="text-white/90 text-sm mb-4 max-w-md">
-                Échange, découvre et profite de réductions{' '}
-                <span className="text-[#7ee5b1] font-semibold">jusqu'à -70%&nbsp;!</span>
+                <span className="text-[#7ee5b1] font-semibold">+120 deals</span> partagés cette semaine
               </p>
 
               {/* Features (hidden on mobile to keep banner compact) */}

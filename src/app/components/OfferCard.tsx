@@ -1,8 +1,12 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
+import { MessageCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Offer } from '../services/offersService';
 import { RatingSummary } from './RatingSummary';
+import { useAuth } from '../context/AuthContext';
+import { chatService } from '../services/chatService';
 
 export type { Offer };
 
@@ -12,7 +16,11 @@ interface OfferCardProps {
 
 export function OfferCard({ offer }: OfferCardProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [imageError, setImageError] = useState(false);
+  const [contacting, setContacting] = useState(false);
+
+  const isOwnOffer = user?.id === offer.userId;
 
   // Parse first image from potentially multi-image URL
   const getFirstImage = (imageUrl?: string): string | undefined => {
@@ -51,11 +59,48 @@ export function OfferCard({ offer }: OfferCardProps) {
   const imageUrl = getFirstImage(offer.imageUrl);
   const showImage = Boolean(imageUrl) && !imageError;
 
+  const handleContact = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      toast.error('Connectez-vous pour envoyer un message');
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+      navigate(`/signin?redirect=${redirect}`);
+      return;
+    }
+    try {
+      setContacting(true);
+      const existing = await chatService.findExistingConversation(offer.id, user.id, offer.userId);
+      if (existing) {
+        navigate(`/chat/${existing.id}`);
+        return;
+      }
+      const params = new URLSearchParams({
+        offerId: offer.id,
+        receiverId: offer.userId,
+        storeName: offer.storeName || '',
+        otherName: offer.userName || '',
+      });
+      navigate(`/chat/new?${params.toString()}`);
+    } catch {
+      toast.error("Erreur lors de l'ouverture de la conversation");
+    } finally {
+      setContacting(false);
+    }
+  };
+
   return (
-    <motion.button
+    <motion.div
       whileTap={{ scale: 0.98 }}
       onClick={() => navigate(`/offer/${offer.id}`)}
-      className="w-full bg-white rounded-2xl overflow-hidden shadow-sm active:shadow-md transition-shadow"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          navigate(`/offer/${offer.id}`);
+        }
+      }}
+      className="w-full bg-white rounded-2xl overflow-hidden shadow-sm active:shadow-md transition-shadow cursor-pointer"
     >
       <div className="flex gap-3 p-3">
         <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
@@ -94,6 +139,21 @@ export function OfferCard({ offer }: OfferCardProps) {
           </div>
         </div>
       </div>
-    </motion.button>
+
+      {/* Action: Contacter */}
+      {!isOwnOffer && (
+        <div className="px-3 pb-3">
+          <button
+            type="button"
+            onClick={handleContact}
+            disabled={contacting}
+            className="w-full inline-flex items-center justify-center gap-2 bg-[#1FA774] hover:bg-[#16865c] disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
+          >
+            <MessageCircle size={16} />
+            Contacter
+          </button>
+        </div>
+      )}
+    </motion.div>
   );
 }

@@ -138,20 +138,20 @@ export function ForgotPasswordScreen() {
                   disabled={loading}
                   className="disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Sending...' : 'Send Reset Link'}
+                  {loading ? 'Envoi…' : 'Envoyer le lien'}
                 </Button>
               </div>
 
               {/* Back to Sign In */}
               <p className="text-center text-gray-600">
-                Remember your password?{' '}
+                Tu te souviens de ton mot de passe ?{' '}
                 <button
                   type="button"
                   onClick={() => navigate('/signin')}
                   className="text-[#1FA774] font-semibold hover:underline disabled:opacity-50"
                   disabled={loading}
                 >
-                  Sign In
+                  Connexion
                 </button>
               </p>
             </form>

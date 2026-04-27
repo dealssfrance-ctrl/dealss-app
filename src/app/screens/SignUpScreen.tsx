@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { Button } from '../components/Button';
+import { Logo } from '../components/Logo';
 import { ArrowLeft, Eye, EyeOff, User, Mail, Lock, AlertCircle, Store, MapPin } from 'lucide-react';
 import { useAuth, AccountType } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -94,7 +95,7 @@ export function SignUpScreen() {
             <button onClick={() => navigate('/welcome')} className="p-1">
               <ArrowLeft size={24} className="text-gray-900" />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Create Account</h1>
+            <h1 className="text-xl font-semibold text-gray-900">Créer un compte</h1>
           </div>
         </div>
       </div>
@@ -106,8 +107,10 @@ export function SignUpScreen() {
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Troqly</h2>
-            <p className="text-gray-500">Create your account to get started</p>
+            <div className="flex justify-center mb-4">
+              <Logo className="h-12 w-auto" />
+            </div>
+            <p className="text-gray-500">Crée ton compte pour commencer</p>
           </div>
 
           {error && (
@@ -165,7 +168,7 @@ export function SignUpScreen() {
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {accountType === 'merchant' ? 'Nom du gérant' : 'Full Name'}
+                {accountType === 'merchant' ? 'Nom du gérant' : 'Nom complet'}
               </label>
               <div className="relative">
                 <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -225,7 +228,7 @@ export function SignUpScreen() {
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+                Adresse e-mail
               </label>
               <div className="relative">
                 <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -273,7 +276,7 @@ export function SignUpScreen() {
             {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
+                Confirmer le mot de passe
               </label>
               <div className="relative">
                 <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -316,20 +319,20 @@ export function SignUpScreen() {
                 disabled={loading}
                 className="disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating Account...' : 'Create Account'}
+                {loading ? 'Création…' : 'Créer un compte'}
               </Button>
             </div>
 
             {/* Sign In Link */}
             <p className="text-center text-gray-600">
-              Already have an account?{' '}
+              Déjà un compte ?{' '}
               <button
                 type="button"
                 onClick={() => navigate('/signin')}
                 className="text-[#1FA774] font-semibold hover:underline disabled:opacity-50"
                 disabled={loading}
               >
-                Sign In
+                Connexion
               </button>
             </p>
           </form>

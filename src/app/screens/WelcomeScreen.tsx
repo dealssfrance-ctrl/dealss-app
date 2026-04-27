@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { Button } from '../components/Button';
+import { Logo } from '../components/Logo';
 import { Repeat, MapPin, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,7 +21,7 @@ export function WelcomeScreen() {
     {
       icon: Repeat,
       iconBg: 'bg-indigo-500/90',
-      title: 'Troc entre employés',
+      title: 'Échange tes réductions en 2 clics',
       description: "Échange ta réduc Zara contre une réduc McDonald's et plus encore",
     },
     {
@@ -32,7 +33,7 @@ export function WelcomeScreen() {
     {
       icon: Star,
       iconBg: 'bg-amber-400/95',
-      title: 'Communauté fiable',
+      title: 'Utilisateurs vérifiés et notés',
       description: 'Profils notés et échanges confirmés mutuellement',
     },
   ];
@@ -56,9 +57,11 @@ export function WelcomeScreen() {
           initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-8"
+          className="text-center mb-8 flex justify-center"
         >
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-5 tracking-tight">Troqly</h1>
+          <div className="bg-white rounded-2xl px-6 py-4 shadow-lg">
+            <Logo className="h-14 md:h-16 w-auto" />
+          </div>
         </motion.div>
 
         {/* Features */}
@@ -119,16 +122,7 @@ export function WelcomeScreen() {
             }}
             className="w-full py-4 rounded-full font-semibold text-white border-2 border-white/30 hover:bg-white/10 transition-colors"
           >
-            Se connecter
-          </button>
-          <button
-            onClick={() => {
-              markWelcomeSeen();
-              navigate('/');
-            }}
-            className="w-full py-3 rounded-full font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-colors text-sm flex items-center justify-center gap-2"
-          >
-            Continuer en invité
+            Connexion
           </button>
         </div>
       </motion.div>

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { useFilters } from '../context/FilterContext';
 import { useChatNotifications } from '../context/ChatNotificationsContext';
+import { Logo } from './Logo';
 
 export function DesktopSidebar() {
   const navigate = useNavigate();
@@ -22,8 +23,8 @@ export function DesktopSidebar() {
     <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-white border-r border-gray-200 sticky top-0 h-screen shrink-0">
       {/* Logo */}
       <div className="px-6 py-6 border-b border-gray-100">
-        <button onClick={() => navigate('/')} className="text-2xl font-bold text-gray-900 hover:text-[#1FA774] transition-colors">
-          Troqly
+        <button onClick={() => navigate('/')} className="flex items-center hover:opacity-80 transition-opacity" aria-label="Troqly">
+          <Logo className="h-9 w-auto" />
         </button>
       </div>
 

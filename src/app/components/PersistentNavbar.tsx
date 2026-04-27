@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { useLocation } from 'react-router';
+import { Logo } from './Logo';
 
 interface PersistentNavbarProps {
   title?: string;
@@ -48,7 +49,7 @@ export function PersistentNavbar({
               ← Retour
             </motion.button>
           ) : (
-            <h1 className="text-lg font-bold text-[#1FA774]">Troqly</h1>
+            <Logo className="h-7 w-auto" />
           )}
         </div>
 
