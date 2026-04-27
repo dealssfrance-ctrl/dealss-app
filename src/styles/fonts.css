@@ -1,0 +1,10 @@
+/* Poppins is loaded from Google Fonts. Multiple weights are bundled so headings,
+   body text, and buttons can all share a single typographic family. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+html,
+body,
+#root {
+  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, 'Noto Sans', sans-serif;
+}
