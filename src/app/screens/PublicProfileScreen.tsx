@@ -4,13 +4,11 @@ import { Layout } from '../components/Layout';
 import { OfferCard } from '../components/OfferCard';
 import { offersService, Offer } from '../services/offersService';
 import { reviewsService } from '../services/reviewsService';
-import { chatService } from '../services/chatService';
-import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { motion } from 'motion/react';
-import { ArrowLeft, Package, Briefcase, EyeOff, Star, Store, MapPin, BadgeCheck, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Package, Briefcase, EyeOff, Star, Store, MapPin, BadgeCheck } from 'lucide-react';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
-import { toast } from 'sonner';
+import { Logo } from '../components/Logo';
 
 interface PublicUser {
   id: string;
@@ -30,12 +28,10 @@ interface PublicUser {
 export function PublicProfileScreen() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
   const [user, setUser] = useState<PublicUser | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [rating, setRating] = useState<{ averageRating: number; reviewCount: number }>({ averageRating: 0, reviewCount: 0 });
   const [loading, setLoading] = useState(true);
-  const [contacting, setContacting] = useState(false);
 
   useEffect(() => {
     if (userId) loadProfile();
@@ -114,44 +110,6 @@ export function PublicProfileScreen() {
 
   if (!user) return null;
 
-  const isOwnProfile = currentUser?.id === user.id;
-
-  const handleContactClick = async () => {
-    if (!user) return;
-    if (!currentUser) {
-      toast.error('Connectez-vous pour envoyer un message');
-      const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-      navigate(`/signin?redirect=${redirect}`);
-      return;
-    }
-    try {
-      setContacting(true);
-      // Reuse an existing thread with this user if any.
-      const sibs = await chatService.findSiblingConversations(currentUser.id, user.id);
-      if (sibs.length > 0) {
-        navigate(`/chat/${sibs[0]}`);
-        return;
-      }
-      // Otherwise, start a draft chat anchored on the user's first active offer.
-      const firstOffer = offers[0];
-      if (!firstOffer) {
-        toast.info("Cet utilisateur n'a pas d'offre active pour démarrer une conversation");
-        return;
-      }
-      const params = new URLSearchParams({
-        offerId: firstOffer.id,
-        receiverId: user.id,
-        storeName: firstOffer.storeName || '',
-        otherName: user.accountType === 'merchant' ? (user.storeName || user.name) : user.name,
-      });
-      navigate(`/chat/new?${params.toString()}`);
-    } catch {
-      toast.error("Erreur lors de l'ouverture de la conversation");
-    } finally {
-      setContacting(false);
-    }
-  };
-
   const userInitial = user.name.charAt(0).toUpperCase();
   const joinDate = new Date(user.createdAt).toLocaleDateString('fr-FR', {
     month: 'long',
@@ -163,11 +121,12 @@ export function PublicProfileScreen() {
       <div className="min-h-screen bg-gray-50 pb-24 md:pb-6">
         {/* Header */}
         <div className="bg-white border-b border-gray-200">
-          <div className="max-w-5xl mx-auto px-5 md:px-8 lg:px-10 py-6 flex items-center gap-3">
+          <div className="max-w-5xl mx-auto px-5 md:px-8 lg:px-10 py-6 grid grid-cols-[auto_1fr_auto] items-center gap-3">
             <button onClick={() => navigate(-1)} className="text-gray-600 hover:text-gray-900">
               <ArrowLeft size={22} />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Profil</h1>
+            <Logo className="h-8 w-auto justify-self-center" />
+            <div aria-hidden="true" className="w-[22px]" />
           </div>
         </div>
 
@@ -243,20 +202,6 @@ export function PublicProfileScreen() {
                 </p>
               </div>
             </div>
-
-            {!isOwnProfile && (
-              <div className="mt-5">
-                <button
-                  type="button"
-                  onClick={handleContactClick}
-                  disabled={contacting}
-                  className="w-full inline-flex items-center justify-center gap-2 bg-[#1FA774] hover:bg-[#16865c] disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-2xl transition-colors"
-                >
-                  <MessageCircle size={18} />
-                  Contacter
-                </button>
-              </div>
-            )}
           </motion.div>
 
           {/* Offers Section */}
