@@ -33,8 +33,8 @@ export function SignUpScreen() {
     e.preventDefault();
     setError('');
 
-    if (!formData.name.trim()) {
-      toast.error(accountType === 'merchant' ? 'Le nom du gérant est requis' : 'Le nom est requis');
+    if (accountType === 'individual' && !formData.name.trim()) {
+      toast.error('Le nom est requis');
       return;
     }
 
@@ -59,7 +59,7 @@ export function SignUpScreen() {
         formData.email,
         formData.password,
         formData.confirmPassword,
-        formData.name,
+        accountType === 'merchant' ? formData.storeName : formData.name,
         accountType,
         accountType === 'merchant'
           ? {
@@ -165,24 +165,26 @@ export function SignUpScreen() {
               </p>
             </div>
 
-            {/* Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {accountType === 'merchant' ? 'Nom du gérant' : 'Nom complet'}
-              </label>
-              <div className="relative">
-                <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleChange('name', e.target.value)}
-                  placeholder="John Doe"
-                  className="w-full bg-white border border-gray-200 rounded-2xl pl-12 pr-5 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent disabled:bg-gray-100"
-                  required
-                  disabled={loading}
-                />
+            {/* Name (individual only) */}
+            {accountType === 'individual' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom complet
+                </label>
+                <div className="relative">
+                  <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => handleChange('name', e.target.value)}
+                    placeholder="John Doe"
+                    className="w-full bg-white border border-gray-200 rounded-2xl pl-12 pr-5 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent disabled:bg-gray-100"
+                    required
+                    disabled={loading}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Merchant-only fields */}
             {accountType === 'merchant' && (
