@@ -264,20 +264,13 @@ export function Home() {
             >
               <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
             </button>
-            {user ? (
+            {user && (
               <button
                 onClick={handleLogout}
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
                 title="Se déconnecter"
               >
                 <LogOut size={20} />
-              </button>
-            ) : (
-              <button
-                onClick={() => navigate('/signin')}
-                className="text-sm font-semibold text-white bg-[#1FA774] px-4 py-2 rounded-full hover:bg-[#16865c] transition-colors"
-              >
-                Connexion
               </button>
             )}
           </>
