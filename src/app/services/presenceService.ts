@@ -94,8 +94,12 @@ export function subscribeToUserPresence(
   userId: string,
   onChange: (lastSeenAt: string | null) => void,
 ): () => void {
+  // Channel names must be unique per subscription instance — sharing a name
+  // between two callers triggers "cannot add postgres_changes callbacks
+  // after subscribe()" because supabase-js reuses the existing channel.
+  const channelName = `presence:${userId}:${Math.random().toString(36).slice(2)}`;
   const channel = supabase
-    .channel(`presence:${userId}`)
+    .channel(channelName)
     .on(
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${userId}` },
