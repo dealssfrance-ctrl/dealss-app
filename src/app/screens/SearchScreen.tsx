@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { offersService, Offer } from '../services/offersService';
 
-const CATEGORIES = ['All', 'Fashion', 'Points', 'Food', 'Sports', 'Electronics', 'Beauty', 'Vols', 'Other'];
+const CATEGORIES = ['All', 'Fashion', 'Points', 'Food', 'Beauty', 'Vols', 'Electronics', 'Sports', 'Other'];
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   'All': '✨',

@@ -26,7 +26,7 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
 };
 
 // Primary categories first in the order the user defined them.
-const CATEGORY_ORDER = ['mode', 'fashion', 'points', 'food', 'sports', 'electronics', 'beauty', 'vols', 'other'];
+const CATEGORY_ORDER = ['mode', 'fashion', 'points', 'food', 'beauty', 'vols', 'electronics', 'sports', 'other'];
 
 function normalizeCategoryKey(value: string): string {
   return value

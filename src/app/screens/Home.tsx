@@ -47,7 +47,7 @@ function getOfferThumbnail(offer: Offer): string {
   return getCategoryImage(offer.category);
 }
 
-const DEFAULT_CATEGORIES = ['All', 'Fashion', 'Points', 'Food', 'Sports', 'Electronics', 'Beauty', 'Vols', 'Other'];
+const DEFAULT_CATEGORIES = ['All', 'Fashion', 'Points', 'Food', 'Beauty', 'Vols', 'Electronics', 'Sports', 'Other'];
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   'All':    '✨',
