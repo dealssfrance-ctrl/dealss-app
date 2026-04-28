@@ -278,7 +278,7 @@ export function Home() {
       />
 
       {/* Desktop header */}
-      <div className="bg-white border-b border-gray-200 hidden md:block sticky top-0 z-10">
+      <div className="bg-white border-b border-gray-200 hidden md:block sticky top-0 z-30">
         <div className="px-8 lg:px-10 py-6">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             <h1 className="text-2xl font-bold text-gray-900">Accueil</h1>
