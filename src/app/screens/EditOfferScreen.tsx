@@ -8,7 +8,7 @@ import { offersService, Offer } from '../services/offersService';
 import { toast } from 'sonner';
 import { EditOfferFormSkeleton } from '../components/Skeleton';
 
-const CATEGORIES = ['Fashion', 'Sports', 'Food', 'Electronics', 'Beauty', 'Vols', 'Other'];
+const CATEGORIES = ['Fashion', 'Points', 'Food', 'Sports', 'Electronics', 'Beauty', 'Vols', 'Other'];
 
 // Parse the stored imageUrl which may be a JSON-stringified array, a CSV, or a single URL.
 function parseImageUrls(value?: string): string[] {

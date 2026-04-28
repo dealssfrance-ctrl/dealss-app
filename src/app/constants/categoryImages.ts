@@ -1,6 +1,7 @@
 // Category images - one per category for consistent branding
 export const CATEGORY_IMAGES: Record<string, string> = {
   'Fashion': 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=1000&q=80',
+  'Points': 'https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?auto=format&fit=crop&w=1000&q=80',
   'Beauty': 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1000&q=80',
   'Electronics': 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop',
   'Food': 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500&h=500&fit=crop',
@@ -30,6 +31,9 @@ export function getCategoryImage(category?: string): string {
   const normalizedMap: Record<string, string> = {
     fashion: CATEGORY_IMAGES['Fashion'],
     mode: CATEGORY_IMAGES['Fashion'],
+    points: CATEGORY_IMAGES['Points'],
+    fidelite: CATEGORY_IMAGES['Points'],
+    loyalty: CATEGORY_IMAGES['Points'],
     beauty: CATEGORY_IMAGES['Beauty'],
     beaute: CATEGORY_IMAGES['Beauty'],
     electronics: CATEGORY_IMAGES['Electronics'],

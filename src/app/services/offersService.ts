@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient';
 const CATEGORY_CANONICAL_LABELS: Record<string, string> = {
   mode: 'Mode',
   fashion: 'Fashion',
+  points: 'Points',
   beauty: 'Beauté',
   vols: 'Voyage',
   sports: 'Sport',
@@ -15,6 +16,7 @@ const CATEGORY_CANONICAL_LABELS: Record<string, string> = {
 const CATEGORY_ALIASES: Record<string, string[]> = {
   mode: ['mode'],
   fashion: ['fashion'],
+  points: ['points', 'fidelite', 'fidélité', 'loyalty'],
   beauty: ['beauty', 'beaute', 'beauté'],
   vols: ['vols', 'voyage', 'travel'],
   sports: ['sports', 'sport'],
@@ -24,7 +26,7 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
 };
 
 // Primary categories first in the order the user defined them.
-const CATEGORY_ORDER = ['mode', 'fashion', 'sports', 'food', 'electronics', 'beauty', 'vols', 'other'];
+const CATEGORY_ORDER = ['mode', 'fashion', 'points', 'food', 'sports', 'electronics', 'beauty', 'vols', 'other'];
 
 function normalizeCategoryKey(value: string): string {
   return value
