@@ -20,8 +20,8 @@ BEGIN
     EXECUTE $POL$
       CREATE POLICY users_update_own_presence ON users
         FOR UPDATE TO authenticated
-        USING (auth.uid() = id)
-        WITH CHECK (auth.uid() = id)
+        USING (auth.uid()::text = id::text)
+        WITH CHECK (auth.uid()::text = id::text)
     $POL$;
   END IF;
 END $$;
