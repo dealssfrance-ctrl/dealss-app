@@ -348,20 +348,21 @@ export function PublicProfileScreen() {
 
 function PresenceDot({ userId }: { userId: string }) {
   const presence = useUserPresence(userId);
-  if (presence.status === 'unknown') return null;
   return <PresenceIndicator presence={presence} size={11} />;
 }
 
 function PresenceListItem({ userId }: { userId: string }) {
   const presence = useUserPresence(userId);
-  if (presence.status === 'unknown') return null;
   const color =
     presence.status === 'online'
       ? 'text-[#1FA774]'
       : presence.status === 'recent'
       ? 'text-amber-600'
       : 'text-gray-500';
-  const label = presence.status === 'recent' ? 'Actif récemment' : presence.label;
+  const label =
+    presence.status === 'recent'
+      ? 'Actif récemment'
+      : presence.label || 'Hors ligne';
   return (
     <li className={`flex items-center gap-2 text-sm ${color}`}>
       <PresenceIndicator presence={presence} size={10} />

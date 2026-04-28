@@ -26,14 +26,13 @@ export function PresenceIndicator({
   className = '',
   labelClassName = '',
 }: PresenceIndicatorProps) {
-  if (presence.status === 'unknown') return null;
-
   const dotClass = STATUS_COLORS[presence.status];
+  const label = presence.label || 'Hors ligne';
 
   return (
     <span
       className={`inline-flex items-center gap-1.5 ${className}`}
-      title={presence.label}
+      title={label}
     >
       <span
         aria-hidden="true"
@@ -43,7 +42,7 @@ export function PresenceIndicator({
         style={{ width: size, height: size }}
       />
       {showLabel && (
-        <span className={`text-xs ${labelClassName}`}>{presence.label}</span>
+        <span className={`text-xs ${labelClassName}`}>{label}</span>
       )}
     </span>
   );
