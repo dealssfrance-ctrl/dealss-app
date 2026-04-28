@@ -59,15 +59,18 @@ export function describePresence(lastSeenAt: string | null | undefined): Presenc
   return { lastSeenAt, status: 'away', label: `Vu il y a ${days} j` };
 }
 
-/** Update the current user's `last_seen_at` to now. Silent on error. */
+/** Update the current user's `last_seen_at` to now. Logs failures. */
 export async function sendHeartbeat(userId: string): Promise<void> {
   try {
-    await supabase
+    const { error } = await supabase
       .from('users')
       .update({ last_seen_at: new Date().toISOString() })
       .eq('id', userId);
-  } catch {
-    // Network errors are expected (offline, tab suspended) — ignore.
+    if (error) {
+      console.warn('[presence] heartbeat failed:', error.message);
+    }
+  } catch (err) {
+    console.warn('[presence] heartbeat threw:', err);
   }
 }
 
@@ -79,9 +82,14 @@ export async function fetchLastSeen(userId: string): Promise<string | null> {
       .select('last_seen_at')
       .eq('id', userId)
       .single();
-    if (error || !data) return null;
+    if (error) {
+      console.warn('[presence] fetchLastSeen failed:', error.message);
+      return null;
+    }
+    if (!data) return null;
     return (data as any).last_seen_at ?? null;
-  } catch {
+  } catch (err) {
+    console.warn('[presence] fetchLastSeen threw:', err);
     return null;
   }
 }
