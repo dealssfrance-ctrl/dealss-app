@@ -11,6 +11,8 @@ import { motion } from 'motion/react';
 import { ArrowLeft, Package, Briefcase, EyeOff, Star, Store, MapPin, BadgeCheck, MessageCircle } from 'lucide-react';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
 import { Logo } from '../components/Logo';
+import { PresenceIndicator } from '../components/PresenceIndicator';
+import { useUserPresence } from '../hooks/useUserPresence';
 import { toast } from 'sonner';
 
 interface PublicUser {
@@ -207,7 +209,9 @@ export function PublicProfileScreen() {
                       <BadgeCheck size={20} />
                     </span>
                   )}
+                  <PresenceDot userId={user.id} />
                 </div>
+                <PresenceLine userId={user.id} />
 
                 {user.accountType === 'merchant' ? (
                   user.storeLocation && (
@@ -299,4 +303,22 @@ export function PublicProfileScreen() {
       </div>
     </Layout>
   );
+}
+
+function PresenceDot({ userId }: { userId: string }) {
+  const presence = useUserPresence(userId);
+  if (presence.status === 'unknown') return null;
+  return <PresenceIndicator presence={presence} size={11} />;
+}
+
+function PresenceLine({ userId }: { userId: string }) {
+  const presence = useUserPresence(userId);
+  if (presence.status === 'unknown') return null;
+  const color =
+    presence.status === 'online'
+      ? 'text-[#1FA774]'
+      : presence.status === 'recent'
+      ? 'text-amber-600'
+      : 'text-gray-500';
+  return <p className={`text-sm mb-1 ${color}`}>{presence.label}</p>;
 }

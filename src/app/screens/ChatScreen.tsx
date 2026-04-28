@@ -13,6 +13,8 @@ import { ChatScreenSkeleton } from '../components/Skeleton';
 import { Layout } from '../components/Layout';
 import { ReviewRequestCard } from '../components/ReviewRequestCard';
 import { ReviewRequestModal } from '../components/ReviewRequestModal';
+import { PresenceIndicator } from '../components/PresenceIndicator';
+import { useUserPresence } from '../hooks/useUserPresence';
 
 const POLL_INTERVAL = 30_000;
 
@@ -39,6 +41,35 @@ function ReviewBubble({ rating, comment, isMine }: { rating: number; comment?: s
       {comment && <p className="text-sm text-gray-700 leading-snug mt-1">{comment}</p>}
     </div>
   );
+}
+
+function ChatHeaderSubtitle({
+  otherUserId,
+  fallback,
+}: {
+  otherUserId: string;
+  fallback?: string;
+}) {
+  const presence = useUserPresence(otherUserId);
+
+  if (presence.status === 'online' || presence.status === 'recent') {
+    const color = presence.status === 'online' ? 'text-[#1FA774]' : 'text-amber-600';
+    return (
+      <p className={`text-xs truncate flex items-center gap-1.5 ${color}`}>
+        <PresenceIndicator presence={presence} size={8} />
+        <span className="truncate">{presence.label}</span>
+      </p>
+    );
+  }
+  if (presence.status === 'away') {
+    return (
+      <p className="text-xs text-gray-400 truncate flex items-center gap-1.5">
+        <PresenceIndicator presence={presence} size={8} />
+        <span className="truncate">{presence.label}</span>
+      </p>
+    );
+  }
+  return <p className="text-xs text-gray-400 truncate">{fallback}</p>;
 }
 
 export function ChatScreen() {
@@ -742,7 +773,10 @@ export function ChatScreen() {
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="font-semibold text-gray-900 truncate leading-tight">{conversation.otherUserName}</h2>
-              <p className="text-xs text-gray-400 truncate">{conversation.storeName}</p>
+              <ChatHeaderSubtitle
+                otherUserId={conversation.otherUserId}
+                fallback={conversation.storeName}
+              />
             </div>
           </div>
         </div>
