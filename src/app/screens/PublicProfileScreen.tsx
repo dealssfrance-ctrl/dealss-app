@@ -8,11 +8,12 @@ import { chatService } from '../services/chatService';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { motion } from 'motion/react';
-import { ArrowLeft, Package, Briefcase, EyeOff, Star, Store, MapPin, BadgeCheck, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Package, Briefcase, EyeOff, Star, Store, MapPin, BadgeCheck, MessageCircle, CheckCircle2, Sparkles } from 'lucide-react';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
 import { Logo } from '../components/Logo';
 import { PresenceIndicator } from '../components/PresenceIndicator';
 import { useUserPresence } from '../hooks/useUserPresence';
+import { getCategoryLabel } from '../utils/categories';
 import { toast } from 'sonner';
 
 interface PublicUser {
@@ -36,6 +37,7 @@ export function PublicProfileScreen() {
   const { user: currentUser } = useAuth();
   const [user, setUser] = useState<PublicUser | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [allOffers, setAllOffers] = useState<Offer[]>([]);
   const [rating, setRating] = useState<{ averageRating: number; reviewCount: number }>({ averageRating: 0, reviewCount: 0 });
   const [loading, setLoading] = useState(true);
   const [contacting, setContacting] = useState(false);
@@ -81,11 +83,12 @@ export function PublicProfileScreen() {
         isVerified: Boolean((userData as any).is_verified),
       });
 
-      // Fetch user's active offers + aggregated seller rating
+      // Fetch user's offers (all statuses for stats) + aggregated seller rating
       const [response, sellerRating] = await Promise.all([
         offersService.getMyOffers(userId!),
         reviewsService.getSellerRating(userId!),
       ]);
+      setAllOffers(response.data);
       setOffers(response.data.filter(o => o.status === 'active'));
       setRating(sellerRating);
     } catch {
@@ -159,6 +162,22 @@ export function PublicProfileScreen() {
     year: 'numeric',
   });
 
+  // Number of completed exchanges = offers no longer active (sold/closed).
+  const completedExchanges = allOffers.filter((o) => o.status === 'inactive').length;
+
+  // Specialty = top 1–2 categories by frequency among the user's offers.
+  const specialty = (() => {
+    const counts = new Map<string, number>();
+    for (const o of allOffers) {
+      const cat = (o.category || '').trim();
+      if (!cat) continue;
+      counts.set(cat, (counts.get(cat) || 0) + 1);
+    }
+    if (counts.size === 0) return '';
+    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2);
+    return sorted.map(([key]) => getCategoryLabel(key)).join(' / ');
+  })();
+
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50 pb-24 md:pb-6">
@@ -211,7 +230,6 @@ export function PublicProfileScreen() {
                   )}
                   <PresenceDot userId={user.id} />
                 </div>
-                <PresenceLine userId={user.id} />
 
                 {user.accountType === 'merchant' ? (
                   user.storeLocation && (
@@ -230,21 +248,44 @@ export function PublicProfileScreen() {
                 )}
 
                 <p className="text-gray-400 text-sm">Membre depuis {joinDate}</p>
-                <p className="text-gray-500 text-sm mt-1 flex items-center gap-1">
-                  <Package size={14} />
-                  {offers.length} offre{offers.length !== 1 ? 's' : ''} active{offers.length !== 1 ? 's' : ''}
-                </p>
-                <p className="text-gray-600 text-sm mt-1 flex items-center gap-1">
-                  <Star size={14} className={rating.reviewCount > 0 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'} />
-                  {rating.reviewCount > 0 ? (
-                    <>
-                      <span className="font-semibold text-gray-900">{rating.averageRating.toFixed(1)}</span>
-                      <span className="text-gray-500">({rating.reviewCount} avis)</span>
-                    </>
-                  ) : (
-                    <span className="text-gray-400">Aucun avis</span>
+
+                <ul className="text-sm mt-2 space-y-1">
+                  <li className="text-gray-700 flex items-center gap-2">
+                    <Package size={14} className="text-gray-400" />
+                    <span>
+                      <span className="font-semibold text-gray-900">{offers.length}</span> offre{offers.length !== 1 ? 's' : ''} active{offers.length !== 1 ? 's' : ''}
+                    </span>
+                  </li>
+                  <li className="text-gray-700 flex items-center gap-2">
+                    <Star size={14} className={rating.reviewCount > 0 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'} />
+                    {rating.reviewCount > 0 ? (
+                      <span>
+                        <span className="font-semibold text-gray-900">{rating.averageRating.toFixed(1)}</span>{' '}
+                        <span className="text-gray-500">({rating.reviewCount} avis)</span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">Aucun avis</span>
+                    )}
+                  </li>
+                  {completedExchanges > 0 && (
+                    <li className="text-gray-700 flex items-center gap-2">
+                      <CheckCircle2 size={14} className="text-[#1FA774]" />
+                      <span>
+                        <span className="font-semibold text-gray-900">{completedExchanges}</span> échange{completedExchanges !== 1 ? 's' : ''} réussi{completedExchanges !== 1 ? 's' : ''}
+                      </span>
+                    </li>
                   )}
-                </p>
+                  {specialty && (
+                    <li className="text-gray-700 flex items-center gap-2">
+                      <Sparkles size={14} className="text-gray-400" />
+                      <span>
+                        Spécialité&nbsp;:&nbsp;
+                        <span className="font-medium text-gray-900">{specialty}</span>
+                      </span>
+                    </li>
+                  )}
+                  <PresenceListItem userId={user.id} />
+                </ul>
               </div>
             </div>
 
@@ -311,7 +352,7 @@ function PresenceDot({ userId }: { userId: string }) {
   return <PresenceIndicator presence={presence} size={11} />;
 }
 
-function PresenceLine({ userId }: { userId: string }) {
+function PresenceListItem({ userId }: { userId: string }) {
   const presence = useUserPresence(userId);
   if (presence.status === 'unknown') return null;
   const color =
@@ -320,5 +361,11 @@ function PresenceLine({ userId }: { userId: string }) {
       : presence.status === 'recent'
       ? 'text-amber-600'
       : 'text-gray-500';
-  return <p className={`text-sm mb-1 ${color}`}>{presence.label}</p>;
+  const label = presence.status === 'recent' ? 'Actif récemment' : presence.label;
+  return (
+    <li className={`flex items-center gap-2 text-sm ${color}`}>
+      <PresenceIndicator presence={presence} size={10} />
+      <span>{label}</span>
+    </li>
+  );
 }
