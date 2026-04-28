@@ -178,14 +178,15 @@ export function Home() {
     try {
       const result = await offersService.getCategories();
       if (result.success) {
-        // Deduplicate and ensure 'All' is first
+        // Merge defaults with DB categories so newly-added entries (like
+        // "Points") show up even before any offer is published in them.
         const seen = new Set<string>();
-        const deduped: string[] = [];
-        for (const c of result.data) {
+        const merged: string[] = [];
+        for (const c of [...DEFAULT_CATEGORIES, ...result.data]) {
           const key = c.toLowerCase();
-          if (!seen.has(key)) { seen.add(key); deduped.push(c); }
+          if (!seen.has(key)) { seen.add(key); merged.push(c); }
         }
-        setCategories(deduped);
+        setCategories(merged);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
