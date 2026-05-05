@@ -20,9 +20,6 @@ export const CATEGORIES: CategoryConfig[] = [
   { key: 'Electronics', label: 'Électronique', emoji: '📱' },
   { key: 'High-Tech', label: 'High-Tech', emoji: '💻' },
   { key: 'Maison', label: 'Maison', emoji: '🏠' },
-  { key: 'Troc', label: 'Troc/Échange', emoji: '🔄' },
-  { key: 'Echange', label: 'Troc/Échange', emoji: '🔄' },
-  { key: 'Échange', label: 'Troc/Échange', emoji: '🔄' },
   { key: 'Other', label: 'Autre', emoji: '📦' },
 ];
 

@@ -7,7 +7,6 @@ export const CATEGORY_IMAGES: Record<string, string> = {
   'Food': 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500&h=500&fit=crop',
   'Sports': 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=500&h=500&fit=crop',
   'Vols': 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=500&h=500&fit=crop',
-  'Troc': 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500&h=500&fit=crop',
   'Other': 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&h=500&fit=crop',
   // Legacy variants
   'Mode': 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=1000&q=80',
@@ -45,9 +44,6 @@ export function getCategoryImage(category?: string): string {
     sport: CATEGORY_IMAGES['Sports'],
     vols: CATEGORY_IMAGES['Vols'],
     voyage: CATEGORY_IMAGES['Vols'],
-    troc: CATEGORY_IMAGES['Troc'],
-    echange: CATEGORY_IMAGES['Troc'],
-    'troc/echange': CATEGORY_IMAGES['Troc'],
     other: CATEGORY_IMAGES['Other'],
     maison: CATEGORY_IMAGES['Other'],
   };

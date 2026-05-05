@@ -9,7 +9,7 @@ import { offersService } from '../services/offersService';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
-const CATEGORIES = ['Fashion', 'Points', 'Food', 'Beauty', 'Vols', 'Electronics', 'Sports', 'Troc', 'Other'];
+const CATEGORIES = ['Fashion', 'Points', 'Food', 'Beauty', 'Vols', 'Electronics', 'Sports', 'Other'];
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   'Fashion': '👗',
@@ -19,7 +19,6 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   'Electronics': '📱',
   'Beauty': '💄',
   'Vols': '✈️',
-  'Troc': '🔄',
   'Other': '📦',
 };
 

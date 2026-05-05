@@ -19,16 +19,6 @@ import { useUserPresence } from '../hooks/useUserPresence';
 
 const POLL_INTERVAL = 30_000;
 
-/** Detects Troc/Échange category (handles French/English aliases & accents). */
-function isTrocCategory(category?: string | null): boolean {
-  if (!category) return false;
-  const n = category
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-    .toLowerCase();
-  return n === 'troc' || n === 'echange' || n === 'troc/echange';
-}
 
 // ── Review message bubble ─────────────────────────────────────────────────────
 function ReviewBubble({ rating, comment, isMine }: { rating: number; comment?: string; isMine: boolean }) {
@@ -121,8 +111,7 @@ export function ChatScreen() {
   const [activeReviewPayload, setActiveReviewPayload] = useState<ReviewRequestPayload | null>(null);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [submittedOfferIds, setSubmittedOfferIds] = useState<Set<string>>(new Set());
-  // Exchange (Troc/Échange) state
-  const [offerCategory, setOfferCategory] = useState<string>('');
+  // Exchange validation state (available for all offers).
   const [exchange, setExchange] = useState<Exchange | null>(null);
   const [exchangeLoading, setExchangeLoading] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -378,25 +367,11 @@ export function ChatScreen() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Load offer category for the current thread (used to gate Troc-only actions).
-  useEffect(() => {
-    const offerId = conversation?.offerId || draftOfferId || '';
-    if (!offerId) return;
-    let cancelled = false;
-    offersService
-      .getOfferById(offerId)
-      .then((res) => {
-        if (!cancelled && res?.data) setOfferCategory(res.data.category || '');
-      })
-      .catch(() => { /* non-blocking */ });
-    return () => { cancelled = true; };
-  }, [conversation?.offerId, draftOfferId]);
-
-  // Load existing exchange status when applicable (Troc category).
+  // Load existing exchange status for the current thread (any offer).
   useEffect(() => {
     const offerId = conversation?.offerId || draftOfferId || '';
     const otherId = conversation?.otherUserId || draftReceiverId || '';
-    if (!user || !offerId || !otherId || !isTrocCategory(offerCategory)) {
+    if (!user || !offerId || !otherId) {
       setExchange(null);
       return;
     }
@@ -406,7 +381,7 @@ export function ChatScreen() {
       .then((ex) => { if (!cancelled) setExchange(ex); })
       .catch(() => { /* non-blocking */ });
     return () => { cancelled = true; };
-  }, [user, conversation?.offerId, conversation?.otherUserId, draftOfferId, draftReceiverId, offerCategory]);
+  }, [user, conversation?.offerId, conversation?.otherUserId, draftOfferId, draftReceiverId]);
 
   // For each unique review_request offerId received by current user, check if already reviewed
   useEffect(() => {
@@ -773,10 +748,9 @@ export function ChatScreen() {
     }
   };
 
-  // ── Exchange (Troc/Échange) handlers ────────────────────────────────────────
+  // ── Exchange handlers (available for all offers) ────────────────────────────
   const exchangeOfferId = conversation?.offerId || draftOfferId || '';
   const exchangeOtherId = conversation?.otherUserId || draftReceiverId || '';
-  const isTrocOffer = isTrocCategory(offerCategory);
 
   const handleConfirmExchange = async () => {
     if (!user || !exchangeOfferId || !exchangeOtherId || exchangeLoading) return;
@@ -899,8 +873,8 @@ export function ChatScreen() {
         {/* Messages (only this scrolls) */}
         <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto px-5 md:px-6 py-4">
           <div className="max-w-3xl mx-auto flex flex-col gap-2 pb-2">
-            {/* Exchange status banner (Troc/Échange offers) */}
-            {isTrocOffer && exchange && (
+            {/* Exchange status banner */}
+            {exchange && (
               <div
                 className={`mb-2 rounded-2xl px-4 py-3 border text-sm flex items-start gap-3 ${
                   exchange.status === 'confirmed'
@@ -1126,7 +1100,7 @@ export function ChatScreen() {
                     </div>
                   </button>
 
-                  {isTrocOffer && exchangeOfferId && exchangeOtherId && (
+                  {exchangeOfferId && exchangeOtherId && (
                     <>
                       <div className="border-t border-gray-100" />
                       <button
