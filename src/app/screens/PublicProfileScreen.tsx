@@ -8,7 +8,7 @@ import { chatService } from '../services/chatService';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { motion } from 'motion/react';
-import { ArrowLeft, Package, Briefcase, EyeOff, Star, Store, MapPin, BadgeCheck, MessageCircle, CheckCircle2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Package, Briefcase, EyeOff, Star, Store, MapPin, BadgeCheck, MessageCircle, CheckCircle2, Sparkles, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
 import { Logo } from '../components/Logo';
 import { PresenceIndicator } from '../components/PresenceIndicator';
@@ -29,6 +29,9 @@ interface PublicUser {
   storeLocation: string;
   storeLogoUrl: string;
   isVerified: boolean;
+  successfulExchanges: number;
+  reportedCount: number;
+  isBlocked: boolean;
 }
 
 export function PublicProfileScreen() {
@@ -53,7 +56,7 @@ export function PublicProfileScreen() {
       // Fetch user info
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, name, company, job_title, is_profile_public, show_work_info, created_at, account_type, store_name, store_location, store_logo_url, is_verified')
+        .select('id, name, company, job_title, is_profile_public, show_work_info, created_at, account_type, store_name, store_location, store_logo_url, is_verified, successful_exchanges, reported_count, is_blocked')
         .eq('id', userId)
         .single();
 
@@ -81,6 +84,9 @@ export function PublicProfileScreen() {
         storeLocation: (userData as any).store_location || '',
         storeLogoUrl: (userData as any).store_logo_url || '',
         isVerified: Boolean((userData as any).is_verified),
+        successfulExchanges: Number((userData as any).successful_exchanges ?? 0),
+        reportedCount: Number((userData as any).reported_count ?? 0),
+        isBlocked: Boolean((userData as any).is_blocked),
       });
 
       // Fetch user's offers (all statuses for stats) + aggregated seller rating
@@ -162,8 +168,11 @@ export function PublicProfileScreen() {
     year: 'numeric',
   });
 
-  // Number of completed exchanges = offers no longer active (sold/closed).
-  const completedExchanges = allOffers.filter((o) => o.status === 'inactive').length;
+  // Number of completed exchanges (real validated trocs > legacy inactive-offer count).
+  const completedExchanges =
+    user.successfulExchanges > 0
+      ? user.successfulExchanges
+      : allOffers.filter((o) => o.status === 'inactive').length;
 
   // Specialty = top 1–2 categories by frequency among the user's offers.
   const specialty = (() => {
@@ -275,6 +284,19 @@ export function PublicProfileScreen() {
                       </span>
                     </li>
                   )}
+                  {user.isBlocked ? (
+                    <li className="text-red-700 flex items-center gap-2">
+                      <ShieldAlert size={14} className="text-red-600" />
+                      <span className="font-semibold">Utilisateur bloqué (signalements multiples)</span>
+                    </li>
+                  ) : user.reportedCount >= 3 ? (
+                    <li className="text-amber-700 flex items-center gap-2">
+                      <AlertTriangle size={14} className="text-amber-600" />
+                      <span>
+                        <span className="font-semibold">{user.reportedCount}</span> signalement{user.reportedCount !== 1 ? 's' : ''} reçu{user.reportedCount !== 1 ? 's' : ''}
+                      </span>
+                    </li>
+                  ) : null}
                   {specialty && (
                     <li className="text-gray-700 flex items-center gap-2">
                       <Sparkles size={14} className="text-gray-400" />
