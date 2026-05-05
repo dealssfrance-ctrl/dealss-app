@@ -47,11 +47,12 @@ function getOfferThumbnail(offer: Offer): string {
   return getCategoryImage(offer.category);
 }
 
-const DEFAULT_CATEGORIES = ['All', 'Fashion', 'Food', 'Sports', 'Electronics', 'Beauty', 'Vols', 'Other'];
+const DEFAULT_CATEGORIES = ['All', 'Fashion', 'Points', 'Food', 'Beauty', 'Vols', 'Electronics', 'Sports', 'Troc', 'Other'];
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   'All':    '✨',
   'Fashion':'👗',
+  'Points': '🌟',
   'Food':   '🍔',
   'Sports': '🏀',
   'Electronics': '📱',
@@ -177,14 +178,15 @@ export function Home() {
     try {
       const result = await offersService.getCategories();
       if (result.success) {
-        // Deduplicate and ensure 'All' is first
+        // Merge defaults with DB categories so newly-added entries (like
+        // "Points") show up even before any offer is published in them.
         const seen = new Set<string>();
-        const deduped: string[] = [];
-        for (const c of result.data) {
+        const merged: string[] = [];
+        for (const c of [...DEFAULT_CATEGORIES, ...result.data]) {
           const key = c.toLowerCase();
-          if (!seen.has(key)) { seen.add(key); deduped.push(c); }
+          if (!seen.has(key)) { seen.add(key); merged.push(c); }
         }
-        setCategories(deduped);
+        setCategories(merged);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -264,7 +266,7 @@ export function Home() {
             >
               <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
             </button>
-            {user ? (
+            {user && (
               <button
                 onClick={handleLogout}
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
@@ -272,20 +274,13 @@ export function Home() {
               >
                 <LogOut size={20} />
               </button>
-            ) : (
-              <button
-                onClick={() => navigate('/signin')}
-                className="text-sm font-semibold text-white bg-[#1FA774] px-4 py-2 rounded-full hover:bg-[#16865c] transition-colors"
-              >
-                Connexion
-              </button>
             )}
           </>
         }
       />
 
       {/* Desktop header */}
-      <div className="bg-white border-b border-gray-200 hidden md:block sticky top-0 z-10">
+      <div className="bg-white border-b border-gray-200 hidden md:block sticky top-0 z-30">
         <div className="px-8 lg:px-10 py-6">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             <h1 className="text-2xl font-bold text-gray-900">Accueil</h1>

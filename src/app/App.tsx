@@ -3,6 +3,7 @@ import { router } from './routes';
 import { AuthProvider } from './context/AuthContext';
 import { FilterProvider } from './context/FilterContext';
 import { ChatNotificationsProvider } from './context/ChatNotificationsContext';
+import { PresenceHeartbeat } from './components/PresenceHeartbeat';
 import { Toaster } from 'sonner';
 import { useEffect } from 'react';
 
@@ -27,6 +28,7 @@ export default function App() {
         <ChatNotificationsProvider>
           <div className="min-h-screen bg-gray-50">
             <HashErrorHandler />
+            <PresenceHeartbeat />
             <RouterProvider router={router} />
             <Toaster position="top-center" richColors />
           </div>

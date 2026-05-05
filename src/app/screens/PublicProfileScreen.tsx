@@ -8,8 +8,12 @@ import { chatService } from '../services/chatService';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabaseClient';
 import { motion } from 'motion/react';
-import { ArrowLeft, Package, Briefcase, EyeOff, Star, Store, MapPin, BadgeCheck, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Package, Briefcase, EyeOff, Star, Store, MapPin, BadgeCheck, MessageCircle, CheckCircle2, Sparkles, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { ProfileOffersSkeleton } from '../components/Skeleton';
+import { Logo } from '../components/Logo';
+import { PresenceIndicator } from '../components/PresenceIndicator';
+import { useUserPresence } from '../hooks/useUserPresence';
+import { getCategoryLabel } from '../utils/categories';
 import { toast } from 'sonner';
 
 interface PublicUser {
@@ -25,6 +29,9 @@ interface PublicUser {
   storeLocation: string;
   storeLogoUrl: string;
   isVerified: boolean;
+  successfulExchanges: number;
+  reportedCount: number;
+  isBlocked: boolean;
 }
 
 export function PublicProfileScreen() {
@@ -33,6 +40,7 @@ export function PublicProfileScreen() {
   const { user: currentUser } = useAuth();
   const [user, setUser] = useState<PublicUser | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [allOffers, setAllOffers] = useState<Offer[]>([]);
   const [rating, setRating] = useState<{ averageRating: number; reviewCount: number }>({ averageRating: 0, reviewCount: 0 });
   const [loading, setLoading] = useState(true);
   const [contacting, setContacting] = useState(false);
@@ -48,7 +56,7 @@ export function PublicProfileScreen() {
       // Fetch user info
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, name, company, job_title, is_profile_public, show_work_info, created_at, account_type, store_name, store_location, store_logo_url, is_verified')
+        .select('id, name, company, job_title, is_profile_public, show_work_info, created_at, account_type, store_name, store_location, store_logo_url, is_verified, successful_exchanges, reported_count, is_blocked')
         .eq('id', userId)
         .single();
 
@@ -76,13 +84,17 @@ export function PublicProfileScreen() {
         storeLocation: (userData as any).store_location || '',
         storeLogoUrl: (userData as any).store_logo_url || '',
         isVerified: Boolean((userData as any).is_verified),
+        successfulExchanges: Number((userData as any).successful_exchanges ?? 0),
+        reportedCount: Number((userData as any).reported_count ?? 0),
+        isBlocked: Boolean((userData as any).is_blocked),
       });
 
-      // Fetch user's active offers + aggregated seller rating
+      // Fetch user's offers (all statuses for stats) + aggregated seller rating
       const [response, sellerRating] = await Promise.all([
         offersService.getMyOffers(userId!),
         reviewsService.getSellerRating(userId!),
       ]);
+      setAllOffers(response.data);
       setOffers(response.data.filter(o => o.status === 'active'));
       setRating(sellerRating);
     } catch {
@@ -126,13 +138,11 @@ export function PublicProfileScreen() {
     }
     try {
       setContacting(true);
-      // Reuse an existing thread with this user if any.
       const sibs = await chatService.findSiblingConversations(currentUser.id, user.id);
       if (sibs.length > 0) {
         navigate(`/chat/${sibs[0]}`);
         return;
       }
-      // Otherwise, start a draft chat anchored on the user's first active offer.
       const firstOffer = offers[0];
       if (!firstOffer) {
         toast.info("Cet utilisateur n'a pas d'offre active pour démarrer une conversation");
@@ -158,16 +168,36 @@ export function PublicProfileScreen() {
     year: 'numeric',
   });
 
+  // Number of completed exchanges (real validated trocs > legacy inactive-offer count).
+  const completedExchanges =
+    user.successfulExchanges > 0
+      ? user.successfulExchanges
+      : allOffers.filter((o) => o.status === 'inactive').length;
+
+  // Specialty = top 1–2 categories by frequency among the user's offers.
+  const specialty = (() => {
+    const counts = new Map<string, number>();
+    for (const o of allOffers) {
+      const cat = (o.category || '').trim();
+      if (!cat) continue;
+      counts.set(cat, (counts.get(cat) || 0) + 1);
+    }
+    if (counts.size === 0) return '';
+    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2);
+    return sorted.map(([key]) => getCategoryLabel(key)).join(' / ');
+  })();
+
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50 pb-24 md:pb-6">
         {/* Header */}
         <div className="bg-white border-b border-gray-200">
-          <div className="max-w-5xl mx-auto px-5 md:px-8 lg:px-10 py-6 flex items-center gap-3">
+          <div className="max-w-5xl mx-auto px-5 md:px-8 lg:px-10 py-6 grid grid-cols-[auto_1fr_auto] items-center gap-3">
             <button onClick={() => navigate(-1)} className="text-gray-600 hover:text-gray-900">
               <ArrowLeft size={22} />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Profil</h1>
+            <Logo className="h-8 w-auto justify-self-center" />
+            <div aria-hidden="true" className="w-[22px]" />
           </div>
         </div>
 
@@ -207,6 +237,7 @@ export function PublicProfileScreen() {
                       <BadgeCheck size={20} />
                     </span>
                   )}
+                  <PresenceDot userId={user.id} />
                 </div>
 
                 {user.accountType === 'merchant' ? (
@@ -226,21 +257,57 @@ export function PublicProfileScreen() {
                 )}
 
                 <p className="text-gray-400 text-sm">Membre depuis {joinDate}</p>
-                <p className="text-gray-500 text-sm mt-1 flex items-center gap-1">
-                  <Package size={14} />
-                  {offers.length} offre{offers.length !== 1 ? 's' : ''} active{offers.length !== 1 ? 's' : ''}
-                </p>
-                <p className="text-gray-600 text-sm mt-1 flex items-center gap-1">
-                  <Star size={14} className={rating.reviewCount > 0 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'} />
-                  {rating.reviewCount > 0 ? (
-                    <>
-                      <span className="font-semibold text-gray-900">{rating.averageRating.toFixed(1)}</span>
-                      <span className="text-gray-500">({rating.reviewCount} avis)</span>
-                    </>
-                  ) : (
-                    <span className="text-gray-400">Aucun avis</span>
+
+                <ul className="text-sm mt-2 space-y-1">
+                  <li className="text-gray-700 flex items-center gap-2">
+                    <Package size={14} className="text-gray-400" />
+                    <span>
+                      <span className="font-semibold text-gray-900">{offers.length}</span> offre{offers.length !== 1 ? 's' : ''} active{offers.length !== 1 ? 's' : ''}
+                    </span>
+                  </li>
+                  <li className="text-gray-700 flex items-center gap-2">
+                    <Star size={14} className={rating.reviewCount > 0 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'} />
+                    {rating.reviewCount > 0 ? (
+                      <span>
+                        <span className="font-semibold text-gray-900">{rating.averageRating.toFixed(1)}</span>{' '}
+                        <span className="text-gray-500">({rating.reviewCount} avis)</span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">Aucun avis</span>
+                    )}
+                  </li>
+                  {completedExchanges > 0 && (
+                    <li className="text-gray-700 flex items-center gap-2">
+                      <CheckCircle2 size={14} className="text-[#1FA774]" />
+                      <span>
+                        <span className="font-semibold text-gray-900">{completedExchanges}</span> échange{completedExchanges !== 1 ? 's' : ''} réussi{completedExchanges !== 1 ? 's' : ''}
+                      </span>
+                    </li>
                   )}
-                </p>
+                  {user.isBlocked ? (
+                    <li className="text-red-700 flex items-center gap-2">
+                      <ShieldAlert size={14} className="text-red-600" />
+                      <span className="font-semibold">Utilisateur bloqué (signalements multiples)</span>
+                    </li>
+                  ) : user.reportedCount >= 3 ? (
+                    <li className="text-amber-700 flex items-center gap-2">
+                      <AlertTriangle size={14} className="text-amber-600" />
+                      <span>
+                        <span className="font-semibold">{user.reportedCount}</span> signalement{user.reportedCount !== 1 ? 's' : ''} reçu{user.reportedCount !== 1 ? 's' : ''}
+                      </span>
+                    </li>
+                  ) : null}
+                  {specialty && (
+                    <li className="text-gray-700 flex items-center gap-2">
+                      <Sparkles size={14} className="text-gray-400" />
+                      <span>
+                        Spécialité&nbsp;:&nbsp;
+                        <span className="font-medium text-gray-900">{specialty}</span>
+                      </span>
+                    </li>
+                  )}
+                  <PresenceListItem userId={user.id} />
+                </ul>
               </div>
             </div>
 
@@ -275,14 +342,53 @@ export function PublicProfileScreen() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <OfferCard offer={offer} />
+                    <OfferCard offer={offer} hideContact />
                   </motion.div>
                 ))}
               </div>
             )}
           </div>
         </div>
+
+        {/* Mobile sticky CTA above bottom nav */}
+        {!isOwnProfile && (
+          <div className="md:hidden fixed bottom-16 left-0 right-0 z-20 bg-white/95 backdrop-blur border-t border-gray-200 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.06)]">
+            <button
+              onClick={handleContactClick}
+              disabled={contacting}
+              className="w-full flex items-center justify-center gap-2 bg-[#1FA774] text-white py-3.5 rounded-full font-bold text-[15px] shadow-md shadow-[#1FA774]/30 hover:bg-[#16865c] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            >
+              <MessageCircle size={20} />
+              Contacter {(user.accountType === 'merchant' ? (user.storeName || user.name) : user.name).split(' ')[0]}
+            </button>
+          </div>
+        )}
       </div>
     </Layout>
+  );
+}
+
+function PresenceDot({ userId }: { userId: string }) {
+  const presence = useUserPresence(userId);
+  return <PresenceIndicator presence={presence} size={11} />;
+}
+
+function PresenceListItem({ userId }: { userId: string }) {
+  const presence = useUserPresence(userId);
+  const color =
+    presence.status === 'online'
+      ? 'text-[#1FA774]'
+      : presence.status === 'recent'
+      ? 'text-amber-600'
+      : 'text-gray-500';
+  const label =
+    presence.status === 'recent'
+      ? 'Actif récemment'
+      : presence.label || 'Hors ligne';
+  return (
+    <li className={`flex items-center gap-2 text-sm ${color}`}>
+      <PresenceIndicator presence={presence} size={10} />
+      <span>{label}</span>
+    </li>
   );
 }

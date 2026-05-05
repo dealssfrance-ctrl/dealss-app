@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router';
-import { ArrowLeft, Send, Image as ImageIcon, Star, Plus } from 'lucide-react';
+import { ArrowLeft, Send, Image as ImageIcon, Star, Plus, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
@@ -9,12 +9,26 @@ import { playMessageSound } from '../utils/sounds';
 import { chatService, ChatMessage, ConversationDetail, ReviewRequestPayload } from '../services/chatService';
 import { offersService } from '../services/offersService';
 import { reviewsService } from '../services/reviewsService';
+import { exchangeService, Exchange } from '../services/exchangeService';
 import { ChatScreenSkeleton } from '../components/Skeleton';
 import { Layout } from '../components/Layout';
 import { ReviewRequestCard } from '../components/ReviewRequestCard';
 import { ReviewRequestModal } from '../components/ReviewRequestModal';
+import { PresenceIndicator } from '../components/PresenceIndicator';
+import { useUserPresence } from '../hooks/useUserPresence';
 
 const POLL_INTERVAL = 30_000;
+
+/** Detects Troc/Échange category (handles French/English aliases & accents). */
+function isTrocCategory(category?: string | null): boolean {
+  if (!category) return false;
+  const n = category
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+  return n === 'troc' || n === 'echange' || n === 'troc/echange';
+}
 
 // ── Review message bubble ─────────────────────────────────────────────────────
 function ReviewBubble({ rating, comment, isMine }: { rating: number; comment?: string; isMine: boolean }) {
@@ -39,6 +53,35 @@ function ReviewBubble({ rating, comment, isMine }: { rating: number; comment?: s
       {comment && <p className="text-sm text-gray-700 leading-snug mt-1">{comment}</p>}
     </div>
   );
+}
+
+function ChatHeaderSubtitle({
+  otherUserId,
+  fallback,
+}: {
+  otherUserId: string;
+  fallback?: string;
+}) {
+  const presence = useUserPresence(otherUserId);
+
+  if (presence.status === 'online' || presence.status === 'recent') {
+    const color = presence.status === 'online' ? 'text-[#1FA774]' : 'text-amber-600';
+    return (
+      <p className={`text-xs truncate flex items-center gap-1.5 ${color}`}>
+        <PresenceIndicator presence={presence} size={8} />
+        <span className="truncate">{presence.label}</span>
+      </p>
+    );
+  }
+  if (presence.status === 'away') {
+    return (
+      <p className="text-xs text-gray-400 truncate flex items-center gap-1.5">
+        <PresenceIndicator presence={presence} size={8} />
+        <span className="truncate">{presence.label}</span>
+      </p>
+    );
+  }
+  return <p className="text-xs text-gray-400 truncate">{fallback}</p>;
 }
 
 export function ChatScreen() {
@@ -78,6 +121,13 @@ export function ChatScreen() {
   const [activeReviewPayload, setActiveReviewPayload] = useState<ReviewRequestPayload | null>(null);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [submittedOfferIds, setSubmittedOfferIds] = useState<Set<string>>(new Set());
+  // Exchange (Troc/Échange) state
+  const [offerCategory, setOfferCategory] = useState<string>('');
+  const [exchange, setExchange] = useState<Exchange | null>(null);
+  const [exchangeLoading, setExchangeLoading] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
   const [hasMoreOlder, setHasMoreOlder] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -327,6 +377,36 @@ export function ChatScreen() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  // Load offer category for the current thread (used to gate Troc-only actions).
+  useEffect(() => {
+    const offerId = conversation?.offerId || draftOfferId || '';
+    if (!offerId) return;
+    let cancelled = false;
+    offersService
+      .getOfferById(offerId)
+      .then((res) => {
+        if (!cancelled && res?.data) setOfferCategory(res.data.category || '');
+      })
+      .catch(() => { /* non-blocking */ });
+    return () => { cancelled = true; };
+  }, [conversation?.offerId, draftOfferId]);
+
+  // Load existing exchange status when applicable (Troc category).
+  useEffect(() => {
+    const offerId = conversation?.offerId || draftOfferId || '';
+    const otherId = conversation?.otherUserId || draftReceiverId || '';
+    if (!user || !offerId || !otherId || !isTrocCategory(offerCategory)) {
+      setExchange(null);
+      return;
+    }
+    let cancelled = false;
+    exchangeService
+      .findExchange(offerId, user.id, otherId)
+      .then((ex) => { if (!cancelled) setExchange(ex); })
+      .catch(() => { /* non-blocking */ });
+    return () => { cancelled = true; };
+  }, [user, conversation?.offerId, conversation?.otherUserId, draftOfferId, draftReceiverId, offerCategory]);
 
   // For each unique review_request offerId received by current user, check if already reviewed
   useEffect(() => {
@@ -693,6 +773,72 @@ export function ChatScreen() {
     }
   };
 
+  // ── Exchange (Troc/Échange) handlers ────────────────────────────────────────
+  const exchangeOfferId = conversation?.offerId || draftOfferId || '';
+  const exchangeOtherId = conversation?.otherUserId || draftReceiverId || '';
+  const isTrocOffer = isTrocCategory(offerCategory);
+
+  const handleConfirmExchange = async () => {
+    if (!user || !exchangeOfferId || !exchangeOtherId || exchangeLoading) return;
+    setActionsOpen(false);
+    setExchangeLoading(true);
+    try {
+      const ex = await exchangeService.confirmExchange(
+        exchangeOfferId,
+        user.id,
+        exchangeOtherId,
+      );
+      setExchange(ex);
+      if (ex.status === 'confirmed') {
+        toast.success('✅ Échange validé par les deux parties !');
+      } else {
+        toast.success(
+          'Confirmation enregistrée. En attente de l\'autre participant.',
+        );
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la confirmation';
+      toast.error(msg);
+    } finally {
+      setExchangeLoading(false);
+    }
+  };
+
+  const handleOpenReport = () => {
+    setActionsOpen(false);
+    setReportOpen(true);
+  };
+
+  const handleSubmitReport = async () => {
+    if (!user || !exchangeOfferId || !exchangeOtherId || reportSubmitting) return;
+    setReportSubmitting(true);
+    try {
+      await exchangeService.reportExchange(
+        exchangeOfferId,
+        user.id,
+        exchangeOtherId,
+        reportReason.trim() || undefined,
+      );
+      toast.success('Signalement envoyé');
+      setReportOpen(false);
+      setReportReason('');
+      // Refresh exchange status (it may now be 'disputed').
+      try {
+        const ex = await exchangeService.findExchange(
+          exchangeOfferId,
+          user.id,
+          exchangeOtherId,
+        );
+        setExchange(ex);
+      } catch { /* noop */ }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors du signalement';
+      toast.error(msg);
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
   const formatTime = (dateStr: string) =>
     new Date(dateStr).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
@@ -742,7 +888,10 @@ export function ChatScreen() {
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="font-semibold text-gray-900 truncate leading-tight">{conversation.otherUserName}</h2>
-              <p className="text-xs text-gray-400 truncate">{conversation.storeName}</p>
+              <ChatHeaderSubtitle
+                otherUserId={conversation.otherUserId}
+                fallback={conversation.storeName}
+              />
             </div>
           </div>
         </div>
@@ -750,6 +899,45 @@ export function ChatScreen() {
         {/* Messages (only this scrolls) */}
         <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto px-5 md:px-6 py-4">
           <div className="max-w-3xl mx-auto flex flex-col gap-2 pb-2">
+            {/* Exchange status banner (Troc/Échange offers) */}
+            {isTrocOffer && exchange && (
+              <div
+                className={`mb-2 rounded-2xl px-4 py-3 border text-sm flex items-start gap-3 ${
+                  exchange.status === 'confirmed'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : exchange.status === 'disputed'
+                    ? 'bg-red-50 border-red-200 text-red-800'
+                    : 'bg-amber-50 border-amber-200 text-amber-800'
+                }`}
+              >
+                {exchange.status === 'confirmed' ? (
+                  <CheckCircle2 size={18} className="flex-shrink-0 mt-0.5" />
+                ) : exchange.status === 'disputed' ? (
+                  <AlertTriangle size={18} className="flex-shrink-0 mt-0.5" />
+                ) : (
+                  <CheckCircle2 size={18} className="flex-shrink-0 mt-0.5 opacity-60" />
+                )}
+                <div className="flex-1 min-w-0">
+                  {exchange.status === 'confirmed' ? (
+                    <p className="font-semibold">✅ Échange validé par les deux parties</p>
+                  ) : exchange.status === 'disputed' ? (
+                    <p className="font-semibold">⚠️ Échange signalé comme problématique</p>
+                  ) : exchangeService.hasUserConfirmed(exchange, currentUserId) ? (
+                    <p>
+                      <span className="font-semibold">Vous avez confirmé.</span>{' '}
+                      En attente de l'autre participant.
+                    </p>
+                  ) : exchangeService.hasOtherConfirmed(exchange, currentUserId) ? (
+                    <p>
+                      L'autre participant a confirmé l'échange. À votre tour de
+                      confirmer si tout s'est bien passé.
+                    </p>
+                  ) : (
+                    <p>Échange en attente de confirmation des deux parties.</p>
+                  )}
+                </div>
+              </div>
+            )}
             {/* Top loader for older messages */}
             {hasMoreOlder && messages.length > 0 && (
               <div className="flex justify-center py-2">
@@ -937,6 +1125,45 @@ export function ChatScreen() {
                       <p className="text-xs text-gray-500 truncate">Sur cette offre</p>
                     </div>
                   </button>
+
+                  {isTrocOffer && exchangeOfferId && exchangeOtherId && (
+                    <>
+                      <div className="border-t border-gray-100" />
+                      <button
+                        onClick={handleConfirmExchange}
+                        disabled={
+                          exchangeLoading ||
+                          (exchange ? exchangeService.hasUserConfirmed(exchange, currentUserId) : false)
+                        }
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors disabled:opacity-50 text-left"
+                      >
+                        <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <CheckCircle2 size={16} className="text-emerald-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900">
+                            {exchange && exchangeService.hasUserConfirmed(exchange, currentUserId)
+                              ? 'Échange confirmé'
+                              : 'Confirmer l\'échange'}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">Valider le troc</p>
+                        </div>
+                      </button>
+                      <div className="border-t border-gray-100" />
+                      <button
+                        onClick={handleOpenReport}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                          <AlertTriangle size={16} className="text-red-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900">Problème avec cet échange</p>
+                          <p className="text-xs text-gray-500 truncate">Signaler l'utilisateur</p>
+                        </div>
+                      </button>
+                    </>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1007,6 +1234,65 @@ export function ChatScreen() {
           isLoading={submittingReview}
         />
       )}
+
+      {/* Exchange report modal */}
+      <AnimatePresence>
+        {reportOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center p-4"
+            onClick={() => !reportSubmitting && setReportOpen(false)}
+          >
+            <motion.div
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 30, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertTriangle size={20} className="text-red-600" />
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg">Signaler un problème</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                Décrivez brièvement le problème rencontré avec cet échange.
+                L'utilisateur signalé sera marqué et bloqué automatiquement
+                au-delà d'un certain seuil de signalements.
+              </p>
+              <textarea
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                placeholder="Ex : la personne ne s'est pas présentée au rendez-vous…"
+                rows={4}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+                disabled={reportSubmitting}
+              />
+              <div className="flex gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(false)}
+                  disabled={reportSubmitting}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitReport}
+                  disabled={reportSubmitting}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-60"
+                >
+                  {reportSubmitting ? 'Envoi…' : 'Envoyer le signalement'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
     </Layout>
   );

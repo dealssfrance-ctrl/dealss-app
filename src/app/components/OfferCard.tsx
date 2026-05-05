@@ -12,9 +12,10 @@ export type { Offer };
 
 interface OfferCardProps {
   offer: Offer;
+  hideContact?: boolean;
 }
 
-export function OfferCard({ offer }: OfferCardProps) {
+export function OfferCard({ offer, hideContact = false }: OfferCardProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [imageError, setImageError] = useState(false);
@@ -141,7 +142,7 @@ export function OfferCard({ offer }: OfferCardProps) {
       </div>
 
       {/* Action: Contacter */}
-      {!isOwnOffer && (
+      {!isOwnOffer && !hideContact && (
         <div className="px-3 pb-3">
           <button
             type="button"
