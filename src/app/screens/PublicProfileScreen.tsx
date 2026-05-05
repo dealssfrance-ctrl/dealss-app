@@ -276,12 +276,17 @@ export function PublicProfileScreen() {
                       <span className="text-gray-400">Aucun avis</span>
                     )}
                   </li>
-                  {completedExchanges > 0 && (
+                  {completedExchanges > 0 ? (
                     <li className="text-gray-700 flex items-center gap-2">
                       <CheckCircle2 size={14} className="text-[#1FA774]" />
                       <span>
-                        <span className="font-semibold text-gray-900">{completedExchanges}</span> échange{completedExchanges !== 1 ? 's' : ''} réussi{completedExchanges !== 1 ? 's' : ''}
+                        <span className="font-semibold text-gray-900">+{completedExchanges}</span> échange{completedExchanges !== 1 ? 's' : ''} réussi{completedExchanges !== 1 ? 's' : ''}
                       </span>
+                    </li>
+                  ) : (
+                    <li className="text-gray-500 flex items-center gap-2">
+                      <CheckCircle2 size={14} className="text-gray-300" />
+                      <span>0 échange réussi</span>
                     </li>
                   )}
                   {user.isBlocked ? (
