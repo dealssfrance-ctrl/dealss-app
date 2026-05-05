@@ -49,6 +49,38 @@ function getOfferThumbnail(offer: Offer): string {
 
 const DEFAULT_CATEGORIES = ['All', 'Fashion', 'Points', 'Food', 'Beauty', 'Vols', 'Electronics', 'Sports', 'Other'];
 
+/** Normalizes legacy/French category aliases to the canonical name. */
+function canonicalCategory(raw: string): string {
+  const n = raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+  const map: Record<string, string> = {
+    beaute: 'Beauty',
+    beauty: 'Beauty',
+    voyage: 'Vols',
+    voyages: 'Vols',
+    vol: 'Vols',
+    vols: 'Vols',
+    sport: 'Sports',
+    sports: 'Sports',
+    mode: 'Fashion',
+    fashion: 'Fashion',
+    nourriture: 'Food',
+    food: 'Food',
+    electronique: 'Electronics',
+    electronics: 'Electronics',
+    point: 'Points',
+    points: 'Points',
+    autre: 'Other',
+    other: 'Other',
+    troc: 'Other',
+    echange: 'Other',
+  };
+  return map[n] || raw;
+}
+
 const CATEGORY_EMOJIS: Record<string, string> = {
   'All':    '✨',
   'Fashion':'👗',
@@ -182,7 +214,8 @@ export function Home() {
         // "Points") show up even before any offer is published in them.
         const seen = new Set<string>();
         const merged: string[] = [];
-        for (const c of [...DEFAULT_CATEGORIES, ...result.data]) {
+        for (const raw of [...DEFAULT_CATEGORIES, ...result.data]) {
+          const c = raw === 'All' ? 'All' : canonicalCategory(raw);
           const key = c.toLowerCase();
           if (!seen.has(key)) { seen.add(key); merged.push(c); }
         }
