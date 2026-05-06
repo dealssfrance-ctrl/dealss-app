@@ -1,31 +1,35 @@
 import { Home, Search, MessageCircle, User, Plus, Sliders } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useFilters } from '../context/FilterContext';
 import { useChatNotifications } from '../context/ChatNotificationsContext';
 import { Logo } from './Logo';
+import { LanguageIconButton } from './LanguageIconButton';
 
 export function DesktopSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { filters, setFilters, resetFilters } = useFilters();
   const { unreadCount } = useChatNotifications();
 
   const navItems = [
-    { icon: Home, label: 'Accueil', path: '/' },
-    { icon: Search, label: 'Rechercher', path: '/search' },
-    { icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadCount },
-    { icon: User, label: 'Profil', path: '/profile' },
+    { icon: Home, label: t('nav.home'), path: '/' },
+    { icon: Search, label: t('nav.search'), path: '/search' },
+    { icon: MessageCircle, label: t('nav.messages'), path: '/messages', badge: unreadCount },
+    { icon: User, label: t('nav.profile'), path: '/profile' },
   ];
 
   return (
     <aside className="hidden md:flex flex-col w-64 lg:w-72 bg-white border-r border-gray-200 sticky top-0 h-screen shrink-0">
       {/* Logo */}
-      <div className="px-6 py-6 border-b border-gray-100">
+      <div className="px-6 py-6 border-b border-gray-100 flex items-center justify-between gap-2">
         <button onClick={() => navigate('/')} className="flex items-center hover:opacity-80 transition-opacity" aria-label="Troqly">
           <Logo className="h-9 w-auto" />
         </button>
+        <LanguageIconButton />
       </div>
 
       {/* Navigation */}
@@ -64,12 +68,12 @@ export function DesktopSidebar() {
       <div className="px-3 py-4 border-t border-gray-100 space-y-3 max-h-64 overflow-y-auto">
         <div className="w-full flex items-center gap-2 text-sm font-semibold text-gray-700 px-4 py-2">
           <Sliders size={18} />
-          <span>Filtres</span>
+          <span>{t('search.filters')}</span>
           <button
             onClick={resetFilters}
             className="ml-auto text-xs text-[#1FA774] hover:underline"
           >
-            Réinitialiser
+            {t('home.reset_filters')}
           </button>
         </div>
 
@@ -77,7 +81,7 @@ export function DesktopSidebar() {
             {/* Discount Range */}
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2">
-                Réduction: {filters.discountMin}% - {filters.discountMax}%
+                {t('home.discount_range')}: {filters.discountMin}% - {filters.discountMax}%
               </label>
               <div className="space-y-2">
                 <input
@@ -111,7 +115,7 @@ export function DesktopSidebar() {
 
             {/* Sort by Date */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-2">Tri par date</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-2">{t('home.sort_by_date', 'Tri par date')}</label>
               <select
                 value={filters.sortByDate}
                 onChange={(e) =>
@@ -122,16 +126,16 @@ export function DesktopSidebar() {
                 }
                 className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1FA774]"
               >
-                <option value="none">Aucun</option>
-                <option value="newest">Plus récent</option>
-                <option value="oldest">Plus ancien</option>
+                <option value="none">{t('home.sort_none', 'Aucun')}</option>
+                <option value="newest">{t('home.sort_newest', 'Plus récent')}</option>
+                <option value="oldest">{t('home.sort_oldest', 'Plus ancien')}</option>
               </select>
             </div>
 
             {/* Min Rating */}
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2">
-                Note minimale: {filters.minRating}⭐
+                {t('home.min_rating', 'Note minimale')}: {filters.minRating}⭐
               </label>
               <input
                 type="range"
@@ -152,7 +156,7 @@ export function DesktopSidebar() {
             {/* Min Comments */}
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2">
-                Minimum de commentaires: {filters.minComments}
+                {t('home.min_comments', 'Minimum de commentaires')}: {filters.minComments}
               </label>
               <input
                 type="range"
@@ -179,7 +183,7 @@ export function DesktopSidebar() {
           className="w-full flex items-center justify-center gap-2 bg-[#1FA774] text-white py-3 rounded-full font-semibold hover:bg-[#16865c] transition-colors"
         >
           <Plus size={20} />
-          <span>Nouvelle offre</span>
+          <span>{t('offer.add_title')}</span>
         </button>
       </div>
 

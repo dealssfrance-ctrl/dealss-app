@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate, useSearchParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
 import { ArrowLeft, Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
@@ -9,6 +10,7 @@ import { toast } from 'sonner';
 
 export function SignInScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/';
   const { signin, isAuthenticated } = useAuth();
@@ -32,10 +34,10 @@ export function SignInScreen() {
     try {
       setLoading(true);
       await signin(formData.email, formData.password);
-      toast.success('Connexion réussie !');
+      toast.success(t('auth.sign_in_success'));
       // Navigation is handled by the isAuthenticated render check below
     } catch (err: any) {
-      const message = err.message || 'Échec de la connexion';
+      const message = err.message || t('auth.sign_in_failed');
       setError(message);
       toast.error(message);
     } finally {
@@ -58,7 +60,7 @@ export function SignInScreen() {
             <button onClick={() => navigate('/welcome')} className="p-1">
               <ArrowLeft size={24} className="text-gray-900" />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Connexion</h1>
+            <h1 className="text-xl font-semibold text-gray-900">{t('auth.sign_in_title')}</h1>
           </div>
         </div>
       </div>
@@ -73,7 +75,7 @@ export function SignInScreen() {
             <div className="flex justify-center mb-6">
               <Logo className="h-12 w-auto" />
             </div>
-            <p className="text-gray-500">Connecte-toi pour continuer sur Troqly</p>
+            <p className="text-gray-500">{t('welcome.sign_in')}</p>
           </div>
 
           {error && (
@@ -91,7 +93,7 @@ export function SignInScreen() {
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Adresse e-mail
+                {t('auth.email_label')}
               </label>
               <div className="relative">
                 <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -99,7 +101,7 @@ export function SignInScreen() {
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleChange('email', e.target.value)}
-                  placeholder="john@example.com"
+                  placeholder={t('auth.email_placeholder')}
                   className="w-full bg-white border border-gray-200 rounded-2xl pl-12 pr-5 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent disabled:bg-gray-100"
                   required
                   disabled={loading}
@@ -111,7 +113,7 @@ export function SignInScreen() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Mot de passe
+                  {t('auth.password_label')}
                 </label>
                 <button
                   type="button"
@@ -119,7 +121,7 @@ export function SignInScreen() {
                   className="text-sm text-[#1FA774] font-medium hover:underline disabled:opacity-50"
                   disabled={loading}
                 >
-                  Mot de passe oublié ?
+                  {t('auth.forgot_password')}
                 </button>
               </div>
               <div className="relative">
@@ -151,20 +153,20 @@ export function SignInScreen() {
                 disabled={loading}
                 className="disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Connexion…' : 'Connexion'}
+                {loading ? t('auth.signing_in') : t('auth.sign_in_action')}
               </Button>
             </div>
 
             {/* Sign Up Link */}
             <p className="text-center text-gray-600">
-              Pas encore de compte ?{' '}
+              {t('auth.no_account')}{' '}
               <button
                 type="button"
                 onClick={() => navigate('/signup')}
                 className="text-[#1FA774] font-semibold hover:underline disabled:opacity-50"
                 disabled={loading}
               >
-                Créer un compte
+                {t('welcome.create_account')}
               </button>
             </p>
           </form>

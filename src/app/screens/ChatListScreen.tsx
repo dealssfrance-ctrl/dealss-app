@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Layout } from '../components/Layout';
 import { HyvisHeader } from '../components/HyvisHeader';
 import { useNavigate } from 'react-router';
@@ -42,6 +43,7 @@ function avatarGradient(name: string): string {
 
 export function ChatListScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, isAuthenticated } = useAuth();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +94,7 @@ export function ChatListScreen() {
       setConversations(response.data);
     } catch (error) {
       console.error('Error fetching conversations:', error);
-      toast.error('Chargement trop long. Réessayez.');
+      toast.error(t('common.loading_long'));
     } finally {
       setLoading(false);
     }
@@ -284,15 +286,15 @@ export function ChatListScreen() {
             <div className="w-20 h-20 rounded-3xl bg-[#1FA774]/10 flex items-center justify-center mb-5">
               <MessageSquare size={36} className="text-[#1FA774]" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Vos messages</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">{t('chat.title')}</h2>
             <p className="text-gray-500 text-center mb-6 max-w-xs">
-              Connectez-vous pour discuter avec d'autres membres et échanger vos réductions.
+              {t('profile.please_sign_in')}
             </p>
             <button
               onClick={() => navigate('/signin')}
               className="px-8 py-3 bg-[#1FA774] text-white font-semibold rounded-full shadow-md shadow-[#1FA774]/30 hover:bg-[#16865c] transition-colors"
             >
-              Se connecter
+              {t('auth.sign_in_action')}
             </button>
           </div>
         </div>
@@ -321,7 +323,7 @@ export function ChatListScreen() {
                 <p className="text-xs uppercase tracking-widest text-white/70 mb-1">
                   Boîte de réception
                 </p>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Messages</h1>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{t('chat.title')}</h1>
               </div>
               <span className="text-sm text-white/80 bg-white/15 backdrop-blur px-3 py-1.5 rounded-full">
                 {conversations.length}{' '}
@@ -339,7 +341,7 @@ export function ChatListScreen() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Rechercher une conversation…"
+                placeholder={t('search.placeholder')}
                 className="w-full bg-white/95 text-gray-900 placeholder-gray-400 pl-11 pr-4 py-3 rounded-full text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-white/60"
               />
             </div>
@@ -347,21 +349,21 @@ export function ChatListScreen() {
             {/* Tabs */}
             <div className="mt-4 flex gap-2">
               {([
-                { key: 'all', label: 'Toutes', count: visibleCount - archivedCount },
-                { key: 'archived', label: 'Archivées', count: archivedCount },
-              ] as const).map((t) => (
+                { key: 'all', label: t('chat.all'), count: visibleCount - archivedCount },
+                { key: 'archived', label: t('chat.archived'), count: archivedCount },
+              ] as const).map((tabItem) => (
                 <button
-                  key={t.key}
-                  onClick={() => { setTab(t.key); setMenuOpenId(null); }}
+                  key={tabItem.key}
+                  onClick={() => { setTab(tabItem.key); setMenuOpenId(null); }}
                   className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    tab === t.key
+                    tab === tabItem.key
                       ? 'bg-white text-[#1FA774] shadow-sm'
                       : 'bg-white/15 text-white hover:bg-white/25'
                   }`}
                 >
-                  {t.label}
-                  <span className={`ml-1.5 text-[11px] ${tab === t.key ? 'text-[#1FA774]/70' : 'text-white/70'}`}>
-                    {t.count}
+                  {tabItem.label}
+                  <span className={`ml-1.5 text-[11px] ${tab === tabItem.key ? 'text-[#1FA774]/70' : 'text-white/70'}`}>
+                    {tabItem.count}
                   </span>
                 </button>
               ))}
@@ -381,12 +383,12 @@ export function ChatListScreen() {
                 <MessageSquare size={36} className="text-[#1FA774]" />
               </div>
               <h2 className="text-lg font-bold text-gray-900 mb-1">
-                {query ? 'Aucun résultat' : 'Pas encore de messages'}
+                {query ? t('search.no_results') : t('chat.no_conversations')}
               </h2>
               <p className="text-gray-500 text-center max-w-xs">
                 {query
-                  ? 'Essayez avec un autre nom ou marque.'
-                  : 'Contactez un vendeur depuis une offre pour démarrer une conversation.'}
+                  ? t('search.no_results_subtitle')
+                  : t('chat.no_conversations_subtitle')}
               </p>
             </div>
           ) : (

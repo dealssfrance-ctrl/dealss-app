@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Star, Send } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 
 interface ReviewInputProps {
   onSubmit: (rating: number, comment: string) => void;
@@ -8,6 +9,7 @@ interface ReviewInputProps {
 }
 
 export function ReviewInput({ onSubmit, userName }: ReviewInputProps) {
+  const { t } = useTranslation();
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -33,7 +35,7 @@ export function ReviewInput({ onSubmit, userName }: ReviewInputProps) {
           </span>
         </div>
         <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-900 mb-2">Write a review</p>
+          <p className="text-sm font-semibold text-gray-900 mb-2">{t('review.write_review', 'Write a review')}</p>
 
           {/* Star Rating */}
           <div className="flex items-center gap-1 mb-3">
@@ -57,11 +59,11 @@ export function ReviewInput({ onSubmit, userName }: ReviewInputProps) {
             ))}
             {rating > 0 && (
               <span className="text-sm text-gray-600 ml-2">
-                {rating === 1 && 'Not worth it'}
-                {rating === 2 && 'Could be better'}
-                {rating === 3 && 'Good deal'}
-                {rating === 4 && 'Great deal!'}
-                {rating === 5 && 'Excellent deal!'}
+                {rating === 1 && t('review.offer_star_1', 'Not worth it')}
+                {rating === 2 && t('review.offer_star_2', 'Could be better')}
+                {rating === 3 && t('review.offer_star_3', 'Good deal')}
+                {rating === 4 && t('review.offer_star_4', 'Great deal!')}
+                {rating === 5 && t('review.offer_star_5', 'Excellent deal!')}
               </span>
             )}
           </div>
@@ -71,7 +73,7 @@ export function ReviewInput({ onSubmit, userName }: ReviewInputProps) {
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Share your experience with this offer..."
+              placeholder={t('review.share_offer_experience', 'Share your experience with this offer...')}
               rows={3}
               className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 pr-12 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent resize-none"
             />

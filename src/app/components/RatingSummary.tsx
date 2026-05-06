@@ -1,5 +1,6 @@
 import { Star } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 
 interface RatingSummaryProps {
   averageRating?: number;
@@ -14,6 +15,7 @@ export function RatingSummary({
   size = 'md',
   showLabel = true,
 }: RatingSummaryProps) {
+  const { t } = useTranslation();
   const stars = Math.round(averageRating);
   
   const sizeConfig = {
@@ -75,11 +77,11 @@ export function RatingSummary({
           </span>
           {reviewCount > 0 && (
             <span className="text-gray-500">
-              ({reviewCount} {reviewCount === 1 ? 'avis' : 'avis'})
+              ({reviewCount} {t('review.label_count', 'avis')})
             </span>
           )}
           {reviewCount === 0 && (
-            <span className="text-gray-400 text-[11px]">Pas encore d'avis</span>
+            <span className="text-gray-400 text-[11px]">{t('review.no_reviews_short', "Pas encore d'avis")}</span>
           )}
         </motion.div>
       )}

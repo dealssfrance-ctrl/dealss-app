@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Camera, X, Loader2, ImagePlus } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 interface MultiImageUploaderProps {
   onImagesSelected: (files: File[]) => void;
@@ -21,6 +22,7 @@ export function MultiImageUploader({
   uploadProgress = 0,
 }: MultiImageUploaderProps) {
   const [images, setImages] = useState<ImagePreview[]>([]);
+  const { t } = useTranslation();
 
   const handleImageChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,11 +33,11 @@ export function MultiImageUploader({
       let validFiles: File[] = [];
       for (const file of files) {
         if (file.size > 5 * 1024 * 1024) {
-          toast.error(`${file.name} dépasse 5 Mo`);
+          toast.error(t('offer.file_too_large', '{{name}} dépasse 5 Mo', { name: file.name }));
           continue;
         }
         if (!file.type.startsWith('image/')) {
-          toast.error(`${file.name} n'est pas une image`);
+          toast.error(t('offer.not_image', "{{name}} n'est pas une image", { name: file.name }));
           continue;
         }
         validFiles.push(file);
@@ -66,7 +68,7 @@ export function MultiImageUploader({
         reader.readAsDataURL(file);
       }
     },
-    [images, onImagesSelected]
+    [images, onImagesSelected, t]
   );
 
   const removeImage = (id: string) => {
@@ -86,8 +88,8 @@ export function MultiImageUploader({
       {images.length === 0 ? (
         <label className="w-full h-48 flex flex-col items-center justify-center bg-white border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer hover:bg-gray-50 hover:border-[#1FA774] transition-colors">
           <Camera size={40} className="text-gray-400 mb-2" />
-          <span className="text-sm font-medium text-gray-600">Ajouter des photos</span>
-          <span className="text-xs text-gray-400 mt-1">Sélectionnez plusieurs fichiers</span>
+          <span className="text-sm font-medium text-gray-600">{t('offer.add_photos', 'Ajouter des photos')}</span>
+          <span className="text-xs text-gray-400 mt-1">{t('offer.add_photos_hint', 'Sélectionnez plusieurs fichiers')}</span>
           <input
             type="file"
             accept="image/*"
@@ -102,7 +104,7 @@ export function MultiImageUploader({
           {/* Add More Button */}
           <label className="w-full h-24 flex flex-col items-center justify-center bg-white border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer hover:bg-gray-50 hover:border-[#1FA774] transition-colors">
             <ImagePlus size={24} className="text-gray-400 mb-1" />
-            <span className="text-xs font-medium text-gray-600">Ajouter plus</span>
+            <span className="text-xs font-medium text-gray-600">{t('offer.add_more', 'Ajouter plus')}</span>
             <input
               type="file"
               accept="image/*"
@@ -125,7 +127,7 @@ export function MultiImageUploader({
         >
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-gray-700">
-              {images.length} image{images.length > 1 ? 's' : ''} sélectionnée{images.length > 1 ? 's' : ''}
+              {t(images.length > 1 ? 'offer.images_selected_other' : 'offer.images_selected_one', { count: images.length, defaultValue: `${images.length} image${images.length > 1 ? 's' : ''} sélectionnée${images.length > 1 ? 's' : ''}` })}
             </p>
             {images.length > 0 && !isLoading && (
               <button
@@ -133,7 +135,7 @@ export function MultiImageUploader({
                 onClick={clearAll}
                 className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
               >
-                Effacer tout
+                {t('offer.clear_all', 'Effacer tout')}
               </button>
             )}
           </div>
@@ -183,7 +185,7 @@ export function MultiImageUploader({
               className="space-y-2"
             >
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Envoi en cours...</span>
+                <span className="text-gray-600">{t('offer.uploading', 'Envoi en cours...')}</span>
                 <span className="font-medium text-[#1FA774]">{uploadProgress}%</span>
               </div>
               <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
@@ -207,7 +209,7 @@ export function MultiImageUploader({
           className="flex items-center gap-2 text-[#1FA774] text-sm font-medium"
         >
           <Loader2 size={16} className="animate-spin" />
-          Traitement en cours...
+          {t('offer.processing', 'Traitement en cours...')}
         </motion.div>
       )}
     </div>

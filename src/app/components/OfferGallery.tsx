@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface OfferGalleryProps {
   /** Pre-parsed list of image URLs. */
@@ -49,6 +50,7 @@ function parseImageUrls(imageUrl: string): string[] {
 }
 
 export function OfferGallery({ images: imagesProp, imageUrl, storeName, onImageError }: OfferGalleryProps) {
+  const { t } = useTranslation();
   const images = useMemo(() => {
     if (imagesProp && imagesProp.length > 0) return imagesProp;
     return parseImageUrls(imageUrl || '');
@@ -63,7 +65,7 @@ export function OfferGallery({ images: imagesProp, imageUrl, storeName, onImageE
   if (images.length === 0) {
     return (
       <div className="w-full h-full bg-gray-100 rounded-2xl flex items-center justify-center">
-        <span className="text-sm text-gray-400">No image available</span>
+        <span className="text-sm text-gray-400">{t('offer.no_image_available', 'No image available')}</span>
       </div>
     );
   }
@@ -72,8 +74,8 @@ export function OfferGallery({ images: imagesProp, imageUrl, storeName, onImageE
     return (
       <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center">
         <div className="text-center px-6">
-          <p className="text-sm font-medium text-slate-600">Image indisponible</p>
-          <p className="text-xs text-slate-500 mt-1">Le visuel de cette offre ne peut pas etre charge</p>
+          <p className="text-sm font-medium text-slate-600">{t('offer.image_unavailable', 'Image indisponible')}</p>
+          <p className="text-xs text-slate-500 mt-1">{t('offer.image_unavailable_desc', 'Le visuel de cette offre ne peut pas être chargé')}</p>
         </div>
       </div>
     );
@@ -118,7 +120,7 @@ export function OfferGallery({ images: imagesProp, imageUrl, storeName, onImageE
             >
               <img
                 src={img}
-                alt={`Thumbnail ${idx + 1}`}
+                alt={t('offer.thumbnail', 'Thumbnail {{n}}', { n: idx + 1 })}
                 className="w-full h-full object-cover"
                 onError={() => handleImageError(idx)}
               />
@@ -149,7 +151,7 @@ export function OfferGallery({ images: imagesProp, imageUrl, storeName, onImageE
               whileTap={{ scale: 0.9 }}
               onClick={handlePrev}
               className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white p-2 rounded-full backdrop-blur-sm transition-colors z-10"
-              aria-label="Previous image"
+              aria-label={t('offer.previous_image', 'Previous image')}
             >
               <ChevronLeft size={24} />
             </motion.button>
@@ -158,7 +160,7 @@ export function OfferGallery({ images: imagesProp, imageUrl, storeName, onImageE
               whileTap={{ scale: 0.9 }}
               onClick={handleNext}
               className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white p-2 rounded-full backdrop-blur-sm transition-colors z-10"
-              aria-label="Next image"
+              aria-label={t('offer.next_image', 'Next image')}
             >
               <ChevronRight size={24} />
             </motion.button>
@@ -173,7 +175,7 @@ export function OfferGallery({ images: imagesProp, imageUrl, storeName, onImageE
                   className={`w-1.5 h-1.5 rounded-full transition-colors ${
                     idx === currentIndex ? 'bg-white' : 'bg-white/50'
                   }`}
-                  aria-label={`Go to image ${idx + 1}`}
+                  aria-label={t('offer.go_to_image', 'Go to image {{n}}', { n: idx + 1 })}
                 />
               ))}
             </div>

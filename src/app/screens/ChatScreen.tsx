@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Send, Image as ImageIcon, Star, Plus, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -77,6 +78,7 @@ function ChatHeaderSubtitle({
 export function ChatScreen() {
   const { id: routeId } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
 
@@ -431,9 +433,9 @@ export function ChatScreen() {
     return (
       <Layout>
         <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
-          <p className="text-gray-400">Conversation introuvable</p>
+          <p className="text-gray-400">{t('chat.not_found', 'Conversation introuvable')}</p>
           <button onClick={() => navigate('/messages')} className="text-[#1FA774] font-medium">
-            Retour aux messages
+            {t('chat.back_to_list')}
           </button>
         </div>
       </Layout>
@@ -461,7 +463,7 @@ export function ChatScreen() {
       return newId;
     } catch (err) {
       console.error('Error materializing conversation:', err);
-      toast.error('Impossible de créer la conversation');
+      toast.error(t('chat.create_failed', 'Impossible de créer la conversation'));
       return null;
     }
   };
@@ -674,7 +676,7 @@ export function ChatScreen() {
 
   const openReviewModalFor = (payload: ReviewRequestPayload) => {
     if (!user) {
-      toast.error('Connectez-vous pour laisser un avis');
+      toast.error(t('review.signin_required', 'Connectez-vous pour laisser un avis'));
       navigate('/signin');
       return;
     }
@@ -738,9 +740,9 @@ export function ChatScreen() {
         next.add(activeReviewPayload.offerId);
         return next;
       });
-      toast.success('Merci pour votre avis !');
+      toast.success(t('review.thank_you', 'Merci pour votre avis !'));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de l\'envoi de l\'avis';
+      const msg = err instanceof Error ? err.message : t('review.submit_failed');
       toast.error(msg);
       throw err;
     } finally {
@@ -764,14 +766,14 @@ export function ChatScreen() {
       );
       setExchange(ex);
       if (ex.status === 'confirmed') {
-        toast.success('✅ Échange validé par les deux parties !');
+        toast.success(t('chat.exchange_validated', '✅ Échange validé par les deux parties !'));
       } else {
         toast.success(
-          'Confirmation enregistrée. En attente de l\'autre participant.',
+          t('chat.confirmation_recorded', 'Confirmation enregistrée. En attente de l\'autre participant.'),
         );
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de la confirmation';
+      const msg = err instanceof Error ? err.message : t('chat.confirm_failed', 'Erreur lors de la confirmation');
       toast.error(msg);
     } finally {
       setExchangeLoading(false);
@@ -793,7 +795,7 @@ export function ChatScreen() {
         exchangeOtherId,
         reportReason.trim() || undefined,
       );
-      toast.success('Signalement envoyé');
+      toast.success(t('chat.report_sent', 'Signalement envoyé'));
       setReportOpen(false);
       setReportReason('');
       // Refresh exchange status (it may now be 'disputed').
@@ -806,7 +808,7 @@ export function ChatScreen() {
         setExchange(ex);
       } catch { /* noop */ }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors du signalement';
+      const msg = err instanceof Error ? err.message : t('chat.report_failed', 'Erreur lors du signalement');
       toast.error(msg);
     } finally {
       setReportSubmitting(false);
@@ -893,21 +895,20 @@ export function ChatScreen() {
                 )}
                 <div className="flex-1 min-w-0">
                   {exchange.status === 'confirmed' ? (
-                    <p className="font-semibold">✅ Échange validé par les deux parties</p>
+                    <p className="font-semibold">{t('chat.exchange_validated', '✅ Échange validé par les deux parties')}</p>
                   ) : exchange.status === 'disputed' ? (
-                    <p className="font-semibold">⚠️ Échange signalé comme problématique</p>
+                    <p className="font-semibold">{t('chat.exchange_disputed', '⚠️ Échange signalé comme problématique')}</p>
                   ) : exchangeService.hasUserConfirmed(exchange, currentUserId) ? (
                     <p>
-                      <span className="font-semibold">Vous avez confirmé.</span>{' '}
-                      En attente de l'autre participant.
+                      <span className="font-semibold">{t('chat.you_confirmed', 'Vous avez confirmé.')}</span>{' '}
+                      {t('chat.waiting_other', 'En attente de l\'autre participant.')}
                     </p>
                   ) : exchangeService.hasOtherConfirmed(exchange, currentUserId) ? (
                     <p>
-                      L'autre participant a confirmé l'échange. À votre tour de
-                      confirmer si tout s'est bien passé.
+                      {t('chat.other_confirmed', 'L\'autre participant a confirmé l\'échange. À votre tour de confirmer si tout s\'est bien passé.')}
                     </p>
                   ) : (
-                    <p>Échange en attente de confirmation des deux parties.</p>
+                    <p>{t('chat.exchange_pending_both', 'Échange en attente de confirmation des deux parties.')}</p>
                   )}
                 </div>
               </div>
@@ -918,14 +919,14 @@ export function ChatScreen() {
                 {loadingOlder ? (
                   <div className="text-xs text-gray-400 flex items-center gap-2">
                     <span className="inline-block w-3 h-3 border-2 border-gray-300 border-t-[#1FA774] rounded-full animate-spin" />
-                    Chargement…
+                    {t('common.loading')}
                   </div>
                 ) : (
                   <button
                     onClick={loadOlderMessages}
                     className="text-xs text-[#1FA774] font-medium hover:underline"
                   >
-                    Voir les messages plus anciens
+                    {t('chat.see_older', 'Voir les messages plus anciens')}
                   </button>
                 )}
               </div>
@@ -936,7 +937,7 @@ export function ChatScreen() {
               return (
                 <div key={`grp-${group.conversationId}`} className="flex flex-col gap-2">
                   {showOfferSep && meta && (
-                    <div className="my-4 flex items-center gap-3" aria-label="Séparateur d'offre">
+                    <div className="my-4 flex items-center gap-3" aria-label={t('chat.offer_separator', 'Séparateur d\'offre')}>
                       <div className="flex-1 h-px bg-gradient-to-r from-transparent to-gray-200" />
                       <button
                         type="button"
@@ -957,14 +958,14 @@ export function ChatScreen() {
                         )}
                         <div className="flex flex-col items-start min-w-0">
                           <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
-                            À propos de
+                            {t('chat.about_offer')}
                           </span>
                           <span className="text-sm font-semibold text-gray-900 truncate max-w-[200px] group-hover:text-[#1FA774] transition-colors">
-                            {meta.storeName || 'cette offre'}
+                            {meta.storeName || t('chat.this_offer', 'cette offre')}
                           </span>
                         </div>
                         <span className="text-[#1FA774] text-xs font-medium ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          Voir →
+                          {t('common.see', 'Voir')} →
                         </span>
                       </button>
                       <div className="flex-1 h-px bg-gradient-to-l from-transparent to-gray-200" />
@@ -996,7 +997,7 @@ export function ChatScreen() {
                         {msg.imageUrl && !failedImageMessageIds.has(msg.id) ? (
                           <img
                             src={msg.imageUrl}
-                            alt="Photo partagée"
+                            alt={t('chat.shared_photo', 'Photo partagée')}
                             className="max-w-full max-h-72 w-auto object-cover block"
                             loading="lazy"
                             onError={() => {
@@ -1009,7 +1010,7 @@ export function ChatScreen() {
                           />
                         ) : (
                           <div className="px-3 py-2 text-xs text-gray-500 bg-gray-100 rounded-xl">
-                            Image indisponible
+                            {t('chat.image_unavailable', 'Image indisponible')}
                           </div>
                         )}
                       </div>
@@ -1045,7 +1046,7 @@ export function ChatScreen() {
             <div className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
               <div className="max-w-3xl mx-auto px-5 md:px-6 py-2.5 flex items-center gap-3">
                 <span className="text-[10px] uppercase tracking-wider text-emerald-700 font-semibold flex-shrink-0">
-                  À propos de
+                  {t('chat.about_offer')}
                 </span>
                 {draftOffer.imageUrl ? (
                   <img
@@ -1095,8 +1096,8 @@ export function ChatScreen() {
                       <Star size={16} className="text-amber-600 fill-amber-500" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">Demander un avis</p>
-                      <p className="text-xs text-gray-500 truncate">Sur cette offre</p>
+                      <p className="text-sm font-semibold text-gray-900">{t('chat.request_review_action', 'Demander un avis')}</p>
+                      <p className="text-xs text-gray-500 truncate">{t('chat.on_this_offer', 'Sur cette offre')}</p>
                     </div>
                   </button>
 
@@ -1117,10 +1118,10 @@ export function ChatScreen() {
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-gray-900">
                             {exchange && exchangeService.hasUserConfirmed(exchange, currentUserId)
-                              ? 'Échange confirmé'
-                              : 'Confirmer l\'échange'}
+                              ? t('chat.exchange_confirmed', 'Échange confirmé')
+                              : t('chat.complete_exchange')}
                           </p>
-                          <p className="text-xs text-gray-500 truncate">Valider le troc</p>
+                          <p className="text-xs text-gray-500 truncate">{t('chat.validate_swap', 'Valider le troc')}</p>
                         </div>
                       </button>
                       <div className="border-t border-gray-100" />
@@ -1132,8 +1133,8 @@ export function ChatScreen() {
                           <AlertTriangle size={16} className="text-red-600" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-900">Problème avec cet échange</p>
-                          <p className="text-xs text-gray-500 truncate">Signaler l'utilisateur</p>
+                          <p className="text-sm font-semibold text-gray-900">{t('chat.exchange_problem', 'Problème avec cet échange')}</p>
+                          <p className="text-xs text-gray-500 truncate">{t('chat.report_user')}</p>
                         </div>
                       </button>
                     </>
@@ -1150,8 +1151,8 @@ export function ChatScreen() {
                 className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
                   actionsOpen ? 'bg-[#1FA774] text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
                 }`}
-                aria-label="Plus d'actions"
-                title="Plus d'actions"
+                aria-label={t('chat.more_actions', 'Plus d\'actions')}
+                title={t('chat.more_actions', 'Plus d\'actions')}
               >
                 <motion.div animate={{ rotate: actionsOpen ? 45 : 0 }} transition={{ duration: 0.2 }}>
                   <Plus size={20} />
@@ -1177,7 +1178,7 @@ export function ChatScreen() {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Écrire un message..."
+                placeholder={t('chat.type_message')}
                 className="flex-1 bg-gray-100 rounded-full px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774]"
               />
               {/* Send */}
@@ -1230,17 +1231,15 @@ export function ChatScreen() {
                 <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
                   <AlertTriangle size={20} className="text-red-600" />
                 </div>
-                <h3 className="font-bold text-gray-900 text-lg">Signaler un problème</h3>
+                <h3 className="font-bold text-gray-900 text-lg">{t('chat.report_title', 'Signaler un problème')}</h3>
               </div>
               <p className="text-sm text-gray-600 mb-3">
-                Décrivez brièvement le problème rencontré avec cet échange.
-                L'utilisateur signalé sera marqué et bloqué automatiquement
-                au-delà d'un certain seuil de signalements.
+                {t('chat.report_description', "Décrivez brièvement le problème rencontré avec cet échange. L'utilisateur signalé sera marqué et bloqué automatiquement au-delà d'un certain seuil de signalements.")}
               </p>
               <textarea
                 value={reportReason}
                 onChange={(e) => setReportReason(e.target.value)}
-                placeholder="Ex : la personne ne s'est pas présentée au rendez-vous…"
+                placeholder={t('chat.report_placeholder', "Ex : la personne ne s'est pas présentée au rendez-vous…")}
                 rows={4}
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
                 disabled={reportSubmitting}
@@ -1252,7 +1251,7 @@ export function ChatScreen() {
                   disabled={reportSubmitting}
                   className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50"
                 >
-                  Annuler
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
@@ -1260,7 +1259,7 @@ export function ChatScreen() {
                   disabled={reportSubmitting}
                   className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-60"
                 >
-                  {reportSubmitting ? 'Envoi…' : 'Envoyer le signalement'}
+                  {reportSubmitting ? t('auth.sending') : t('chat.send_report', 'Envoyer le signalement')}
                 </button>
               </div>
             </motion.div>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { PresenceInfo, PresenceStatus } from '../services/presenceService';
 
 interface PresenceIndicatorProps {
@@ -26,8 +27,9 @@ export function PresenceIndicator({
   className = '',
   labelClassName = '',
 }: PresenceIndicatorProps) {
+  const { t } = useTranslation();
   const dotClass = STATUS_COLORS[presence.status];
-  const label = presence.label || 'Hors ligne';
+  const label = presence.label || t('chat.offline', 'Hors ligne');
 
   return (
     <span

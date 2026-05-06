@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
+import { useTranslation, Trans } from 'react-i18next';
 import { Button } from '../components/Button';
 import { Mail, RefreshCw, LogOut, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -11,6 +12,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export function EmailVerificationScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { clearPendingVerification, logout } = useAuth();
   const [resending, setResending] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -28,7 +30,7 @@ export function EmailVerificationScreen() {
       const errorDescription = params.get('error_description')?.replace(/\+/g, ' ');
 
       if (errorCode === 'otp_expired') {
-        setUrlError('Le lien de vérification a expiré. Veuillez en demander un nouveau.');
+        setUrlError(t('auth.verify_link_expired_desc'));
       } else if (errorDescription) {
         setUrlError(errorDescription);
       }
@@ -85,7 +87,7 @@ export function EmailVerificationScreen() {
         const data = await res.json();
         if (data.verified) {
           clearPendingVerification();
-          toast.success('Email vérifié ! Connectez-vous pour continuer.');
+          toast.success(t('auth.verify_email_verified_login'));
           navigate('/signin', { replace: true });
         }
       } catch {
@@ -112,7 +114,7 @@ export function EmailVerificationScreen() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user?.email_confirmed_at) {
           clearPendingVerification();
-          toast.success('Email vérifié ! Bienvenue 🎉');
+          toast.success(t('auth.verify_email_verified_welcome'));
           navigate('/', { replace: true });
           return;
         }
@@ -122,13 +124,13 @@ export function EmailVerificationScreen() {
       const data = await res.json();
       if (data.verified) {
         clearPendingVerification();
-        toast.success('Email vérifié ! Connectez-vous pour continuer.');
+        toast.success(t('auth.verify_email_verified_login'));
         navigate('/signin', { replace: true });
         return;
       }
-      toast.error('Email pas encore vérifié. Vérifiez votre boîte mail.');
+      toast.error(t('auth.verify_not_yet'));
     } catch {
-      toast.error('Erreur lors de la vérification');
+      toast.error(t('common.error_generic'));
     } finally {
       setChecking(false);
     }
@@ -149,11 +151,11 @@ export function EmailVerificationScreen() {
 
       if (error) throw error;
 
-      toast.success('Email de vérification renvoyé !');
+      toast.success(t('auth.verify_resent'));
       setCooldown(60);
       setUrlError(null);
     } catch (err: any) {
-      toast.error(err.message || 'Échec de l\'envoi');
+      toast.error(err.message || t('common.error_generic'));
     } finally {
       setResending(false);
     }
@@ -184,10 +186,10 @@ export function EmailVerificationScreen() {
           </motion.div>
 
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
-            Vérifiez votre email
+            {t('auth.verify_title')}
           </h1>
           <p className="text-gray-500 mb-2">
-            Un email de confirmation a été envoyé à
+            {t('auth.verify_email_sent_to')}
           </p>
           <p className="text-[#1FA774] font-semibold text-lg mb-6">
             {pendingEmail}
@@ -195,8 +197,7 @@ export function EmailVerificationScreen() {
 
           <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 mb-6 text-left">
             <p className="text-sm text-gray-600 leading-relaxed">
-              Cliquez sur le lien dans l'email pour activer votre compte.
-              Si vous ne trouvez pas l'email, vérifiez votre dossier <strong>spam</strong>.
+              <Trans i18nKey="auth.verify_click_link" components={{ strong: <strong /> }} />
             </p>
           </div>
 
@@ -209,7 +210,7 @@ export function EmailVerificationScreen() {
             >
               <AlertTriangle size={20} className="text-orange-500 flex-shrink-0 mt-0.5" />
               <div className="text-left">
-                <p className="text-sm font-medium text-orange-800">Lien expiré</p>
+                <p className="text-sm font-medium text-orange-800">{t('auth.verify_link_expired')}</p>
                 <p className="text-sm text-orange-600 mt-1">{urlError}</p>
               </div>
             </motion.div>
@@ -224,10 +225,10 @@ export function EmailVerificationScreen() {
             <span className="flex items-center justify-center gap-2">
               <RefreshCw size={18} className={resending ? 'animate-spin' : ''} />
               {cooldown > 0
-                ? `Renvoyer dans ${cooldown}s`
+                ? t('auth.verify_resend_in', { count: cooldown })
                 : resending
-                  ? 'Envoi...'
-                  : 'Renvoyer l\'email de vérification'
+                  ? t('auth.sending')
+                  : t('auth.verify_resend_action')
               }
             </span>
           </Button>
@@ -240,7 +241,7 @@ export function EmailVerificationScreen() {
           >
             <span className="flex items-center justify-center gap-2">
               <CheckCircle size={18} className={checking ? 'animate-pulse' : ''} />
-              {checking ? 'Vérification...' : 'J\'ai déjà vérifié → Se connecter'}
+              {checking ? t('auth.verify_checking') : t('auth.verify_already_verified_action')}
             </span>
           </Button>
 
@@ -250,7 +251,7 @@ export function EmailVerificationScreen() {
             className="flex items-center justify-center gap-2 w-full py-3 text-sm text-gray-500 hover:text-gray-700 transition-colors"
           >
             <LogOut size={16} />
-            Utiliser un autre compte
+            {t('auth.verify_use_another')}
           </button>
         </motion.div>
       </div>

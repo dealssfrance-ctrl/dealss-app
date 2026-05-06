@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { FilterProvider } from './context/FilterContext';
 import { ChatNotificationsProvider } from './context/ChatNotificationsContext';
 import { PresenceHeartbeat } from './components/PresenceHeartbeat';
+import { UpdatePrompt } from './components/UpdatePrompt';
 import { Toaster } from 'sonner';
 import { useEffect } from 'react';
 
@@ -30,6 +31,7 @@ export default function App() {
             <HashErrorHandler />
             <PresenceHeartbeat />
             <RouterProvider router={router} />
+            <UpdatePrompt />
             <Toaster position="top-center" richColors />
           </div>
         </ChatNotificationsProvider>

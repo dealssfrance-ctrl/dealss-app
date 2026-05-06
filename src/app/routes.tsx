@@ -14,6 +14,8 @@ import { ProfileScreen } from './screens/ProfileScreen';
 import { PublicProfileScreen } from './screens/PublicProfileScreen';
 import { ChatListScreen } from './screens/ChatListScreen';
 import { ChatScreen } from './screens/ChatScreen';
+import { DeleteAccountScreen } from './screens/DeleteAccountScreen';
+import { PrivacyScreen } from './screens/PrivacyScreen';
 import { AuthRoute, ProtectedRoute, VerificationGate } from './context/ProtectedRoute';
 
 export const router = createBrowserRouter([
@@ -76,6 +78,18 @@ export const router = createBrowserRouter([
   {
     path: '/chat/:id',
     Component: () => <ProtectedRoute requireAuth><ChatScreen /></ProtectedRoute>,
+  },
+  {
+    path: '/delete-account',
+    Component: DeleteAccountScreen,
+  },
+  {
+    path: '/privacy',
+    Component: PrivacyScreen,
+  },
+  {
+    path: '/privacy-policy',
+    Component: PrivacyScreen,
   },
   {
     path: '*',

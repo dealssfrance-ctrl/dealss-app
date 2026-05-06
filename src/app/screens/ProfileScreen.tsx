@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Layout } from '../components/Layout';
 import { PersistentNavbar } from '../components/PersistentNavbar';
 import { UserOfferCard } from '../components/UserOfferCard';
 import { RatingSummary } from '../components/RatingSummary';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { useAuth } from '../context/AuthContext';
 import { offersService, Offer } from '../services/offersService';
 import { reviewsService } from '../services/reviewsService';
@@ -28,6 +30,7 @@ function withTimeout<T>(promise: Promise<T>, ms = REQUEST_TIMEOUT_MS): Promise<T
 
 export function ProfileScreen() {
   const { user, logout, deleteAccount } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,7 +83,7 @@ export function ProfileScreen() {
       const response = await withTimeout(offersService.getMyOffers(user.id));
       setOffers(response.data);
     } catch (error) {
-      toast.error('Chargement trop long. Réessayez.');
+      toast.error(t('common.loading_long'));
     } finally {
       setLoading(false);
     }
@@ -103,11 +106,11 @@ export function ProfileScreen() {
     const trimmedStoreName = storeName.trim();
     const trimmedStoreLocation = storeLocation.trim();
     if (!trimmedName) {
-      toast.error('Le nom ne peut pas être vide');
+      toast.error(t('profile.name_empty'));
       return;
     }
     if (isMerchant && !trimmedStoreName) {
-      toast.error('Le nom du magasin ne peut pas être vide');
+      toast.error(t('profile.store_name_empty'));
       return;
     }
     setSavingProfile(true);
@@ -140,9 +143,9 @@ export function ProfileScreen() {
         setStoreLocation(trimmedStoreLocation);
       }
       setIsEditing(false);
-      toast.success('Profil mis à jour');
+      toast.success(t('profile.profile_updated'));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de la mise à jour';
+      const msg = err instanceof Error ? err.message : t('profile.update_failed');
       toast.error(msg);
     } finally {
       setSavingProfile(false);
@@ -159,9 +162,9 @@ export function ProfileScreen() {
     try {
       await offersService.deleteOffer(id);
       setOffers(prev => prev.filter(offer => offer.id !== id));
-      toast.success('Offer deleted');
+      toast.success(t('offer.deleted'));
     } catch (error) {
-      toast.error('Failed to delete offer');
+      toast.error(t('common.error_generic'));
     }
   };
 
@@ -175,10 +178,10 @@ export function ProfileScreen() {
     try {
       setDeleting(true);
       await deleteAccount();
-      toast.success('Compte supprimé avec succès');
+      toast.success(t('profile.delete_account_success'));
       navigate('/');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur';
+      const msg = err instanceof Error ? err.message : t('common.error_generic');
       toast.error(msg);
       setDeleting(false);
     }
@@ -212,8 +215,8 @@ export function ProfileScreen() {
         <div className="relative max-w-5xl mx-auto px-5 md:px-8 lg:px-10 pt-7 pb-20 md:pb-24">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <p className="text-xs uppercase tracking-widest text-white/70 mb-0.5">Mon espace</p>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Profil</h1>
+              <p className="text-xs uppercase tracking-widest text-white/70 mb-0.5">{t('profile.title')}</p>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{t('profile.title')}</h1>
             </div>
             <div className="flex items-center gap-1">
               {!isEditing && (
@@ -222,12 +225,12 @@ export function ProfileScreen() {
                   className="flex items-center gap-2 px-3.5 py-2 text-white/95 font-medium text-sm rounded-full hover:bg-white/15 transition-colors"
                 >
                   <Edit2 size={16} />
-                  <span className="hidden sm:inline">Modifier</span>
+                  <span className="hidden sm:inline">{t('common.edit')}</span>
                 </button>
               )}
               <button
                 onClick={handleLogout}
-                aria-label="Se déconnecter"
+                aria-label={t('auth.logout')}
                 className="flex items-center gap-2 p-2 text-white/95 rounded-full hover:bg-white/15 transition-colors"
               >
                 <LogOut size={18} />
@@ -439,7 +442,7 @@ export function ProfileScreen() {
         {/* My Offers Section */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">Mes offres</h3>
+            <h3 className="text-lg font-bold text-gray-900">{t('profile.my_offers')}</h3>
             {offers.length > 0 && (
               <button
                 onClick={() => navigate('/add-offer')}
@@ -458,7 +461,7 @@ export function ProfileScreen() {
                 <Plus size={28} className="text-[#1FA774]" />
               </div>
               <div>
-                <p className="font-semibold text-gray-900 mb-1">Vous n'avez pas encore d'offre</p>
+                <p className="font-semibold text-gray-900 mb-1">{t('profile.no_offers')}</p>
                 <p className="text-sm text-gray-500">
                   Publiez votre première réduction et commencez à échanger.
                 </p>
@@ -468,7 +471,7 @@ export function ProfileScreen() {
                 className="flex items-center gap-2 bg-[#1FA774] text-white px-6 py-3 rounded-full font-semibold hover:bg-[#16865c] transition-colors shadow-md shadow-[#1FA774]/30"
               >
                 <Plus size={18} />
-                <span>Ajouter une offre</span>
+                <span>{t('profile.create_first_offer')}</span>
               </button>
             </div>
           ) : (
@@ -488,18 +491,22 @@ export function ProfileScreen() {
         </div>
 
         {/* Danger Zone */}
-        <div className="mt-10 border border-red-200 rounded-3xl p-6 bg-red-50/60">
+        <div className="mt-10 mb-6">
+          <LanguageSwitcher />
+        </div>
+
+        <div className="border border-red-200 rounded-3xl p-6 bg-red-50/60">
           <h3 className="text-base font-semibold text-red-700 mb-1 flex items-center gap-2">
-            <AlertTriangle size={18} /> Zone dangereuse
+            <AlertTriangle size={18} /> {t('profile.delete_account')}
           </h3>
           <p className="text-sm text-red-500 mb-4">
-            La suppression de votre compte est irréversible. Toutes vos offres, messages et données seront définitivement effacés.
+            {t('profile.delete_account_confirm')}
           </p>
           <button
             onClick={() => { setShowDeleteConfirm(true); setConfirmText(''); }}
             className="flex items-center gap-2 px-5 py-2.5 bg-white border border-red-300 text-red-600 text-sm font-semibold rounded-full hover:bg-red-50 transition-colors"
           >
-            <Trash2 size={16} /> Supprimer mon compte
+            <Trash2 size={16} /> {t('profile.delete_account')}
           </button>
         </div>
       </div>
@@ -524,7 +531,7 @@ export function ProfileScreen() {
                 <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
                   <Trash2 size={20} className="text-red-600" />
                 </div>
-                <h2 className="text-lg font-bold text-gray-900">Supprimer mon compte</h2>
+                <h2 className="text-lg font-bold text-gray-900">{t('profile.delete_account')}</h2>
               </div>
               <p className="text-sm text-gray-600 mb-4">
                 Cette action est <strong>irréversible</strong>. Toutes vos offres, messages et données seront définitivement supprimés.
@@ -546,14 +553,14 @@ export function ProfileScreen() {
                   disabled={deleting}
                   className="flex-1 py-3 rounded-full font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
                 >
-                  Annuler
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleDeleteAccount}
                   disabled={deleting || confirmText.trim().toLowerCase() !== 'supprimer'}
                   className="flex-1 py-3 rounded-full font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-40"
                 >
-                  {deleting ? 'Suppression...' : 'Confirmer'}
+                  {deleting ? t('delete_account.deleting') : t('common.confirm')}
                 </button>
               </div>
             </motion.div>

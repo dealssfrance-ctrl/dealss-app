@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
   MessageCircle,
@@ -58,9 +59,10 @@ function formatRelative(dateStr: string): string {
   return `il y a ${years} an${years > 1 ? 's' : ''}`;
 }
 
-function formatJoined(dateStr: string): string {
+function formatJoined(dateStr: string, locale: string = 'fr-FR'): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const localeMap: Record<string, string> = { fr: 'fr-FR', en: 'en-US', nl: 'nl-BE' };
+  return date.toLocaleDateString(localeMap[locale] || locale, { month: 'long', year: 'numeric' });
 }
 
 interface SellerInfo {
@@ -75,6 +77,7 @@ interface SellerInfo {
 export function OfferDetailScreen() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(true);
@@ -152,7 +155,7 @@ export function OfferDetailScreen() {
         }
       } catch (error) {
         console.error('Error fetching offer:', error);
-        toast.error('Chargement trop long. Réessayez.');
+        toast.error(t('common.loading_long'));
       } finally {
         setLoading(false);
       }
@@ -172,9 +175,9 @@ export function OfferDetailScreen() {
     return (
       <Layout>
         <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
-          <p className="text-gray-400">Offre introuvable</p>
+          <p className="text-gray-400">{t('offer.not_found')}</p>
           <button onClick={() => navigate('/')} className="text-[#1FA774] font-medium">
-            Retour à l'accueil
+            {t('offer.back_to_home', 'Retour à l\'accueil')}
           </button>
         </div>
       </Layout>
@@ -183,7 +186,7 @@ export function OfferDetailScreen() {
 
   const handleContactClick = async () => {
     if (!user) {
-      toast.error('Connectez-vous pour envoyer un message');
+      toast.error(t('offer.login_to_message', 'Connectez-vous pour envoyer un message'));
       const redirect = encodeURIComponent(window.location.pathname + window.location.search);
       navigate(`/signin?redirect=${redirect}`);
       return;
@@ -210,7 +213,7 @@ export function OfferDetailScreen() {
       });
       navigate(`/chat/new?${params.toString()}`);
     } catch (error) {
-      toast.error('Erreur lors de l\u2019ouverture de la conversation');
+      toast.error(t('offer.open_chat_failed', 'Erreur lors de l’ouverture de la conversation'));
     }
   };
 
@@ -222,7 +225,7 @@ export function OfferDetailScreen() {
         await navigator.share({ title, text: offer.description, url });
       } else {
         await navigator.clipboard.writeText(url);
-        toast.success('Lien copié');
+        toast.success(t('offer.link_copied', 'Lien copié'));
       }
     } catch (err) {
       // User dismissed share sheet — silent.
@@ -236,7 +239,7 @@ export function OfferDetailScreen() {
     <Layout>
       <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f4fbf8_0%,#f8fafc_45%,#f1f5f9_100%)] pb-28 md:pb-12">
         <PersistentNavbar
-          title="Détail offre"
+          title={t('offer.detail_title', 'Détail offre')}
           showBackButton={true}
           onBackClick={() => navigate(-1)}
         />
@@ -255,7 +258,7 @@ export function OfferDetailScreen() {
               className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
             >
               <Share2 size={18} />
-              Partager
+              {t('common.share', 'Partager')}
             </button>
           </div>
         </div>
@@ -276,7 +279,7 @@ export function OfferDetailScreen() {
               <button
                 onClick={handleShare}
                 className="md:hidden absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur shadow-md flex items-center justify-center text-gray-800 hover:bg-white transition-colors"
-                aria-label="Partager"
+                aria-label={t('common.share', 'Partager')}
               >
                 <Share2 size={18} />
               </button>
@@ -298,7 +301,7 @@ export function OfferDetailScreen() {
                   {/* Discount badge */}
                   <div className="flex flex-col items-center justify-center min-w-[88px] py-3 px-4 bg-gradient-to-br from-[#1FA774] to-[#16865c] text-white rounded-2xl shadow-md shadow-[#1FA774]/30 shrink-0">
                     <span className="text-xs font-medium uppercase tracking-wide opacity-80">
-                      Réduc.
+                      {t('offer.discount_short', 'Réduc.')}
                     </span>
                     <span className="text-2xl md:text-3xl font-extrabold leading-none mt-0.5">
                       {offer.discount}
@@ -310,7 +313,7 @@ export function OfferDetailScreen() {
                 <div className="flex flex-wrap gap-2 text-xs">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 rounded-full border border-gray-200">
                     <Clock size={13} className="text-gray-500" />
-                    Publié {formatRelative(offer.createdAt)}
+                    {t('offer.posted_at', 'Publié')} {formatRelative(offer.createdAt)}
                   </span>
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 rounded-full border border-gray-200">
                     <Tag size={13} className="text-gray-500" />
@@ -328,7 +331,7 @@ export function OfferDetailScreen() {
               <div className="bg-white/95 rounded-3xl p-5 md:p-6 border border-white/80 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
                 <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                   <span className="w-1 h-4 bg-[#1FA774] rounded-full" />
-                  Description
+                  {t('offer.description')}
                 </h2>
                 <p
                   className={`text-gray-600 leading-relaxed whitespace-pre-line ${
@@ -344,11 +347,11 @@ export function OfferDetailScreen() {
                   >
                     {descExpanded ? (
                       <>
-                        Voir moins <ChevronUp size={16} />
+                        {t('common.see_less')} <ChevronUp size={16} />
                       </>
                     ) : (
                       <>
-                        Lire la suite <ChevronDown size={16} />
+                        {t('common.see_more')} <ChevronDown size={16} />
                       </>
                     )}
                   </button>
@@ -366,7 +369,7 @@ export function OfferDetailScreen() {
                 >
                   <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
                     <span className="w-1 h-4 bg-[#1FA774] rounded-full" />
-                    À propos du vendeur
+                    {t('offer.about_seller', 'À propos du vendeur')}
                   </h2>
                   <div className="flex items-start gap-4">
                     <div className="relative shrink-0">
@@ -383,11 +386,11 @@ export function OfferDetailScreen() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2 mb-1 flex-wrap">
                         <h3 className="font-bold text-gray-900 truncate">
-                          {sellerInfo.name || offer.userName || 'Vendeur'}
+                          {sellerInfo.name || offer.userName || t('offer.seller', 'Vendeur')}
                         </h3>
                         {sellerRating.reviewCount >= 3 && sellerRating.averageRating >= 4 && (
                           <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                            Vérifié
+                            {t('offer.verified', 'Vérifié')}
                           </span>
                         )}
                       </div>
@@ -410,11 +413,11 @@ export function OfferDetailScreen() {
                           />
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                             <Star size={11} className="fill-amber-400 text-amber-400" />
-                            {sellerRating.reviewCount} avis
+                            {sellerRating.reviewCount} {t('review.label_count', 'avis')}
                           </span>
                         </div>
                       ) : (
-                        <p className="text-xs text-gray-400 mb-2">Aucun avis pour le moment</p>
+                        <p className="text-xs text-gray-400 mb-2">{t('review.no_reviews', 'Aucun avis pour le moment')}</p>
                       )}
                     </div>
                   </div>
@@ -431,8 +434,8 @@ export function OfferDetailScreen() {
                         </p>
                         <p className="text-[11px] text-gray-500 leading-tight">
                           {sellerInfo.activeOffersCount <= 1
-                            ? 'autre offre'
-                            : 'autres offres'}
+                            ? t('offer.other_offer_one', 'autre offre')
+                            : t('offer.other_offer_other', 'autres offres')}
                         </p>
                       </div>
                     </div>
@@ -443,9 +446,9 @@ export function OfferDetailScreen() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-gray-900 leading-tight truncate">
-                            {formatJoined(sellerInfo.joinedAt)}
+                            {formatJoined(sellerInfo.joinedAt, i18n.language)}
                           </p>
-                          <p className="text-[11px] text-gray-500 leading-tight">Membre depuis</p>
+                          <p className="text-[11px] text-gray-500 leading-tight">{t('offer.member_since', 'Membre depuis')}</p>
                         </div>
                       </div>
                     )}
@@ -459,7 +462,7 @@ export function OfferDetailScreen() {
                   <Button onClick={handleContactClick}>
                     <span className="flex items-center justify-center gap-2">
                       <MessageCircle size={22} />
-                      Envoyer un message
+                      {t('offer.send_message', 'Envoyer un message')}
                     </span>
                   </Button>
                 </div>
@@ -470,7 +473,7 @@ export function OfferDetailScreen() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <span className="w-1 h-5 bg-amber-400 rounded-full" />
-                    Avis {offerRating.count > 0 && `(${offerRating.count})`}
+                    {t('review.title')} {offerRating.count > 0 && `(${offerRating.count})`}
                   </h2>
                   {offerRating.count > 0 && (
                     <div className="flex items-center gap-1.5 text-sm">
@@ -497,7 +500,7 @@ export function OfferDetailScreen() {
               className="w-full flex items-center justify-center gap-2 bg-[#1FA774] text-white py-3.5 rounded-full font-bold text-[15px] shadow-md shadow-[#1FA774]/30 hover:bg-[#16865c] transition-colors"
             >
               <MessageCircle size={20} />
-              Contacter {offer.userName?.split(' ')[0] || 'le vendeur'}
+              {t('offer.contact_short', 'Contacter')} {offer.userName?.split(' ')[0] || t('offer.seller', 'le vendeur')}
             </button>
           </div>
         )}

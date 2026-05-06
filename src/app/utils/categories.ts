@@ -54,7 +54,34 @@ export function getCategoryName(key: string): string {
   return cat ? cat.label : key;
 }
 
-/** Categories for forms (excludes 'All', deduplicated by label — prefers French keys) */
+/** Map any category key (FR/EN/variants) to a canonical id used in i18n keys. */
+export function getCategoryCanonicalId(key: string): string {
+  const n = normKey(key);
+  const map: Record<string, string> = {
+    'all': 'all', 'tout': 'all', 'tous': 'all', 'alles': 'all',
+    'fashion': 'fashion', 'mode': 'fashion',
+    'points': 'points', 'punten': 'points',
+    'food': 'food', 'alimentation': 'food', 'voeding': 'food',
+    'travel': 'travel', 'vols': 'travel', 'voyage': 'travel', 'vluchten': 'travel',
+    'sports': 'sports', 'sport': 'sports',
+    'beauty': 'beauty', 'beaute': 'beauty', 'schoonheid': 'beauty',
+    'electronics': 'electronics', 'electronique': 'electronics', 'elektronica': 'electronics',
+    'high-tech': 'hightech', 'hightech': 'hightech',
+    'maison': 'home', 'home': 'home', 'wonen': 'home',
+    'other': 'other', 'autre': 'other', 'overig': 'other',
+  };
+  return map[n] || '';
+}
+
+/** Translate a category key using the i18n `t` function; falls back to original label. */
+export function getLocalizedCategoryName(
+  key: string,
+  t: (k: string, fallback?: any) => any
+): string {
+  const id = getCategoryCanonicalId(key);
+  if (id) return String(t(`categories.${id}`, getCategoryName(key)));
+  return getCategoryName(key);
+}/** Categories for forms (excludes 'All', deduplicated by label — prefers French keys) */
 export const FORM_CATEGORIES = (() => {
   const seen = new Set<string>();
   return CATEGORIES.filter(c => {

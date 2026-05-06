@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { ArrowLeft, Eye, EyeOff, Lock, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +10,7 @@ import { toast } from 'sonner';
 
 export function ResetPasswordScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { resetPassword } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -48,23 +50,23 @@ export function ResetPasswordScreen() {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Les mots de passe ne correspondent pas');
+      toast.error(t('auth.passwords_dont_match'));
       return;
     }
 
     if (formData.password.length < 6) {
-      toast.error('Le mot de passe doit contenir au moins 6 caractères');
+      toast.error(t('auth.password_too_short'));
       return;
     }
 
     try {
       setLoading(true);
       await resetPassword(formData.password);
-      toast.success('Mot de passe réinitialisé avec succès !');
+      toast.success(t('auth.reset_success'));
       setSuccess(true);
       setTimeout(() => navigate('/signin'), 2000);
     } catch (err: any) {
-      toast.error(err.message || 'Échec de la réinitialisation du mot de passe');
+      toast.error(err.message || t('common.error_generic'));
     } finally {
       setLoading(false);
     }
@@ -81,9 +83,9 @@ export function ResetPasswordScreen() {
           <div className="w-16 h-16 bg-green-500 rounded-full mx-auto mb-4 flex items-center justify-center">
             <Check size={32} className="text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Password Reset!</h2>
-          <p className="text-gray-500 mb-6">Your password has been reset successfully.</p>
-          <p className="text-sm text-gray-400">Redirecting to sign in...</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('auth.reset_success')}</h2>
+          <p className="text-gray-500 mb-6">{t('auth.reset_subtitle')}</p>
+          <p className="text-sm text-gray-400">{t('auth.reset_redirect')}</p>
         </motion.div>
       </div>
     );
@@ -98,7 +100,7 @@ export function ResetPasswordScreen() {
             <button onClick={() => navigate('/welcome')} className="p-1">
               <ArrowLeft size={24} className="text-gray-900" />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Reset Password</h1>
+            <h1 className="text-xl font-semibold text-gray-900">{t('auth.reset_title')}</h1>
           </div>
         </div>
       </div>
@@ -113,8 +115,8 @@ export function ResetPasswordScreen() {
             <div className="w-20 h-20 bg-gradient-to-br from-[#1FA774] to-[#16865c] rounded-full mx-auto mb-6 flex items-center justify-center text-3xl">
               🔐
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Create New Password</h2>
-            <p className="text-gray-500">Enter your new password below</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">{t('auth.reset_title')}</h2>
+            <p className="text-gray-500">{t('auth.reset_subtitle')}</p>
           </div>
 
           {error && (
@@ -131,7 +133,7 @@ export function ResetPasswordScreen() {
             {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                New Password
+                {t('auth.reset_password_label')}
               </label>
               <div className="relative">
                 <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -156,7 +158,7 @@ export function ResetPasswordScreen() {
             {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
+                {t('auth.reset_confirm_label')}
               </label>
               <div className="relative">
                 <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -183,7 +185,7 @@ export function ResetPasswordScreen() {
               disabled={loading}
               className="bg-[#1FA774] text-white hover:bg-[#168659] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Resetting...' : 'Reset Password'}
+              {loading ? t('auth.resetting') : t('auth.reset_action')}
             </Button>
           </form>
         </motion.div>

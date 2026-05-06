@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Offer } from '../services/offersService';
@@ -17,6 +18,7 @@ interface OfferCardProps {
 
 export function OfferCard({ offer, hideContact = false }: OfferCardProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [imageError, setImageError] = useState(false);
   const [contacting, setContacting] = useState(false);
@@ -63,7 +65,7 @@ export function OfferCard({ offer, hideContact = false }: OfferCardProps) {
   const handleContact = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!user) {
-      toast.error('Connectez-vous pour envoyer un message');
+      toast.error(t('profile.please_sign_in'));
       const redirect = encodeURIComponent(window.location.pathname + window.location.search);
       navigate(`/signin?redirect=${redirect}`);
       return;
@@ -83,7 +85,7 @@ export function OfferCard({ offer, hideContact = false }: OfferCardProps) {
       });
       navigate(`/chat/new?${params.toString()}`);
     } catch {
-      toast.error("Erreur lors de l'ouverture de la conversation");
+      toast.error(t('common.error_generic'));
     } finally {
       setContacting(false);
     }
@@ -126,7 +128,7 @@ export function OfferCard({ offer, hideContact = false }: OfferCardProps) {
           <p className="text-sm text-gray-600 line-clamp-2 mb-2">{offer.description}</p>
           <div className="flex items-center justify-between">
             {offer.userName && (
-              <span className="text-xs text-gray-400">by {offer.userName}</span>
+              <span className="text-xs text-gray-400">{t('offer.by')} {offer.userName}</span>
             )}
             {/* Seller Rating */}
             {offer.reviewCount !== undefined && offer.reviewCount > 0 && (
@@ -151,7 +153,7 @@ export function OfferCard({ offer, hideContact = false }: OfferCardProps) {
             className="w-full inline-flex items-center justify-center gap-2 bg-[#1FA774] hover:bg-[#16865c] disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
           >
             <MessageCircle size={16} />
-            Contacter
+            {t('offer.contact_seller')}
           </button>
         </div>
       )}

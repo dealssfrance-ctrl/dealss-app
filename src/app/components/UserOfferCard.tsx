@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Edit2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { Offer } from '../services/offersService';
@@ -12,6 +13,7 @@ interface UserOfferCardProps {
 
 export function UserOfferCard({ offer, onDelete }: UserOfferCardProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [imageError, setImageError] = useState(false);
 
   // Parse first image from potentially multi-image URL
@@ -88,7 +90,7 @@ export function UserOfferCard({ offer, onDelete }: UserOfferCardProps) {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 px-2 text-center">
-              No image
+              {t('offer.no_image_short', 'No image')}
             </div>
           )}
         </div>
@@ -121,14 +123,14 @@ export function UserOfferCard({ offer, onDelete }: UserOfferCardProps) {
               className="flex-1 min-w-0 flex items-center justify-center gap-1.5 px-2 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium active:bg-gray-200"
             >
               <Edit2 size={14} className="flex-shrink-0" />
-              <span className="truncate">Modifier</span>
+              <span className="truncate">{t('common.edit', 'Modifier')}</span>
             </button>
             <button
               onClick={handleDelete}
               className="flex-1 min-w-0 flex items-center justify-center gap-1.5 px-2 py-2 bg-red-50 text-red-600 rounded-full text-sm font-medium active:bg-red-100"
             >
               <Trash2 size={14} className="flex-shrink-0" />
-              <span className="truncate">Supprimer</span>
+              <span className="truncate">{t('common.delete', 'Supprimer')}</span>
             </button>
           </div>
         </div>

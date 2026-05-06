@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
 import { ArrowLeft, Eye, EyeOff, User, Mail, Lock, AlertCircle, Store, MapPin } from 'lucide-react';
@@ -9,6 +10,7 @@ import { toast } from 'sonner';
 
 export function SignUpScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { signup, pendingVerification, isAuthenticated } = useAuth();
   const [accountType, setAccountType] = useState<AccountType>('individual');
   const [formData, setFormData] = useState({
@@ -34,22 +36,22 @@ export function SignUpScreen() {
     setError('');
 
     if (accountType === 'individual' && !formData.name.trim()) {
-      toast.error('Le nom est requis');
+      toast.error(t('auth.name_required'));
       return;
     }
 
     if (accountType === 'merchant' && !formData.storeName.trim()) {
-      toast.error('Le nom du magasin est requis');
+      toast.error(t('auth.store_name_required'));
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Les mots de passe ne correspondent pas');
+      toast.error(t('auth.passwords_dont_match'));
       return;
     }
 
     if (formData.password.length < 6) {
-      toast.error('Le mot de passe doit contenir au moins 6 caractères');
+      toast.error(t('auth.password_too_short'));
       return;
     }
 
@@ -69,7 +71,7 @@ export function SignUpScreen() {
           : undefined,
       );
     } catch (err: any) {
-      toast.error(err.message || 'Échec de la création du compte');
+      toast.error(err.message || t('auth.sign_up_failed'));
       setLoading(false);
       return;
     }
@@ -95,7 +97,7 @@ export function SignUpScreen() {
             <button onClick={() => navigate('/welcome')} className="p-1">
               <ArrowLeft size={24} className="text-gray-900" />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Créer un compte</h1>
+            <h1 className="text-xl font-semibold text-gray-900">{t('auth.sign_up_title')}</h1>
           </div>
         </div>
       </div>
@@ -110,7 +112,7 @@ export function SignUpScreen() {
             <div className="flex justify-center mb-4">
               <Logo className="h-12 w-auto" />
             </div>
-            <p className="text-gray-500">Crée ton compte pour commencer</p>
+            <p className="text-gray-500">{t('auth.sign_up_subtitle')}</p>
           </div>
 
           {error && (
@@ -128,7 +130,7 @@ export function SignUpScreen() {
             {/* Account type toggle */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Type de compte
+                {t('auth.account_type_label')}
               </label>
               <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-2xl">
                 <button
@@ -142,7 +144,7 @@ export function SignUpScreen() {
                   }`}
                 >
                   <User size={16} />
-                  Particulier
+                  {t('auth.account_type_individual')}
                 </button>
                 <button
                   type="button"
@@ -155,13 +157,13 @@ export function SignUpScreen() {
                   }`}
                 >
                   <Store size={16} />
-                  Magasin
+                  {t('auth.account_type_merchant')}
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-1.5">
                 {accountType === 'merchant'
-                  ? 'Créez une vitrine pour votre boutique et publiez vos offres.'
-                  : 'Compte personnel pour profiter et partager des deals.'}
+                  ? t('auth.merchant_hint')
+                  : t('auth.individual_hint')}
               </p>
             </div>
 
@@ -169,7 +171,7 @@ export function SignUpScreen() {
             {accountType === 'individual' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom complet
+                  {t('auth.name_label')}
                 </label>
                 <div className="relative">
                   <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -191,7 +193,7 @@ export function SignUpScreen() {
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nom du magasin
+                    {t('auth.store_name_label')}
                   </label>
                   <div className="relative">
                     <Store size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -209,7 +211,7 @@ export function SignUpScreen() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Localisation
+                    {t('auth.store_location_label')}
                   </label>
                   <div className="relative">
                     <MapPin size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -217,12 +219,12 @@ export function SignUpScreen() {
                       type="text"
                       value={formData.storeLocation}
                       onChange={(e) => handleChange('storeLocation', e.target.value)}
-                      placeholder="Centre-ville, Bruxelles"
+                      placeholder={t('auth.store_location_placeholder')}
                       className="w-full bg-white border border-gray-200 rounded-2xl pl-12 pr-5 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent disabled:bg-gray-100"
                       disabled={loading}
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Optionnel — modifiable plus tard</p>
+                  <p className="text-xs text-gray-500 mt-1">{t('common.optional')}</p>
                 </div>
               </>
             )}
@@ -230,7 +232,7 @@ export function SignUpScreen() {
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Adresse e-mail
+                {t('auth.email_label')}
               </label>
               <div className="relative">
                 <Mail size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -249,7 +251,7 @@ export function SignUpScreen() {
             {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                {t('auth.password_label')}
               </label>
               <div className="relative">
                 <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -272,13 +274,13 @@ export function SignUpScreen() {
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">At least 6 characters</p>
+              <p className="text-xs text-gray-500 mt-1">{t('auth.password_too_short')}</p>
             </div>
 
             {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirmer le mot de passe
+                {t('auth.confirm_password_label')}
               </label>
               <div className="relative">
                 <Lock size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -304,14 +306,7 @@ export function SignUpScreen() {
 
             {/* Terms */}
             <p className="text-xs text-gray-500 text-center">
-              By creating an account, you agree to our{' '}
-              <button type="button" className="text-[#1FA774] font-medium">
-                Terms of Service
-              </button>{' '}
-              and{' '}
-              <button type="button" className="text-[#1FA774] font-medium">
-                Privacy Policy
-              </button>
+              {t('auth.agree_terms')}
             </p>
 
             {/* Submit Button */}
@@ -321,20 +316,20 @@ export function SignUpScreen() {
                 disabled={loading}
                 className="disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Création…' : 'Créer un compte'}
+                {loading ? t('auth.creating_account') : t('auth.sign_up_action')}
               </Button>
             </div>
 
             {/* Sign In Link */}
             <p className="text-center text-gray-600">
-              Déjà un compte ?{' '}
+              {t('auth.have_account')}{' '}
               <button
                 type="button"
                 onClick={() => navigate('/signin')}
                 className="text-[#1FA774] font-semibold hover:underline disabled:opacity-50"
                 disabled={loading}
               >
-                Connexion
+                {t('auth.sign_in_link')}
               </button>
             </p>
           </form>

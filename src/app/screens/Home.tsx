@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { Layout } from '../components/Layout';
 import { HyvisHeader } from '../components/HyvisHeader';
 import { useNavigate } from 'react-router';
@@ -11,6 +12,7 @@ import { offersService, Offer } from '../services/offersService';
 import { OfferCardGridSkeleton, CategoryTabsSkeleton, LoadMoreSkeleton } from '../components/Skeleton';
 import { StarRating } from '../components/StarRating';
 import { getCategoryImage } from '../constants/categoryImages';
+import { getLocalizedCategoryName } from '../utils/categories';
 
 /**
  * Returns the first usable image URL from an offer's `imageUrl` field, which
@@ -111,6 +113,7 @@ function categoryEmoji(key: string): string {
 
 export function Home() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const { filters } = useFilters();
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -195,7 +198,7 @@ export function Home() {
     } catch (error) {
       if (gen !== fetchGenRef.current) return;
       console.error('Error fetching offers:', error);
-      toast.error('Erreur lors du chargement des offres');
+      toast.error(t('common.error_generic'));
     } finally {
       if (gen === fetchGenRef.current) {
         setLoading(false);
@@ -280,7 +283,7 @@ export function Home() {
 
   const handleLogout = () => {
     logout();
-    toast.success('Déconnexion réussie');
+    toast.success(t('auth.logout'));
     navigate('/');
   };
 
@@ -295,7 +298,7 @@ export function Home() {
               onClick={handleRefresh}
               disabled={refreshing}
               className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
-              title="Actualiser"
+              title={t('common.retry')}
             >
               <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
             </button>
@@ -303,7 +306,7 @@ export function Home() {
               <button
                 onClick={handleLogout}
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                title="Se déconnecter"
+                title={t('auth.logout')}
               >
                 <LogOut size={20} />
               </button>
@@ -316,13 +319,13 @@ export function Home() {
       <div className="bg-white border-b border-gray-200 hidden md:block sticky top-0 z-30">
         <div className="px-8 lg:px-10 py-6">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <h1 className="text-2xl font-bold text-gray-900">Accueil</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('nav.home')}</h1>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
-                title="Actualiser"
+                title={t('common.retry')}
               >
                 <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
               </button>
@@ -336,7 +339,7 @@ export function Home() {
                 <button
                   onClick={handleLogout}
                   className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                  title="Se déconnecter"
+                  title={t('auth.logout')}
                 >
                   <LogOut size={20} />
                 </button>
@@ -345,7 +348,7 @@ export function Home() {
                   onClick={() => navigate('/signin')}
                   className="text-sm font-semibold text-white bg-[#1FA774] px-4 py-2 rounded-full hover:bg-[#16865c] transition-colors"
                 >
-                  Connexion
+                  {t('auth.sign_in_action')}
                 </button>
               )}
             </div>
@@ -361,7 +364,7 @@ export function Home() {
             onClick={() => navigate('/search')}
             className="w-full md:max-w-xl bg-white rounded-full px-5 py-3.5 text-left text-gray-400 shadow-sm hover:shadow-md transition-shadow border border-gray-100"
           >
-            Rechercher des offres...
+            {t('search.placeholder')}
           </button>
         </div>
 
@@ -383,20 +386,20 @@ export function Home() {
                 <span className="flex items-center justify-center w-5 h-5 rounded bg-[#1FA774] text-white">
                   <Percent size={12} strokeWidth={3} />
                 </span>
-                <span className="text-xs font-semibold uppercase tracking-wider">Réductions exclusives</span>
+                <span className="text-xs font-semibold uppercase tracking-wider">{t('home.banner_badge')}</span>
               </div>
 
               {/* Headline */}
               <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight mb-0.5">
-                Économise jusqu’à
+                {t('home.banner_title')}
               </h2>
               <h3 className="text-xl md:text-2xl lg:text-3xl font-extrabold leading-tight text-[#7ee5b1] mb-3">
-                -70% avec des deals autour de toi
+                {t('home.banner_highlight')}
               </h3>
 
               {/* Subtitle */}
               <p className="text-white/90 text-sm mb-4 max-w-md">
-                <span className="text-[#7ee5b1] font-semibold">+120 deals</span> partagés cette semaine
+                <span className="text-[#7ee5b1] font-semibold">{t('home.banner_subtitle_prefix')}</span> {t('home.banner_subtitle_suffix')}
               </p>
 
               {/* Features (hidden on mobile to keep banner compact) */}
@@ -404,22 +407,22 @@ export function Home() {
                 <div className="flex items-start gap-2 min-w-[130px]">
                   <Shield size={18} className="text-[#7ee5b1] mt-0.5 shrink-0" />
                   <div>
-                    <div className="text-sm font-semibold leading-tight">Communauté<br />fiable</div>
-                    <div className="text-xs text-white/70 mt-0.5">Profils vérifiés et notés</div>
+                    <div className="text-sm font-semibold leading-tight">{t('home.banner_feature_community_title')}</div>
+                    <div className="text-xs text-white/70 mt-0.5">{t('home.banner_feature_community_desc')}</div>
                   </div>
                 </div>
                 <div className="flex items-start gap-2 min-w-[130px] md:border-l md:border-white/15 md:pl-5">
                   <RefreshCw size={18} className="text-[#7ee5b1] mt-0.5 shrink-0" />
                   <div>
-                    <div className="text-sm font-semibold leading-tight">Échange<br />facile</div>
-                    <div className="text-xs text-white/70 mt-0.5">Deals sécurisés et validés</div>
+                    <div className="text-sm font-semibold leading-tight">{t('home.banner_feature_exchange_title')}</div>
+                    <div className="text-xs text-white/70 mt-0.5">{t('home.banner_feature_exchange_desc')}</div>
                   </div>
                 </div>
                 <div className="flex items-start gap-2 min-w-[130px] md:border-l md:border-white/15 md:pl-5">
                   <MapPin size={18} className="text-[#7ee5b1] mt-0.5 shrink-0" />
                   <div>
-                    <div className="text-sm font-semibold leading-tight">Près de toi</div>
-                    <div className="text-xs text-white/70 mt-0.5">Trouve des deals dans ton quartier</div>
+                    <div className="text-sm font-semibold leading-tight">{t('home.banner_feature_local_title')}</div>
+                    <div className="text-xs text-white/70 mt-0.5">{t('home.banner_feature_local_desc')}</div>
                   </div>
                 </div>
               </div>
@@ -480,7 +483,7 @@ export function Home() {
                       : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50'
                   }`}
                 >
-                  {(() => { const e = categoryEmoji(category); return e ? `${e} ` : ''; })()}{category}
+                  {(() => { const e = categoryEmoji(category); return e ? `${e} ` : ''; })()}{getLocalizedCategoryName(category, t)}
                 </button>
               ))}
             </div>

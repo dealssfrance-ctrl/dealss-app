@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { useLocation } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Logo } from './Logo';
 
 interface PersistentNavbarProps {
@@ -16,18 +17,19 @@ export function PersistentNavbar({
   rightContent,
 }: PersistentNavbarProps) {
   const location = useLocation();
-  
+  const { t } = useTranslation();
+
   // Determine page title based on route
   const getTitle = (): string => {
     if (title && title !== 'Troqly') return title;
-    
+
     const path = location.pathname;
-    if (path === '/') return 'Accueil';
-    if (path === '/messages') return 'Messages';
-    if (path === '/profile') return 'Mon profil';
-    if (path.startsWith('/chat/')) return 'Chat';
-    if (path.startsWith('/offer/')) return 'Détail';
-    if (path === '/add-offer') return 'Nouvelle offre';
+    if (path === '/') return t('navbar.home', 'Accueil');
+    if (path === '/messages') return t('navbar.messages', 'Messages');
+    if (path === '/profile') return t('navbar.my_profile', 'Mon profil');
+    if (path.startsWith('/chat/')) return t('navbar.chat', 'Chat');
+    if (path.startsWith('/offer/')) return t('navbar.detail', 'Détail');
+    if (path === '/add-offer') return t('navbar.new_offer', 'Nouvelle offre');
     return 'Troqly';
   };
 
@@ -46,7 +48,7 @@ export function PersistentNavbar({
               onClick={onBackClick}
               className="p-1 text-gray-900"
             >
-              ← Retour
+              ← {t('common.back', 'Retour')}
             </motion.button>
           ) : (
             <Logo className="h-7 w-auto" />

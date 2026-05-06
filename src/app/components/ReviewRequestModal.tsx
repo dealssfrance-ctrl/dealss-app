@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Star, CheckCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ReviewRequestModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export function ReviewRequestModal({
   onSubmit,
   isLoading = false,
 }: ReviewRequestModalProps) {
+  const { t } = useTranslation();
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -74,7 +76,7 @@ export function ReviewRequestModal({
             <div className="w-full md:w-full md:max-w-md bg-white rounded-t-3xl md:rounded-3xl shadow-lg md:shadow-2xl overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                <h2 className="text-lg font-semibold text-gray-900">Évaluer cette offre</h2>
+                <h2 className="text-lg font-semibold text-gray-900">{t('review.rate_offer_modal_title', 'Évaluer cette offre')}</h2>
                 <motion.button
                   whileTap={{ scale: 0.9 }}
                   onClick={handleClose}
@@ -102,7 +104,7 @@ export function ReviewRequestModal({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-gray-500 uppercase font-semibold mb-0.5">
-                        Offre
+                        {t('offer.seller', 'Offre')}
                       </p>
                       <h3 className="text-sm font-semibold text-gray-900 line-clamp-2">
                         {offerTitle}
@@ -116,7 +118,7 @@ export function ReviewRequestModal({
                     {/* Star Rating */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Votre note
+                        {t('review.your_rating', 'Votre note')}
                       </label>
                       <div className="flex justify-center gap-2">
                         {[1, 2, 3, 4, 5].map((star) => (
@@ -146,12 +148,12 @@ export function ReviewRequestModal({
                     {/* Comment */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Commentaire <span className="text-gray-400">(optionnel)</span>
+                        {t('review.comment_label', 'Commentaire')} <span className="text-gray-400">{t('review.comment_optional', '(optionnel)')}</span>
                       </label>
                       <textarea
                         value={comment}
                         onChange={(e) => setComment(e.target.value.slice(0, 500))}
-                        placeholder="Partagez votre expérience..."
+                        placeholder={t('review.share_experience_short', 'Partagez votre expérience...')}
                         rows={4}
                         disabled={isLoading}
                         className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:bg-white disabled:opacity-50 resize-none"
@@ -179,10 +181,10 @@ export function ReviewRequestModal({
                     </motion.div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                        Merci pour votre avis !
+                        {t('review.thanks_title', 'Merci pour votre avis !')}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        Votre évaluation a bien été enregistrée
+                        {t('review.thanks_subtitle', 'Votre évaluation a bien été enregistrée')}
                       </p>
                     </div>
                   </motion.div>
@@ -198,7 +200,7 @@ export function ReviewRequestModal({
                     disabled={isLoading}
                     className="flex-1 px-4 py-3 bg-gray-100 text-gray-900 font-medium rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
                   >
-                    Annuler
+                    {t('common.cancel', 'Annuler')}
                   </motion.button>
                   <motion.button
                     whileTap={{ scale: 0.98 }}
@@ -206,7 +208,7 @@ export function ReviewRequestModal({
                     disabled={rating === 0 || isLoading}
                     className="flex-1 px-4 py-3 bg-[#1FA774] text-white font-medium rounded-xl hover:bg-[#16A15C] transition-colors disabled:opacity-50"
                   >
-                    {isLoading ? 'Envoi...' : 'Confirmer'}
+                    {isLoading ? t('review.sending', 'Envoi...') : t('common.confirm', 'Confirmer')}
                   </motion.button>
                 </div>
               )}
@@ -218,7 +220,7 @@ export function ReviewRequestModal({
                     onClick={handleClose}
                     className="w-full px-4 py-3 bg-[#1FA774] text-white font-medium rounded-xl"
                   >
-                    Fermer
+                    {t('common.close', 'Fermer')}
                   </motion.button>
                 </div>
               )}

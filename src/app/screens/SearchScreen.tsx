@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { OfferCard } from '../components/OfferCard';
 import { Layout } from '../components/Layout';
 import { HyvisHeader } from '../components/HyvisHeader';
@@ -7,6 +8,7 @@ import { ArrowLeft, Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { offersService, Offer } from '../services/offersService';
+import { getLocalizedCategoryName } from '../utils/categories';
 
 const CATEGORIES = ['All', 'Fashion', 'Points', 'Food', 'Beauty', 'Vols', 'Electronics', 'Sports', 'Other'];
 
@@ -30,6 +32,7 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 
 export function SearchScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
@@ -127,7 +130,7 @@ export function SearchScreen() {
             <button onClick={() => navigate(-1)} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
               <ArrowLeft size={24} className="text-gray-900" />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Rechercher</h1>
+            <h1 className="text-xl font-semibold text-gray-900">{t('search.title')}</h1>
           </div>
 
           {/* Search Input */}
@@ -136,7 +139,7 @@ export function SearchScreen() {
             <input
               ref={inputRef}
               type="text"
-              placeholder="Rechercher des offres, magasins..."
+              placeholder={t('search.placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-gray-100 rounded-full pl-12 pr-12 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774]"
@@ -169,7 +172,7 @@ export function SearchScreen() {
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                {CATEGORY_EMOJIS[category] ? `${CATEGORY_EMOJIS[category]} ` : ''}{category}
+                {CATEGORY_EMOJIS[category] ? `${CATEGORY_EMOJIS[category]} ` : ''}{getLocalizedCategoryName(category, t)}
               </button>
             ))}
           </div>
@@ -182,26 +185,28 @@ export function SearchScreen() {
         {initialLoad ? (
           <div className="text-center py-12">
             <Search size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-400">Commencez à taper pour rechercher</p>
+            <p className="text-gray-400">{t('search.placeholder')}</p>
           </div>
         ) : loading ? (
           <SearchResultsSkeleton />
         ) : !hasSearched ? (
           <div className="text-center py-12">
             <Search size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-400">Entrez un terme de recherche ou sélectionnez une catégorie</p>
+            <p className="text-gray-400">{t('search.no_results_subtitle')}</p>
           </div>
         ) : offers.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 font-medium mb-2">Aucun résultat trouvé</p>
+            <p className="text-gray-500 font-medium mb-2">{t('search.no_results')}</p>
             <p className="text-gray-400 text-sm">
-              Essayez avec d'autres mots-clés ou catégories
+              {t('search.no_results_subtitle')}
             </p>
           </div>
         ) : (
           <>
             <p className="text-sm text-gray-500 mb-4">
-              {offers.length} résultat{offers.length > 1 ? 's' : ''} trouvé{offers.length > 1 ? 's' : ''}
+              {offers.length > 1
+                ? t('search.results_count_plural', { count: offers.length })
+                : t('search.results_count', { count: offers.length })}
             </p>
             <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-4 md:space-y-0">
               {offers.map((offer, index) => (
@@ -227,7 +232,7 @@ export function SearchScreen() {
                   {loadingMore ? (
                     <LoadMoreSkeleton />
                   ) : (
-                    'Voir plus de résultats'
+                    t('common.see_more')
                   )}
                 </button>
               </div>

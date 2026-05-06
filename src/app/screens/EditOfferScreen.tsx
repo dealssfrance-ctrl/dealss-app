@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { ArrowLeft, Camera, X, Loader2, Plus } from 'lucide-react';
@@ -7,6 +8,7 @@ import { motion } from 'motion/react';
 import { offersService, Offer } from '../services/offersService';
 import { toast } from 'sonner';
 import { EditOfferFormSkeleton } from '../components/Skeleton';
+import { getLocalizedCategoryName } from '../utils/categories';
 
 const CATEGORIES = ['Fashion', 'Points', 'Food', 'Beauty', 'Vols', 'Electronics', 'Sports', 'Other'];
 
@@ -31,6 +33,7 @@ function parseImageUrls(value?: string): string[] {
 
 export function EditOfferScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { id } = useParams();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,7 +68,7 @@ export function EditOfferScreen() {
         }
       } catch (error) {
         console.error('Error fetching offer:', error);
-        toast.error('Erreur lors du chargement de l\'offre');
+        toast.error(t('offer.load_failed', 'Erreur lors du chargement de l\'offre'));
       } finally {
         setLoading(false);
       }
@@ -98,10 +101,10 @@ export function EditOfferScreen() {
         category: formData.category,
         imageUrl: finalImageUrl
       });
-      toast.success('Offre mise à jour avec succès ! ✅');
+      toast.success(t('offer.updated') + ' ✅');
       navigate('/profile');
     } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de la mise à jour');
+      toast.error(error.message || t('offer.update_failed'));
     } finally {
       setSaving(false);
     }
@@ -116,8 +119,8 @@ export function EditOfferScreen() {
     if (files.length === 0) return;
     const valid: File[] = [];
     for (const f of files) {
-      if (f.size > 5 * 1024 * 1024) { toast.error(`${f.name} dépasse 5 Mo`); continue; }
-      if (!f.type.startsWith('image/')) { toast.error(`${f.name} n'est pas une image`); continue; }
+      if (f.size > 5 * 1024 * 1024) { toast.error(t('offer.file_too_large', '{{name}} dépasse 5 Mo', { name: f.name })); continue; }
+      if (!f.type.startsWith('image/')) { toast.error(t('offer.not_image', '{{name}} n\'est pas une image', { name: f.name })); continue; }
       valid.push(f);
     }
     if (valid.length === 0) { e.target.value = ''; return; }
@@ -146,9 +149,9 @@ export function EditOfferScreen() {
   if (!offer) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
-        <p className="text-gray-400">Offre introuvable</p>
+        <p className="text-gray-400">{t('offer.not_found', 'Offre introuvable')}</p>
         <button onClick={() => navigate('/profile')} className="text-[#1FA774] font-medium">
-          Retour au profil
+          {t('offer.back_to_profile', 'Retour au profil')}
         </button>
       </div>
     );
@@ -164,7 +167,7 @@ export function EditOfferScreen() {
             <button onClick={() => navigate(-1)} className="p-1">
               <ArrowLeft size={24} className="text-gray-900" />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Modifier l'offre</h1>
+            <h1 className="text-xl font-semibold text-gray-900">{t('offer.edit_title')}</h1>
           </div>
         </div>
       </div>
@@ -179,13 +182,13 @@ export function EditOfferScreen() {
           {/* Photos (multi) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Photos
+              {t('offer.photos_label')}
             </label>
             {existingUrls.length === 0 && newPreviews.length === 0 ? (
               <label className="w-full h-48 flex flex-col items-center justify-center bg-white border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer hover:bg-gray-50 hover:border-[#1FA774] transition-colors">
                 <Camera size={40} className="text-gray-400 mb-2" />
-                <span className="text-sm font-medium text-gray-600">Ajouter des photos</span>
-                <span className="text-xs text-gray-400 mt-1">Sélectionnez un ou plusieurs fichiers</span>
+                <span className="text-sm font-medium text-gray-600">{t('offer.add_photos', 'Ajouter des photos')}</span>
+                <span className="text-xs text-gray-400 mt-1">{t('offer.add_photos_hint', 'Sélectionnez un ou plusieurs fichiers')}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -204,7 +207,7 @@ export function EditOfferScreen() {
                       type="button"
                       onClick={() => removeExistingImage(idx)}
                       disabled={saving}
-                      aria-label="Supprimer la photo"
+                      aria-label={t('offer.remove_photo', 'Supprimer la photo')}
                       className="absolute top-1.5 right-1.5 bg-black/60 text-white p-1.5 rounded-full backdrop-blur-sm disabled:opacity-50"
                     >
                       <X size={14} />
@@ -218,7 +221,7 @@ export function EditOfferScreen() {
                       type="button"
                       onClick={() => removeNewImage(idx)}
                       disabled={saving}
-                      aria-label="Supprimer la photo"
+                      aria-label={t('offer.remove_photo', 'Supprimer la photo')}
                       className="absolute top-1.5 right-1.5 bg-black/60 text-white p-1.5 rounded-full backdrop-blur-sm disabled:opacity-50"
                     >
                       <X size={14} />
@@ -227,7 +230,7 @@ export function EditOfferScreen() {
                 ))}
                 <label className="aspect-square flex flex-col items-center justify-center bg-white border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer hover:bg-gray-50 hover:border-[#1FA774] transition-colors">
                   <Plus size={24} className="text-gray-400" />
-                  <span className="text-xs font-medium text-gray-600 mt-1">Ajouter</span>
+                  <span className="text-xs font-medium text-gray-600 mt-1">{t('common.add', 'Ajouter')}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -244,13 +247,13 @@ export function EditOfferScreen() {
           {/* Store Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nom du magasin
+              {t('offer.store_label')}
             </label>
             <input
               type="text"
               value={formData.storeName}
               onChange={(e) => handleChange('storeName', e.target.value)}
-              placeholder="ex: Zara, Nike, Starbucks"
+              placeholder={t('offer.store_placeholder')}
               className="w-full bg-white border border-gray-200 rounded-2xl px-5 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent"
               required
               disabled={saving}
@@ -260,7 +263,7 @@ export function EditOfferScreen() {
           {/* Discount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Réduction
+              {t('offer.discount_label')}
             </label>
             <input
               type="text"
@@ -276,7 +279,7 @@ export function EditOfferScreen() {
           {/* Category */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Catégorie
+              {t('offer.category_label')}
             </label>
             <div className="flex flex-wrap gap-2">
               {CATEGORIES.map((category) => (
@@ -291,7 +294,7 @@ export function EditOfferScreen() {
                       : 'bg-white border border-gray-200 text-gray-600 hover:border-[#1FA774]'
                   } disabled:opacity-50`}
                 >
-                  {category}
+                  {getLocalizedCategoryName(category, t)}
                 </button>
               ))}
             </div>
@@ -300,12 +303,12 @@ export function EditOfferScreen() {
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
+              {t('offer.description_label')}
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="Décrivez les détails de l'offre..."
+              placeholder={t('offer.description_placeholder')}
               rows={4}
               className="w-full bg-white border border-gray-200 rounded-2xl px-5 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent resize-none"
               required
@@ -318,10 +321,10 @@ export function EditOfferScreen() {
               {saving ? (
                 <span className="flex items-center justify-center gap-2">
                   <Loader2 size={20} className="animate-spin" />
-                  Sauvegarde en cours...
+                  {t('offer.updating')}
                 </span>
               ) : (
-                'Sauvegarder les modifications'
+                t('common.save_changes', 'Sauvegarder les modifications')
               )}
             </Button>
           </div>

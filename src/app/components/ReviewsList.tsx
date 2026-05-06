@@ -1,4 +1,5 @@
 import { Star } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { Review } from '../services/reviewsService';
 
 interface ReviewsListProps {
@@ -6,6 +7,7 @@ interface ReviewsListProps {
 }
 
 export function ReviewsList({ reviews }: ReviewsListProps) {
+  const { t } = useTranslation();
   const formatDate = (date: string | Date) => {
     const d = typeof date === 'string' ? new Date(date) : date;
     const now = new Date();
@@ -22,8 +24,8 @@ export function ReviewsList({ reviews }: ReviewsListProps) {
   if (reviews.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500 font-medium">Aucun avis pour le moment</p>
-        <p className="text-sm text-gray-400 mt-1">Les retours clients apparaîtront ici</p>
+        <p className="text-gray-500 font-medium">{t('review.no_reviews', 'Aucun avis pour le moment')}</p>
+        <p className="text-sm text-gray-400 mt-1">{t('review.no_reviews_subtitle', 'Les retours clients apparaîtront ici')}</p>
       </div>
     );
   }

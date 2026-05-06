@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { MultiImageUploader } from '../components/MultiImageUploader';
@@ -8,6 +9,7 @@ import { motion } from 'motion/react';
 import { offersService } from '../services/offersService';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import { getLocalizedCategoryName } from '../utils/categories';
 
 const CATEGORIES = ['Fashion', 'Points', 'Food', 'Beauty', 'Vols', 'Electronics', 'Sports', 'Other'];
 
@@ -24,6 +26,7 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 
 export function AddOfferScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     storeName: '',
@@ -38,32 +41,32 @@ export function AddOfferScreen() {
 
   useEffect(() => {
     if (!user) {
-      toast.error('Vous devez être connecté pour publier une offre');
+      toast.error(t('auth.login_required'));
       navigate('/signin');
     }
-  }, [user, navigate]);
+  }, [user, navigate, t]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.storeName.trim()) {
-      newErrors.storeName = 'Le nom du magasin est requis';
+      newErrors.storeName = t('offer.store_required', 'Le nom du magasin est requis');
     }
 
     if (!formData.discount.trim()) {
-      newErrors.discount = 'La réduction est requise';
+      newErrors.discount = t('offer.discount_required', 'La réduction est requise');
     } else if (!formData.discount.includes('%') && !formData.discount.toLowerCase().includes('buy')) {
-      newErrors.discount = 'Format invalide (ex: -30%, Buy 1 Get 1)';
+      newErrors.discount = t('offer.discount_format', 'Format invalide (ex: -30%, Buy 1 Get 1)');
     }
 
     if (!formData.description.trim()) {
-      newErrors.description = 'La description est requise';
+      newErrors.description = t('offer.description_required');
     } else if (formData.description.length < 10) {
-      newErrors.description = 'La description doit contenir au moins 10 caractères';
+      newErrors.description = t('offer.description_min', 'La description doit contenir au moins 10 caractères');
     }
 
     if (!formData.category) {
-      newErrors.category = 'La catégorie est requise';
+      newErrors.category = t('offer.category_required');
     }
 
     setErrors(newErrors);
@@ -74,12 +77,12 @@ export function AddOfferScreen() {
     e.preventDefault();
     
     if (!validateForm()) {
-      toast.error('Veuillez corriger les erreurs du formulaire');
+      toast.error(t('offer.form_errors', 'Veuillez corriger les erreurs du formulaire'));
       return;
     }
 
     if (!user) {
-      toast.error('Vous devez être connecté pour publier une offre');
+      toast.error(t('auth.login_required'));
       navigate('/signin');
       return;
     }
@@ -106,11 +109,11 @@ export function AddOfferScreen() {
         imageUrl
       }, user.id);
 
-      toast.success('Offre publiée avec succès ! 🎉');
+      toast.success(t('offer.published') + ' 🎉');
       navigate('/');
     } catch (error: any) {
       console.error('Error creating offer:', error);
-      toast.error(error.message || 'Erreur lors de la publication de l\'offre');
+      toast.error(error.message || t('offer.publish_failed'));
     } finally {
       setLoading(false);
       setUploadProgress(0);
@@ -135,7 +138,7 @@ export function AddOfferScreen() {
             <button onClick={() => navigate(-1)} className="p-1">
               <ArrowLeft size={24} className="text-gray-900" />
             </button>
-            <h1 className="text-xl font-semibold text-gray-900">Nouvelle offre</h1>
+            <h1 className="text-xl font-semibold text-gray-900">{t('offer.add_title')}</h1>
           </div>
         </div>
       </div>
@@ -150,7 +153,7 @@ export function AddOfferScreen() {
           {/* Photo Upload - Multi-image */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Photos <span className="text-gray-400">(optionnel)</span>
+              {t('offer.photos_label')} <span className="text-gray-400">({t('common.optional', 'optionnel')})</span>
             </label>
             <MultiImageUploader
               onImagesSelected={setSelectedFiles}
@@ -162,13 +165,13 @@ export function AddOfferScreen() {
           {/* Store Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nom du magasin <span className="text-red-500">*</span>
+              {t('offer.store_label')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={formData.storeName}
               onChange={(e) => handleChange('storeName', e.target.value)}
-              placeholder="ex: Zara, Nike, Starbucks"
+              placeholder={t('offer.store_placeholder')}
               className={`w-full bg-white border rounded-2xl px-5 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent ${
                 errors.storeName ? 'border-red-300' : 'border-gray-200'
               }`}
@@ -182,7 +185,7 @@ export function AddOfferScreen() {
           {/* Discount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Réduction <span className="text-red-500">*</span>
+              {t('offer.discount_label')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -202,7 +205,7 @@ export function AddOfferScreen() {
           {/* Category */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Catégorie <span className="text-red-500">*</span>
+              {t('offer.category_label')} <span className="text-red-500">*</span>
             </label>
             <div className="flex flex-wrap gap-2">
               {CATEGORIES.map((category) => (
@@ -217,7 +220,7 @@ export function AddOfferScreen() {
                       : 'bg-white border border-gray-200 text-gray-600 hover:border-[#1FA774]'
                   } disabled:opacity-50`}
                 >
-                  {CATEGORY_EMOJIS[category] ? `${CATEGORY_EMOJIS[category]} ` : ''}{category}
+                  {CATEGORY_EMOJIS[category] ? `${CATEGORY_EMOJIS[category]} ` : ''}{getLocalizedCategoryName(category, t)}
                 </button>
               ))}
             </div>
@@ -229,12 +232,12 @@ export function AddOfferScreen() {
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description <span className="text-red-500">*</span>
+              {t('offer.description_label')} <span className="text-red-500">*</span>
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="Décrivez les détails de l'offre..."
+              placeholder={t('offer.description_placeholder')}
               rows={4}
               className={`w-full bg-white border rounded-2xl px-5 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1FA774] focus:border-transparent resize-none ${
                 errors.description ? 'border-red-300' : 'border-gray-200'
@@ -245,7 +248,7 @@ export function AddOfferScreen() {
               <p className="mt-1 text-sm text-red-500">{errors.description}</p>
             )}
             <p className="mt-1 text-xs text-gray-400 text-right">
-              {formData.description.length}/500 caractères
+              {formData.description.length}/500 {t('common.chars', 'caractères')}
             </p>
           </div>
 
@@ -259,10 +262,10 @@ export function AddOfferScreen() {
               {loading ? (
                 <>
                   <Loader2 size={20} className="animate-spin" />
-                  Publication...
+                  {t('offer.publishing')}
                 </>
               ) : (
-                'Publier l\'offre'
+                t('offer.publish')
               )}
             </button>
           </motion.div>

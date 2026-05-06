@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Layout } from '../components/Layout';
 import { OfferCard } from '../components/OfferCard';
 import { offersService, Offer } from '../services/offersService';
@@ -37,6 +38,7 @@ interface PublicUser {
 export function PublicProfileScreen() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const { user: currentUser } = useAuth();
   const [user, setUser] = useState<PublicUser | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -131,7 +133,7 @@ export function PublicProfileScreen() {
   const handleContactClick = async () => {
     if (!user) return;
     if (!currentUser) {
-      toast.error('Connectez-vous pour envoyer un message');
+      toast.error(t('offer.login_to_message'));
       const redirect = encodeURIComponent(window.location.pathname + window.location.search);
       navigate(`/signin?redirect=${redirect}`);
       return;
@@ -145,7 +147,7 @@ export function PublicProfileScreen() {
       }
       const firstOffer = offers[0];
       if (!firstOffer) {
-        toast.info("Cet utilisateur n'a pas d'offre active pour démarrer une conversation");
+        toast.info(t('profile.no_active_offer_for_chat', "Cet utilisateur n'a pas d'offre active pour démarrer une conversation"));
         return;
       }
       const params = new URLSearchParams({
@@ -156,14 +158,15 @@ export function PublicProfileScreen() {
       });
       navigate(`/chat/new?${params.toString()}`);
     } catch {
-      toast.error("Erreur lors de l'ouverture de la conversation");
+      toast.error(t('offer.open_chat_failed'));
     } finally {
       setContacting(false);
     }
   };
 
   const userInitial = user.name.charAt(0).toUpperCase();
-  const joinDate = new Date(user.createdAt).toLocaleDateString('fr-FR', {
+  const localeMap: Record<string, string> = { fr: 'fr-FR', en: 'en-US', nl: 'nl-BE' };
+  const joinDate = new Date(user.createdAt).toLocaleDateString(localeMap[i18n.language] || 'fr-FR', {
     month: 'long',
     year: 'numeric',
   });
@@ -233,7 +236,7 @@ export function PublicProfileScreen() {
                     {user.accountType === 'merchant' ? (user.storeName || user.name) : user.name}
                   </h2>
                   {user.accountType === 'merchant' && user.isVerified && (
-                    <span title="Compte vérifié" className="inline-flex items-center text-[#1FA774]">
+                    <span title={t('profile.verified_account', 'Compte vérifié')} className="inline-flex items-center text-[#1FA774]">
                       <BadgeCheck size={20} />
                     </span>
                   )}
@@ -256,7 +259,7 @@ export function PublicProfileScreen() {
                   )
                 )}
 
-                <p className="text-gray-400 text-sm">Membre depuis {joinDate}</p>
+                <p className="text-gray-400 text-sm">{t('offer.member_since')} {joinDate}</p>
 
                 <ul className="text-sm mt-2 space-y-1">
                   <li className="text-gray-700 flex items-center gap-2">
@@ -273,7 +276,7 @@ export function PublicProfileScreen() {
                         <span className="text-gray-500">({rating.reviewCount} avis)</span>
                       </span>
                     ) : (
-                      <span className="text-gray-400">Aucun avis</span>
+                      <span className="text-gray-400">{t('review.no_reviews_short', 'Aucun avis')}</span>
                     )}
                   </li>
                   {completedExchanges > 0 ? (
@@ -292,7 +295,7 @@ export function PublicProfileScreen() {
                   {user.isBlocked ? (
                     <li className="text-red-700 flex items-center gap-2">
                       <ShieldAlert size={14} className="text-red-600" />
-                      <span className="font-semibold">Utilisateur bloqué (signalements multiples)</span>
+                      <span className="font-semibold">{t('profile.user_blocked', 'Utilisateur bloqué (signalements multiples)')}</span>
                     </li>
                   ) : user.reportedCount >= 3 ? (
                     <li className="text-amber-700 flex items-center gap-2">
@@ -325,7 +328,7 @@ export function PublicProfileScreen() {
                   className="w-full inline-flex items-center justify-center gap-2 bg-[#1FA774] hover:bg-[#16865c] disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-2xl transition-colors"
                 >
                   <MessageCircle size={18} />
-                  Contacter
+                  {t('offer.contact_short')}
                 </button>
               </div>
             )}
@@ -333,10 +336,10 @@ export function PublicProfileScreen() {
 
           {/* Offers Section */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Offres</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('profile.offers_section', 'Offres')}</h3>
             {offers.length === 0 ? (
               <div className="bg-white rounded-2xl p-8 text-center">
-                <p className="text-gray-400">Aucune offre active</p>
+                <p className="text-gray-400">{t('profile.no_active_offers', 'Aucune offre active')}</p>
               </div>
             ) : (
               <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">

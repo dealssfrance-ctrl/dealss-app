@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState, ReactNode } from 'react';
 import { Logo } from './Logo';
+import { LanguageIconButton } from './LanguageIconButton';
 
 interface HyvisHeaderProps {
   /** Content rendered on the right side of the header (optional) */
   right?: ReactNode;
+  /** Hide the built-in language icon (default: false) */
+  hideLanguageIcon?: boolean;
 }
 
-export function HyvisHeader({ right }: HyvisHeaderProps) {
+export function HyvisHeader({ right, hideLanguageIcon = false }: HyvisHeaderProps) {
   const [visible, setVisible] = useState(true);
   const lastScrollRef = useRef(0);
 
@@ -38,7 +41,10 @@ export function HyvisHeader({ right }: HyvisHeaderProps) {
         {/* Left spacer keeps logo centered regardless of right slot width */}
         <div aria-hidden="true" />
         <Logo className="h-8 w-auto justify-self-center" />
-        <div className="flex items-center gap-2 justify-self-end">{right}</div>
+        <div className="flex items-center gap-1 justify-self-end">
+          {right}
+          {!hideLanguageIcon && <LanguageIconButton />}
+        </div>
       </div>
     </>
   );

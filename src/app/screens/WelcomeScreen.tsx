@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
 import { Repeat, MapPin, Star } from 'lucide-react';
@@ -8,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 
 export function WelcomeScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { isAuthenticated, markWelcomeSeen } = useAuth();
 
   // If user is already authenticated, redirect to home
@@ -21,20 +23,20 @@ export function WelcomeScreen() {
     {
       icon: Repeat,
       iconBg: 'bg-indigo-500/90',
-      title: 'Échange tes réductions en 2 clics',
-      description: "Échange ta réduc Zara contre une réduc McDonald's et plus encore",
+      title: t('welcome.feature_exchange_title'),
+      description: t('welcome.feature_exchange_desc'),
     },
     {
       icon: MapPin,
       iconBg: 'bg-rose-500/90',
-      title: 'En magasin, près de toi',
-      description: 'Les échanges se font physiquement dans ton quartier',
+      title: t('welcome.feature_local_title'),
+      description: t('welcome.feature_local_desc'),
     },
     {
       icon: Star,
       iconBg: 'bg-amber-400/95',
-      title: 'Utilisateurs vérifiés et notés',
-      description: 'Profils notés et échanges confirmés mutuellement',
+      title: t('welcome.feature_verified_title'),
+      description: t('welcome.feature_verified_desc'),
     },
   ];
 
@@ -48,7 +50,7 @@ export function WelcomeScreen() {
         }}
         className="absolute top-4 right-4 md:top-6 md:right-6 z-10 px-4 py-2 rounded-full text-sm font-semibold text-white/90 hover:text-white hover:bg-white/15 transition-colors"
       >
-        Passer
+        {t('welcome.skip')}
       </button>
 
       {/* Content */}
@@ -113,7 +115,7 @@ export function WelcomeScreen() {
             }}
             className="bg-white !text-[#1FA774] hover:bg-gray-100"
           >
-            Créer un compte
+            {t('welcome.create_account')}
           </Button>
           <button
             onClick={() => {
@@ -122,7 +124,7 @@ export function WelcomeScreen() {
             }}
             className="w-full py-4 rounded-full font-semibold text-white border-2 border-white/30 hover:bg-white/10 transition-colors"
           >
-            Connexion
+            {t('welcome.sign_in')}
           </button>
         </div>
       </motion.div>

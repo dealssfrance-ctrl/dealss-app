@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '../components/Button';
 
 export function EmailConfirmedScreen() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
@@ -36,20 +38,18 @@ export function EmailConfirmedScreen() {
         </motion.div>
 
         <h1 className="text-3xl font-bold text-gray-900 mb-3">
-          Compte vérifié !
+          {t('auth.verify_account_confirmed_title')}
         </h1>
         <p className="text-gray-500 text-lg mb-8">
-          Votre adresse email a été confirmée avec succès.
-          <br />
-          Vous pouvez maintenant vous connecter.
+          {t('auth.verify_account_confirmed_desc')}
         </p>
 
         <Button onClick={() => navigate('/signin', { replace: true })}>
-          Se connecter maintenant
+          {t('auth.verify_signin_now')}
         </Button>
 
         <p className="text-sm text-gray-400 mt-6">
-          Redirection automatique dans {countdown}s…
+          {t('auth.verify_auto_redirect', { count: countdown })}
         </p>
       </motion.div>
     </div>

@@ -1,17 +1,19 @@
 import { Home, Search, MessageCircle, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { useChatNotifications } from '../context/ChatNotificationsContext';
 
 export function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const { unreadCount } = useChatNotifications();
 
   const navItems = [
-    { icon: Home, label: 'Home', path: '/' },
-    { icon: Search, label: 'Search', path: '/search' },
-    { icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadCount },
-    { icon: User, label: 'Profile', path: '/profile' },
+    { icon: Home, label: t('nav.home'), path: '/' },
+    { icon: Search, label: t('nav.search'), path: '/search' },
+    { icon: MessageCircle, label: t('nav.messages'), path: '/messages', badge: unreadCount },
+    { icon: User, label: t('nav.profile'), path: '/profile' },
   ];
 
   return (

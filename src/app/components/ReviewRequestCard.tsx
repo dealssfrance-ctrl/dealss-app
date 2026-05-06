@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface ReviewRequestPayload {
   offerId: string;
@@ -46,6 +47,7 @@ export function ReviewRequestCard({
   isReceiver,
   hasSubmitted = false,
 }: ReviewRequestCardProps) {
+  const { t } = useTranslation();
   const safeImage = firstUrl(payload.offerImageUrl);
   const showImage = safeImage.length > 0;
   const canReview = isReceiver && !hasSubmitted;
@@ -81,7 +83,7 @@ export function ReviewRequestCard({
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-0.5">
-              Demande d'avis
+              {t('review.request_label', "Demande d'avis")}
             </p>
             <h4 className="text-sm font-semibold text-gray-900 line-clamp-2">
               {payload.offerTitle}
@@ -101,7 +103,7 @@ export function ReviewRequestCard({
               transition={{ delay: 0.1 }}
               className="flex items-center gap-1 mt-1 text-xs font-semibold text-amber-700"
             >
-              <span>Évaluer</span>
+              <span>{t('review.evaluate', 'Évaluer')}</span>
               <ChevronRight size={12} />
             </motion.div>
           )}
@@ -112,7 +114,7 @@ export function ReviewRequestCard({
               animate={{ opacity: 1 }}
               className="mt-1 text-xs font-semibold text-[#1FA774]"
             >
-              Review submitted ✅
+              {t('review.submitted_check', 'Review submitted ✅')}
             </motion.div>
           )}
         </div>
