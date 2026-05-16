@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.hyvis.fr',
-  appName: 'Troqly',
+  appId: 'be.troqly.app',
+  appName: 'Troqly.be',
   webDir: 'dist',
   server: {
     // Hybrid mode: the app ships with the bundled web assets (offline-capable
