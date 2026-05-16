@@ -1,4 +1,4 @@
-package com.hyvis.fr;
+package be.troqly.app;
 
 import com.getcapacitor.BridgeActivity;
 
